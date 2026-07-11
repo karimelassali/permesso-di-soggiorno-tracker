@@ -42,8 +42,15 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
     val formNumeroPratica = MutableStateFlow("")
 
     init {
-        // Initialize form fields when credentials flow emits
         viewModelScope.launch {
+            // Check if there are existing credentials in DB first directly
+            val existing = repository.getCredentialsDirect()
+            if (existing == null) {
+                // Pre-populate only if completely empty in DB
+                repository.saveCredentials(UserCredentials())
+            }
+            
+            // Collect flow updates safely
             credentials.collect { creds ->
                 if (creds != null) {
                     formFullName.value = creds.fullName
@@ -51,9 +58,6 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
                     formPassword.value = creds.password
                     formNumeroAssicurata.value = creds.numeroAssicurata
                     formNumeroPratica.value = creds.numeroPratica
-                } else {
-                    // Pre-populate DB with default credentials if empty
-                    repository.saveCredentials(UserCredentials())
                 }
             }
         }
@@ -163,20 +167,45 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             val currentCreds = repository.getCredentialsDirect() ?: UserCredentials()
             var updated = currentCreds
-            if (poliziaStatus != null) {
+            var statusChanged = false
+            var finalStatusText = ""
+            var portalType = ""
+            var details = ""
+
+            if (poliziaStatus != null && currentCreds.lastPoliziaStatus != poliziaStatus) {
                 updated = updated.copy(
                     lastPoliziaStatus = poliziaStatus,
                     lastCheckedTime = System.currentTimeMillis()
                 )
+                statusChanged = true
+                finalStatusText = poliziaStatus
+                portalType = "POLIZIA"
+                details = "Verificato tramite Portale Web Polizia di Stato"
             }
-            if (portaleStatus != null) {
+            if (portaleStatus != null && currentCreds.lastPortaleStatus != portaleStatus) {
                 updated = updated.copy(
                     lastPortaleStatus = portaleStatus,
                     lastCheckedTime = System.currentTimeMillis()
                 )
+                statusChanged = true
+                finalStatusText = portaleStatus
+                portalType = "PORTALE"
+                details = "Verificato tramite Portale Web Portale Immigrazione"
             }
-            if (poliziaStatus != null || portaleStatus != null) {
+
+            if (statusChanged) {
                 repository.saveCredentials(updated)
+                // Insert a history record to keep track
+                val history = com.example.data.StatusHistory(
+                    portalType = portalType,
+                    statusText = finalStatusText,
+                    isSuccess = true,
+                    details = details
+                )
+                repository.insertHistory(history)
+            } else if (poliziaStatus != null || portaleStatus != null) {
+                // Just update the last checked time so we know a check was made
+                repository.saveCredentials(updated.copy(lastCheckedTime = System.currentTimeMillis()))
             }
         }
     }

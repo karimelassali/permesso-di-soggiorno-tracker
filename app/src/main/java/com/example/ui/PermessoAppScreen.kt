@@ -139,49 +139,61 @@ fun PermessoAppScreen(
                     }
                 }
             }
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Fingerprint,
-                            contentDescription = "App Logo",
-                            tint = BentoBadgeGreen,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Text(
-                            text = "Soggiorno Track",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 20.sp,
-                            fontFamily = FontFamily.SansSerif,
-                            color = BentoTextHeading
-                        )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                TopAppBar(
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Fingerprint,
+                                contentDescription = "App Logo",
+                                tint = ItalianGreen,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Text(
+                                text = "Permesso Soggiorno",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                fontFamily = FontFamily.SansSerif,
+                                color = BentoTextHeading
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = BentoBackground
+                    ),
+                    actions = {
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 16.dp)
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(BentoAvatarBg)
+                                .border(1.dp, BentoAvatarBorder, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = initials,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BentoTextPrimary
+                            )
+                        }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = BentoBackground
-                ),
-                actions = {
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 16.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(BentoAvatarBg)
-                            .border(1.dp, BentoAvatarBorder, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = initials,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = BentoTextPrimary
-                        )
-                    }
+                )
+                // Premium thin Italian flag colored stripe
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                ) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianGreen))
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianWhite))
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianRed))
                 }
-            )
+            }
         },
         bottomBar = {
             Column {
@@ -335,6 +347,7 @@ fun DashboardTab(
         item {
             val name = credentials?.fullName?.trim() ?: ""
             val greetName = if (name.isNotBlank()) name else "Amico"
+            val context = androidx.compose.ui.platform.LocalContext.current
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -342,7 +355,7 @@ fun DashboardTab(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Ciao, $greetName! 👋",
                         fontSize = 22.sp,
@@ -360,6 +373,29 @@ fun DashboardTab(
                         fontSize = 13.sp,
                         color = BentoTextSecondary
                     )
+                }
+
+                // Test notifications button
+                OutlinedButton(
+                    onClick = {
+                        com.example.util.NotificationHelper.showStatusNotification(
+                            context,
+                            "Notifiche Attive 🔔",
+                            "Il sistema di monitoraggio automatico di PermessoSoggiorno è attivo!"
+                        )
+                    },
+                    border = BorderStroke(1.dp, BentoCardBorder),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ItalianGreen),
+                    modifier = Modifier.testTag("test_notif_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Test Notifica",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Test", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -543,15 +579,45 @@ fun DashboardTab(
 
 @Composable
 fun BentoPrimaryStatusCard(credentials: UserCredentials?) {
-    val statusText = credentials?.lastPoliziaStatus ?: "In attesa di dati"
-    val statusLabel = if (credentials == null || (credentials.numeroAssicurata.isBlank() && credentials.numeroPratica.isBlank())) {
-        "Da configurare"
-    } else {
-        statusText
+    val hasPolizia = credentials != null && 
+            (credentials.numeroAssicurata.isNotBlank() || credentials.numeroPratica.isNotBlank())
+    val hasPortale = credentials != null && 
+            (credentials.userId.isNotBlank() && credentials.password.isNotBlank())
+
+    val poliziaStatus = credentials?.lastPoliziaStatus ?: "No checks yet"
+    val portaleStatus = credentials?.lastPortaleStatus ?: "No checks yet"
+
+    val combinedStatus = when {
+        hasPolizia && hasPortale -> {
+            if (poliziaStatus != "No checks yet" && portaleStatus != "No checks yet") {
+                // Shorten status if combined to avoid UI overflows
+                val shortPolizia = if (poliziaStatus.length > 20) poliziaStatus.take(17) + "..." else poliziaStatus
+                val shortPortale = if (portaleStatus.length > 20) portaleStatus.take(17) + "..." else portaleStatus
+                "$shortPolizia | $shortPortale"
+            } else if (poliziaStatus != "No checks yet") {
+                poliziaStatus
+            } else if (portaleStatus != "No checks yet") {
+                portaleStatus
+            } else {
+                "In attesa di controllo"
+            }
+        }
+        hasPolizia -> {
+            if (poliziaStatus != "No checks yet") poliziaStatus else "In attesa di controllo"
+        }
+        hasPortale -> {
+            if (portaleStatus != "No checks yet") portaleStatus else "In attesa di controllo"
+        }
+        else -> "Configurazione richiesta"
     }
 
-    val isActiveTracking = credentials != null && 
-            (credentials.numeroAssicurata.isNotBlank() || credentials.numeroPratica.isNotBlank())
+    val statusLabel = if (credentials == null || (!hasPolizia && !hasPortale)) {
+        "Da configurare"
+    } else {
+        combinedStatus
+    }
+
+    val isActiveTracking = credentials != null && (hasPolizia || hasPortale)
 
     Card(
         modifier = Modifier
@@ -613,7 +679,7 @@ fun BentoPrimaryStatusCard(credentials: UserCredentials?) {
                 )
                 Text(
                     text = statusLabel,
-                    fontSize = 22.sp,
+                    fontSize = 20.sp, // Slightly smaller to accommodate dual status elegantly
                     fontWeight = FontWeight.Bold,
                     color = BentoCardPrimaryText
                 )
@@ -630,7 +696,7 @@ fun BentoPortalStatusCard(credentials: UserCredentials?) {
     val statusText = credentials?.lastPortaleStatus ?: "No checks yet"
     val (titleText, descText) = when {
         !hasCredentials -> Pair("Non Attivo", "Configura credenziali")
-        statusText == "No checks yet" -> Pair("Pronto", "Verifica la tua pratica")
+        statusText == "No checks yet" -> Pair("Non Verificato", "Fai un controllo manuale o automatico")
         statusText.contains(" - ") -> {
             val parts = statusText.split(" - ", limit = 2)
             Pair(parts[0], parts[1])
@@ -663,7 +729,7 @@ fun BentoPortalStatusCard(credentials: UserCredentials?) {
             Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
                 Text(
                     text = titleText,
-                    fontSize = 18.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = BentoTextHeading
                 )
@@ -680,11 +746,17 @@ fun BentoPortalStatusCard(credentials: UserCredentials?) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                val dotColor = when {
+                    !hasCredentials -> BentoTextSecondary.copy(alpha = 0.4f)
+                    statusText == "No checks yet" -> BentoTextSecondary.copy(alpha = 0.6f)
+                    statusText.contains("Step 3") || statusText.contains("Pronto") -> BentoBadgeGreen
+                    else -> Color(0xFFFF9800) // Orange/Amber
+                }
                 Box(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(if (hasCredentials) BentoBadgeGreen else BentoTextSecondary.copy(alpha = 0.4f))
+                        .background(dotColor)
                 )
                 Text(
                     text = "Portale Immigrazione",
@@ -699,10 +771,18 @@ fun BentoPortalStatusCard(credentials: UserCredentials?) {
 
 @Composable
 fun BentoPoliziaStatusCard(credentials: UserCredentials?) {
-    val statusText = credentials?.lastPoliziaStatus ?: ""
-    val isReady = statusText.contains("Pronto", ignoreCase = true)
+    val statusText = credentials?.lastPoliziaStatus ?: "No checks yet"
     val hasCode = credentials != null && 
             (credentials.numeroAssicurata.isNotBlank() || credentials.numeroPratica.isNotBlank())
+
+    val (titleText, descText) = when {
+        !hasCode -> Pair("Non Attivo", "Configura ricevuta")
+        statusText == "No checks yet" -> Pair("Non Verificato", "Fai un controllo manuale")
+        statusText.contains("consegna", ignoreCase = true) || statusText.contains("Pronto", ignoreCase = true) -> Pair("Pronto", statusText)
+        else -> Pair("In Trattazione", statusText)
+    }
+
+    val isReady = statusText.contains("Pronto", ignoreCase = true) || statusText.contains("consegna", ignoreCase = true)
 
     Card(
         modifier = Modifier
@@ -726,15 +806,20 @@ fun BentoPoliziaStatusCard(credentials: UserCredentials?) {
                 letterSpacing = 0.5.sp
             )
 
-            Box(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isReady) Icons.Default.CheckCircle else Icons.Default.Schedule,
-                    contentDescription = null,
-                    tint = if (!hasCode) BentoTextSecondary.copy(alpha = 0.2f) else if (isReady) BentoBadgeGreen else BentoCardBorder,
-                    modifier = Modifier.size(44.dp)
+            Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
+                Text(
+                    text = titleText,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BentoTextHeading
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = if (statusText != "No checks yet") statusText else descText,
+                    fontSize = 11.sp,
+                    color = BentoTextSecondary,
+                    lineHeight = 14.sp,
+                    maxLines = 2
                 )
             }
 
@@ -744,13 +829,15 @@ fun BentoPoliziaStatusCard(credentials: UserCredentials?) {
             ) {
                 val dotColor = when {
                     !hasCode -> BentoTextSecondary.copy(alpha = 0.4f)
+                    statusText == "No checks yet" -> BentoTextSecondary.copy(alpha = 0.6f)
                     isReady -> BentoBadgeGreen
-                    else -> BentoAlertRed
+                    else -> Color(0xFFFF9800) // Amber
                 }
                 val label = when {
                     !hasCode -> "Nessun codice"
+                    statusText == "No checks yet" -> "Non controllato"
                     isReady -> "Pronto per il ritiro"
-                    else -> "Non ancora pronto"
+                    else -> "In trattazione"
                 }
 
                 Box(
@@ -1393,77 +1480,182 @@ fun PortalWebViewTab(
         }
 
         // Web Viewer
-        AndroidView(
-            factory = { context ->
-                WebView(context).apply {
-                    val wv = this
-                    // Configure CookieManager to save login sessions persistently
-                    android.webkit.CookieManager.getInstance().apply {
-                        setAcceptCookie(true)
-                        setAcceptThirdPartyCookies(wv, true)
-                    }
-                    webViewClient = object : WebViewClient() {
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            super.onPageFinished(view, url)
-                            webProgress = 100
-                            // Force-sync cookies to persistent storage
-                            android.webkit.CookieManager.getInstance().flush()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
+        ) {
+            AndroidView(
+                factory = { context ->
+                    WebView(context).apply {
+                        val wv = this
+                        // Configure CookieManager to save login sessions persistently
+                        android.webkit.CookieManager.getInstance().apply {
+                            setAcceptCookie(true)
+                            setAcceptThirdPartyCookies(wv, true)
+                        }
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                webProgress = 100
+                                // Force-sync cookies to persistent storage
+                                android.webkit.CookieManager.getInstance().flush()
 
-                            // Scrape the content to automatically detect status changes from manual browsing
-                            view?.evaluateJavascript("(function() { return document.body.innerText; })()") { text ->
-                                val cleanText = text?.trim() ?: ""
-                                if (cleanText.isNotBlank()) {
-                                    if (currentSite == 0) {
-                                        // Portale Immigrazione
-                                        val portaleStatus = when {
-                                            cleanText.contains("Anomalie non riscontrate", ignoreCase = true) || cleanText.contains("nessuna anomalia", ignoreCase = true) -> "Step 3 - Anomalie non riscontrate"
-                                            cleanText.contains("In istruttoria", ignoreCase = true) || cleanText.contains("istruttoria", ignoreCase = true) -> "Step 2 - In istruttoria"
-                                            cleanText.contains("Ricevuto", ignoreCase = true) || cleanText.contains("domanda ricevuta", ignoreCase = true) -> "Step 1 - Ricevuto"
-                                            cleanText.contains("Area Riservata", ignoreCase = true) || cleanText.contains("Benvenuto", ignoreCase = true) || cleanText.contains("stranieri", ignoreCase = true) -> "Collegato (Area Riservata)"
-                                            else -> null
-                                        }
-                                        if (portaleStatus != null) {
-                                            onStatusDetected(null, portaleStatus)
-                                        }
-                                    } else {
-                                        // Polizia di Stato
-                                        val poliziaStatus = when {
-                                            cleanText.contains("pronto per la consegna", ignoreCase = true) || cleanText.contains("consegna", ignoreCase = true) -> "Pronto per la consegna"
-                                            cleanText.contains("non è pronto", ignoreCase = true) || cleanText.contains("in trattazione", ignoreCase = true) -> "In trattazione"
-                                            cleanText.contains("non presente in archivio", ignoreCase = true) || cleanText.contains("non trovato", ignoreCase = true) -> "Non presente in archivio"
-                                            else -> null
-                                        }
-                                        if (poliziaStatus != null) {
-                                            onStatusDetected(poliziaStatus, null)
+                                // Auto-accept/hide cookie consent and inject padding so user can scroll high above bottom bar
+                                val helperJs = """
+                                    (function() {
+                                        // 1. Add bottom padding to body so the bottom of the page isn't blocked by any UI
+                                        var style = document.createElement('style');
+                                        style.innerHTML = 'body { padding-bottom: 220px !important; }';
+                                        document.head.appendChild(style);
+                                        
+                                        // 2. Continuous cleaner loop (runs every 500ms for 6 seconds) to destroy cookie modals/overlays as they load
+                                        var checkCount = 0;
+                                        var cookieTimer = setInterval(function() {
+                                            checkCount++;
+                                            if (checkCount > 12) clearInterval(cookieTimer);
+
+                                            // Try to automatically click any cookie accept button
+                                            var cookieKeywords = ['accetta', 'accetto', 'consenti', 'conferma', 'ok', 'chiudi', 'agree', 'accept', 'allow', 'dismiss'];
+                                            var tags = ['button', 'a', 'div', 'span'];
+                                            for (var t = 0; t < tags.length; t++) {
+                                                var elements = document.getElementsByTagName(tags[t]);
+                                                for (var i = 0; i < elements.length; i++) {
+                                                    var el = elements[i];
+                                                    var text = (el.innerText || el.textContent || '').toLowerCase().trim();
+                                                    for (var j = 0; j < cookieKeywords.length; j++) {
+                                                        var kw = cookieKeywords[j];
+                                                        if (text === kw || (text.indexOf(kw) !== -1 && text.length < 20)) {
+                                                            if (typeof el.click === 'function') {
+                                                                el.click();
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // Directly hide known cookie banners/overlays if they refuse to close
+                                            var commonSelectors = ['#cookie-banner', '#cookie-consent', '.iubenda-cs-banner', '#cookiebanner', '.cookieconsent', '[id*="cookie"]', '[class*="cookie"]', '[id*="consent"]', '[class*="consent"]'];
+                                            commonSelectors.forEach(function(sel) {
+                                                try {
+                                                    var els = document.querySelectorAll(sel);
+                                                    els.forEach(function(el) {
+                                                        el.style.display = 'none';
+                                                        el.style.setProperty('display', 'none', 'important');
+                                                    });
+                                                } catch(e) {}
+                                            });
+                                            
+                                            // Enable scrolling if locked
+                                            document.body.style.overflow = 'auto';
+                                            document.documentElement.style.overflow = 'auto';
+                                        }, 500);
+                                    })()
+                                """.trimIndent()
+                                view?.evaluateJavascript(helperJs, null)
+
+                                // Scrape the content to automatically detect status changes from manual browsing
+                                view?.evaluateJavascript("(function() { return document.body.innerText; })()") { text ->
+                                    val cleanText = text?.trim() ?: ""
+                                    if (cleanText.isNotBlank()) {
+                                        if (currentSite == 0) {
+                                            // Portale Immigrazione
+                                            val portaleStatus = when {
+                                                cleanText.contains("Anomalie non riscontrate", ignoreCase = true) || cleanText.contains("nessuna anomalia", ignoreCase = true) -> "Step 3 - Anomalie non riscontrate"
+                                                cleanText.contains("In istruttoria", ignoreCase = true) || cleanText.contains("istruttoria", ignoreCase = true) -> "Step 2 - In istruttoria"
+                                                cleanText.contains("Ricevuto", ignoreCase = true) || cleanText.contains("domanda ricevuta", ignoreCase = true) -> "Step 1 - Ricevuto"
+                                                cleanText.contains("Area Riservata", ignoreCase = true) || cleanText.contains("Benvenuto", ignoreCase = true) || cleanText.contains("stranieri", ignoreCase = true) -> "Collegato (Area Riservata)"
+                                                else -> null
+                                            }
+                                            if (portaleStatus != null) {
+                                                onStatusDetected(null, portaleStatus)
+                                            }
+                                        } else {
+                                            // Polizia di Stato
+                                            val poliziaStatus = when {
+                                                cleanText.contains("pronto per la consegna", ignoreCase = true) || cleanText.contains("consegna", ignoreCase = true) -> "Pronto per la consegna"
+                                                cleanText.contains("non è pronto", ignoreCase = true) || cleanText.contains("in trattazione", ignoreCase = true) -> "In trattazione"
+                                                cleanText.contains("non presente in archivio", ignoreCase = true) || cleanText.contains("non trovato", ignoreCase = true) -> "Non presente in archivio"
+                                                else -> null
+                                            }
+                                            if (poliziaStatus != null) {
+                                                onStatusDetected(poliziaStatus, null)
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                    webChromeClient = object : android.webkit.WebChromeClient() {
-                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                            super.onProgressChanged(view, newProgress)
-                            webProgress = newProgress
+                        webChromeClient = object : android.webkit.WebChromeClient() {
+                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                super.onProgressChanged(view, newProgress)
+                                webProgress = newProgress
+                            }
                         }
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            databaseEnabled = true // Enable HTML5 local storage databases
+                            builtInZoomControls = true
+                            displayZoomControls = false
+                            useWideViewPort = true
+                            loadWithOverviewMode = true
+                            cacheMode = WebSettings.LOAD_DEFAULT
+                        }
+                        webViewInstance = this
+                        loadUrl(portalUrl)
                     }
-                    settings.apply {
-                        javaScriptEnabled = true
-                        domStorageEnabled = true
-                        databaseEnabled = true // Enable HTML5 local storage databases
-                        builtInZoomControls = true
-                        displayZoomControls = false
-                        useWideViewPort = true
-                        loadWithOverviewMode = true
-                        cacheMode = WebSettings.LOAD_DEFAULT
+                },
+                update = { _ -> },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Custom floating action chip to manually force cookie removal and enable scroll on demand
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 24.dp, end = 16.dp)
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        webViewInstance?.evaluateJavascript("""
+                            (function() {
+                                // 1. Force remove all elements containing cookie or banner words
+                                var els = document.querySelectorAll('*');
+                                for (var i = 0; i < els.length; i++) {
+                                    var el = els[i];
+                                    var id = (el.id || '').toLowerCase();
+                                    var cls = (el.className || '');
+                                    if (typeof cls === 'string') cls = cls.toLowerCase();
+                                    else cls = '';
+                                    if (id.indexOf('cookie') !== -1 || cls.indexOf('cookie') !== -1 || id.indexOf('consent') !== -1 || cls.indexOf('consent') !== -1 || id.indexOf('banner') !== -1 || cls.indexOf('banner') !== -1) {
+                                        el.style.display = 'none';
+                                        try { el.parentNode.removeChild(el); } catch(e){}
+                                    }
+                                }
+                                // 2. Enable scrolling and scroll slightly to verify
+                                document.body.style.overflow = 'auto';
+                                document.documentElement.style.overflow = 'auto';
+                                document.body.style.paddingBottom = '220px';
+                            })()
+                        """.trimIndent(), null)
+                    },
+                    containerColor = ItalianRed,
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.testTag("clean_cookies_fab")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Block, contentDescription = "Rimuovi Cookie", modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Nascondi Cookie 🍪", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
-                    webViewInstance = this
-                    loadUrl(portalUrl)
                 }
-            },
-            update = { _ -> },
-            modifier = Modifier.fillMaxSize().weight(1f)
-        )
+            }
+        }
     }
 }
 
