@@ -159,6 +159,28 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun updateLoggedStatus(poliziaStatus: String?, portaleStatus: String?) {
+        viewModelScope.launch {
+            val currentCreds = repository.getCredentialsDirect() ?: UserCredentials()
+            var updated = currentCreds
+            if (poliziaStatus != null) {
+                updated = updated.copy(
+                    lastPoliziaStatus = poliziaStatus,
+                    lastCheckedTime = System.currentTimeMillis()
+                )
+            }
+            if (portaleStatus != null) {
+                updated = updated.copy(
+                    lastPortaleStatus = portaleStatus,
+                    lastCheckedTime = System.currentTimeMillis()
+                )
+            }
+            if (poliziaStatus != null || portaleStatus != null) {
+                repository.saveCredentials(updated)
+            }
+        }
+    }
+
     fun resetCheckState() {
         _checkState.value = CheckUiState.Idle
     }

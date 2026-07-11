@@ -51,6 +51,55 @@ import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
+// Dynamic Theme-Aware Bento Colors that adapt seamlessly between Light & Dark modes
+private val BentoBackground: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.background
+
+private val BentoTextPrimary: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.onSurface
+
+private val BentoTextSecondary: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.onSurfaceVariant
+
+private val BentoTextHeading: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.onSurface
+
+private val BentoCardPrimaryBg: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.primaryContainer
+
+private val BentoCardPrimaryText: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.onPrimaryContainer
+
+private val BentoBadgeGreen: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.primary
+
+private val BentoBadgeGreenBg: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.secondaryContainer
+
+private val BentoAvatarBg: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.secondaryContainer
+
+private val BentoAvatarBorder: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.outline
+
+private val BentoCardBorder: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.outlineVariant
+
+private val BentoCardLightBg: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.surfaceVariant
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermessoAppScreen(
@@ -227,7 +276,10 @@ fun PermessoAppScreen(
                     onGoToCredentials = { selectedTabIndex = 2 }
                 )
                 1 -> PortalWebViewTab(
-                    credentials = credentials
+                    credentials = credentials,
+                    onStatusDetected = { poliziaStatus, portaleStatus ->
+                        viewModel.updateLoggedStatus(poliziaStatus, portaleStatus)
+                    }
                 )
                 2 -> {
                     val formFullName by viewModel.formFullName.collectAsStateWithLifecycle()
@@ -448,7 +500,7 @@ fun DashboardTab(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(24.dp),
                     border = BorderStroke(1.dp, BentoCardBorder)
                 ) {
@@ -591,7 +643,7 @@ fun BentoPortalStatusCard(credentials: UserCredentials?) {
             .fillMaxWidth()
             .height(160.dp),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, BentoCardBorder)
     ) {
         Column(
@@ -657,7 +709,7 @@ fun BentoPoliziaStatusCard(credentials: UserCredentials?) {
             .fillMaxWidth()
             .height(160.dp),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, BentoCardBorder)
     ) {
         Column(
@@ -782,7 +834,7 @@ fun BentoCredentialsCard(
             // Edit button (p-3 rounded-full bg-white)
             IconButton(
                 onClick = onGoToCredentials,
-                colors = IconButtonDefaults.iconButtonColors(containerColor = Color.White),
+                colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier
                     .size(40.dp)
                     .testTag("edit_credentials_btn")
@@ -974,18 +1026,29 @@ fun CheckStateCard(
     checkState: CheckUiState,
     onDismiss: () -> Unit
 ) {
+    val isSuccess = checkState is CheckUiState.Success
+    val isError = checkState is CheckUiState.Error
+
+    val containerColor = when (checkState) {
+        is CheckUiState.Loading -> MaterialTheme.colorScheme.secondaryContainer
+        is CheckUiState.Success -> EmeraldSuccess
+        is CheckUiState.Error -> BentoAlertRed
+        else -> MaterialTheme.colorScheme.surface
+    }
+
+    val contentColor = when (checkState) {
+        is CheckUiState.Success, is CheckUiState.Error -> Color.White
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = when (checkState) {
-                is CheckUiState.Loading -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
-                is CheckUiState.Success -> EmeraldSuccess.copy(alpha = 0.1f)
-                is CheckUiState.Error -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
-                else -> MaterialTheme.colorScheme.surface
-            }
+            containerColor = containerColor,
+            contentColor = contentColor
         ),
         shape = RoundedCornerShape(12.dp),
-        border = CardDefaults.outlinedCardBorder()
+        border = if (isSuccess || isError) null else BorderStroke(1.dp, BentoCardBorder)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -998,26 +1061,32 @@ fun CheckStateCard(
                         is CheckUiState.Loading -> {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Interrogazione portale...", fontWeight = FontWeight.Bold)
+                            Text("Interrogazione portale...", fontWeight = FontWeight.Bold, color = contentColor)
                         }
                         is CheckUiState.Success -> {
-                            Icon(Icons.Default.CheckCircle, contentDescription = "Success", tint = EmeraldSuccess)
+                            Icon(Icons.Default.CheckCircle, contentDescription = "Success", tint = Color.White)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Risposta Ricevuta!", fontWeight = FontWeight.Bold, color = EmeraldSuccess)
+                            Text("Risposta Ricevuta!", fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         is CheckUiState.Error -> {
-                            Icon(Icons.Default.Error, contentDescription = "Errore", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.Error, contentDescription = "Errore", tint = Color.White)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Errore Controllo", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                            Text("Errore Controllo", fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         else -> {}
                     }
                 }
                 IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Chiudi", modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Chiudi",
+                        modifier = Modifier.size(16.dp),
+                        tint = contentColor
+                    )
                 }
             }
 
@@ -1029,14 +1098,15 @@ fun CheckStateCard(
                         text = checkState.statusText,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.White
                     )
                     if (checkState.detailsText.isNotBlank()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = checkState.detailsText,
                             fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                            color = Color.White.copy(alpha = 0.9f),
+                            lineHeight = 17.sp
                         )
                     }
                 }
@@ -1044,12 +1114,12 @@ fun CheckStateCard(
                     Text(
                         text = checkState.errorMessage,
                         fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.White
                     )
                 }
                 is CheckUiState.Loading -> {
                     Text(
-                        text = "Il sistema si sta connettendo a questure.poliziadistato.it per analizzare lo stato della raccomandata...",
+                        text = "Il sistema si sta connettendo ai portali ufficiali per analizzare lo stato della pratica...",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1067,7 +1137,7 @@ fun HistoryRecordItem(record: StatusHistory) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(1.dp, BentoCardBorder)
     ) {
@@ -1138,13 +1208,47 @@ fun HistoryRecordItem(record: StatusHistory) {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun PortalWebViewTab(
-    credentials: UserCredentials?
+    credentials: UserCredentials?,
+    onStatusDetected: (String?, String?) -> Unit
 ) {
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var webProgress by remember { mutableIntStateOf(0) }
-    val portalUrl = "https://www.portaleimmigrazione.it/ELI_Stranieri/Informativa.aspx"
+    
+    // 0 = Portale Immigrazione, 1 = Polizia di Stato
+    var currentSite by remember { mutableIntStateOf(0) }
+    
+    val portalUrl = if (currentSite == 0) {
+        "https://www.portaleimmigrazione.it/eli2immigrazioneweb/pagine/startpage.aspx"
+    } else {
+        "https://questure.poliziadistato.it/stranieri/"
+    }
+
+    // Force load the new URL when the user switches portals
+    LaunchedEffect(portalUrl) {
+        webViewInstance?.loadUrl(portalUrl)
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // High-contrast, beautifully designed M3 tabs to switch between both official sites
+        TabRow(
+            selectedTabIndex = currentSite,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary
+        ) {
+            Tab(
+                selected = currentSite == 0,
+                onClick = { currentSite = 0 },
+                text = { Text("Portale Immigrazione", fontWeight = FontWeight.Bold, fontSize = 13.sp) },
+                icon = { Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(18.dp)) }
+            )
+            Tab(
+                selected = currentSite == 1,
+                onClick = { currentSite = 1 },
+                text = { Text("Polizia di Stato", fontWeight = FontWeight.Bold, fontSize = 13.sp) },
+                icon = { Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(18.dp)) }
+            )
+        }
+
         // Top Banner for Credential Auto-Fill helper
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -1158,55 +1262,113 @@ fun PortalWebViewTab(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Portale Immigrazione (Sportello Amico)",
+                        text = if (currentSite == 0) "Portale Immigrazione (Sportello Amico)" else "Polizia di Stato (Questura)",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Text(
-                        text = "La password di accesso si trova sulla ricevuta.",
+                        text = if (currentSite == 0) {
+                            "Premi Auto-fill per inserire automaticamente User ID e Password."
+                        } else {
+                            "Premi Auto-fill per inserire automaticamente il Numero Assicurata."
+                        },
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                     )
                 }
 
-                val hasCredentials = credentials != null && 
-                        credentials.userId.isNotBlank() && credentials.password.isNotBlank()
+                val hasCredentials = credentials != null && if (currentSite == 0) {
+                    credentials.userId.isNotBlank() && credentials.password.isNotBlank()
+                } else {
+                    credentials.numeroAssicurata.isNotBlank() || credentials.numeroPratica.isNotBlank()
+                }
 
                 Button(
                     onClick = {
                         webViewInstance?.let { wv ->
-                            val user = credentials?.userId ?: ""
-                            val pass = credentials?.password ?: ""
-                            
-                            // Highly robust Autofill script injection
-                            val jsCode = """
-                                (function() {
-                                    var inputs = document.getElementsByTagName('input');
-                                    var filledUser = false;
-                                    var filledPass = false;
-                                    for (var i = 0; i < inputs.length; i++) {
-                                        var input = inputs[i];
-                                        var type = input.getAttribute('type') || '';
-                                        type = type.toLowerCase();
-                                        var id = (input.getAttribute('id') || '').toLowerCase();
-                                        var name = (input.getAttribute('name') || '').toLowerCase();
-                                        
-                                        // Fill username/codice field
-                                        if (!filledUser && (type === 'text' || id.indexOf('user') !== -1 || id.indexOf('codice') !== -1 || name.indexOf('user') !== -1 || name.indexOf('codice') !== -1 || id.indexOf('username') !== -1)) {
-                                            input.value = '$user';
-                                            filledUser = true;
+                            if (currentSite == 0) {
+                                val user = credentials?.userId ?: ""
+                                val pass = credentials?.password ?: ""
+                                
+                                val jsCode = """
+                                    (function() {
+                                        var inputs = document.getElementsByTagName('input');
+                                        var filledUser = false;
+                                        var filledPass = false;
+                                        for (var i = 0; i < inputs.length; i++) {
+                                            var input = inputs[i];
+                                            var type = input.getAttribute('type') || '';
+                                            type = type.toLowerCase();
+                                            var id = (input.getAttribute('id') || '').toLowerCase();
+                                            var name = (input.getAttribute('name') || '').toLowerCase();
+                                            
+                                            // Fill username/codice field
+                                            if (!filledUser && (type === 'text' || id.indexOf('user') !== -1 || id.indexOf('codice') !== -1 || name.indexOf('user') !== -1 || name.indexOf('codice') !== -1 || id.indexOf('username') !== -1)) {
+                                                input.value = '$user';
+                                                input.dispatchEvent(new Event('input', { bubbles: true }));
+                                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                                                filledUser = true;
+                                            }
+                                            // Fill password field
+                                            if (!filledPass && (type === 'password' || id.indexOf('pass') !== -1 || id.indexOf('pwd') !== -1 || name.indexOf('pass') !== -1 || name.indexOf('pwd') !== -1)) {
+                                                input.value = '$pass';
+                                                input.dispatchEvent(new Event('input', { bubbles: true }));
+                                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                                                filledPass = true;
+                                            }
                                         }
-                                        // Fill password field
-                                        if (!filledPass && (type === 'password' || id.indexOf('pass') !== -1 || id.indexOf('pwd') !== -1 || name.indexOf('pass') !== -1 || name.indexOf('pwd') !== -1)) {
-                                            input.value = '$pass';
-                                            filledPass = true;
+                                        return filledUser && filledPass;
+                                    })()
+                                """.trimIndent()
+                                wv.evaluateJavascript(jsCode, null)
+                            } else {
+                                val code = if (credentials?.numeroAssicurata?.isNotBlank() == true) {
+                                    credentials.numeroAssicurata
+                                } else {
+                                    credentials?.numeroPratica ?: ""
+                                }
+                                
+                                val jsCode = """
+                                    (function() {
+                                        var inputs = document.getElementsByTagName('input');
+                                        var filled = false;
+                                        // 1. Try to target elements with specific name or id that are highly unique to the receipt number field
+                                        for (var i = 0; i < inputs.length; i++) {
+                                            var input = inputs[i];
+                                            var id = (input.getAttribute('id') || '').toLowerCase();
+                                            var name = (input.getAttribute('name') || '').toLowerCase();
+                                            
+                                            if (name === 'numero' || id === 'numero' || name.indexOf('numero') !== -1 || id.indexOf('numero') !== -1 || name.indexOf('assicurata') !== -1 || id.indexOf('assicurata') !== -1) {
+                                                input.value = '$code';
+                                                input.dispatchEvent(new Event('input', { bubbles: true }));
+                                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                                                filled = true;
+                                                break;
+                                            }
                                         }
-                                    }
-                                    return filledUser && filledPass;
-                                })()
-                            """.trimIndent()
-                            wv.evaluateJavascript(jsCode, null)
+                                        // 2. Fallback to standard text or number field that is not search-related
+                                        if (!filled) {
+                                            for (var i = 0; i < inputs.length; i++) {
+                                                var input = inputs[i];
+                                                var type = (input.getAttribute('type') || '').toLowerCase();
+                                                var id = (input.getAttribute('id') || '').toLowerCase();
+                                                var name = (input.getAttribute('name') || '').toLowerCase();
+                                                
+                                                if ((type === 'text' || type === 'number') && name.indexOf('search') === -1 && id.indexOf('search') === -1 && name !== 'q') {
+                                                    input.value = '$code';
+                                                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                                                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                                                    filled = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        return filled;
+                                    })()
+                                """.trimIndent()
+                                wv.evaluateJavascript(jsCode, null)
+                            }
                         }
                     },
                     enabled = hasCredentials,
@@ -1234,10 +1396,49 @@ fun PortalWebViewTab(
         AndroidView(
             factory = { context ->
                 WebView(context).apply {
+                    val wv = this
+                    // Configure CookieManager to save login sessions persistently
+                    android.webkit.CookieManager.getInstance().apply {
+                        setAcceptCookie(true)
+                        setAcceptThirdPartyCookies(wv, true)
+                    }
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             webProgress = 100
+                            // Force-sync cookies to persistent storage
+                            android.webkit.CookieManager.getInstance().flush()
+
+                            // Scrape the content to automatically detect status changes from manual browsing
+                            view?.evaluateJavascript("(function() { return document.body.innerText; })()") { text ->
+                                val cleanText = text?.trim() ?: ""
+                                if (cleanText.isNotBlank()) {
+                                    if (currentSite == 0) {
+                                        // Portale Immigrazione
+                                        val portaleStatus = when {
+                                            cleanText.contains("Anomalie non riscontrate", ignoreCase = true) || cleanText.contains("nessuna anomalia", ignoreCase = true) -> "Step 3 - Anomalie non riscontrate"
+                                            cleanText.contains("In istruttoria", ignoreCase = true) || cleanText.contains("istruttoria", ignoreCase = true) -> "Step 2 - In istruttoria"
+                                            cleanText.contains("Ricevuto", ignoreCase = true) || cleanText.contains("domanda ricevuta", ignoreCase = true) -> "Step 1 - Ricevuto"
+                                            cleanText.contains("Area Riservata", ignoreCase = true) || cleanText.contains("Benvenuto", ignoreCase = true) || cleanText.contains("stranieri", ignoreCase = true) -> "Collegato (Area Riservata)"
+                                            else -> null
+                                        }
+                                        if (portaleStatus != null) {
+                                            onStatusDetected(null, portaleStatus)
+                                        }
+                                    } else {
+                                        // Polizia di Stato
+                                        val poliziaStatus = when {
+                                            cleanText.contains("pronto per la consegna", ignoreCase = true) || cleanText.contains("consegna", ignoreCase = true) -> "Pronto per la consegna"
+                                            cleanText.contains("non è pronto", ignoreCase = true) || cleanText.contains("in trattazione", ignoreCase = true) -> "In trattazione"
+                                            cleanText.contains("non presente in archivio", ignoreCase = true) || cleanText.contains("non trovato", ignoreCase = true) -> "Non presente in archivio"
+                                            else -> null
+                                        }
+                                        if (poliziaStatus != null) {
+                                            onStatusDetected(poliziaStatus, null)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     webChromeClient = object : android.webkit.WebChromeClient() {
@@ -1249,6 +1450,7 @@ fun PortalWebViewTab(
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
+                        databaseEnabled = true // Enable HTML5 local storage databases
                         builtInZoomControls = true
                         displayZoomControls = false
                         useWideViewPort = true

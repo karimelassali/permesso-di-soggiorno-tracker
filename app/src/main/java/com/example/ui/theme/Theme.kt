@@ -24,18 +24,27 @@ private val DarkColorScheme =
 
 private val LightColorScheme =
   lightColorScheme(
-    primary = BentoBadgeGreen,
+    primary = ItalianGreen,
     onPrimary = Color.White,
-    secondary = BentoBadgeGreenBg,
+    secondary = ItalianRed,
+    onSecondary = Color.White,
     background = BentoBackground,
     surface = Color.White,
     onBackground = BentoTextPrimary,
-    onSurface = BentoTextPrimary
+    onSurface = BentoTextPrimary,
+    primaryContainer = BentoCardPrimaryBg,
+    onPrimaryContainer = BentoCardPrimaryText,
+    secondaryContainer = ItalianRedLight,
+    onSecondaryContainer = ItalianRed,
+    error = ItalianRed,
+    outline = BentoAvatarBorder,
+    outlineVariant = BentoCardBorder,
+    surfaceVariant = BentoCardLightBg
   )
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
+  darkTheme: Boolean = false, // Light theme by default as requested by the user
   // Disable dynamic colors by default to show the Bento design system exactly
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
