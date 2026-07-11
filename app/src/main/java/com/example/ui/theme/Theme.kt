@@ -28,21 +28,21 @@ private val LightColorScheme =
     onPrimary = Color.White,
     secondary = ItalianRed,
     onSecondary = Color.White,
-    background = BentoBackground,
+    background = Color(0xFFF5F7F6),
     surface = Color.White,
-    onBackground = BentoTextPrimary,
-    onSurface = BentoTextPrimary,
+    onBackground = Color(0xFF1E293B),
+    onSurface = Color(0xFF1E293B),
     primaryContainer = ItalianGreenLight,
-    onPrimaryContainer = BentoCardPrimaryText,
+    onPrimaryContainer = Color(0xFF1B5E20),
     secondaryContainer = ItalianGreenLight,
     onSecondaryContainer = ItalianGreen,
     tertiary = ItalianRed,
     tertiaryContainer = ItalianRedLight,
     onTertiaryContainer = ItalianRed,
     error = ItalianRed,
-    outline = BentoAvatarBorder,
-    outlineVariant = BentoCardBorder,
-    surfaceVariant = BentoCardLightBg
+    outline = Color(0xFF94A3B8),
+    outlineVariant = Color(0xFFE2E8F0),
+    surfaceVariant = Color(0xFFF1F5F9)
   )
 
 @Composable

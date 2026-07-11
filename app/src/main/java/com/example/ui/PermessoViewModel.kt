@@ -41,6 +41,32 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
     val formNumeroAssicurata = MutableStateFlow("055987476941")
     val formNumeroPratica = MutableStateFlow("")
 
+    // PREMIUM EXTRA FEATURES STATES (Shared Preferences Backed)
+    private val prefs = application.getSharedPreferences("permesso_extra_prefs", android.content.Context.MODE_PRIVATE)
+
+    private val _selectedLanguage = MutableStateFlow(prefs.getString("selected_language", "it") ?: "it")
+    val selectedLanguage: StateFlow<String> = _selectedLanguage.asStateFlow()
+
+    private val _onboardingCompleted = MutableStateFlow(prefs.getBoolean("onboarding_completed", false))
+    val onboardingCompleted: StateFlow<Boolean> = _onboardingCompleted.asStateFlow()
+
+    private val _selectedProvince = MutableStateFlow(prefs.getString("selected_province", "Milano") ?: "Milano")
+    val selectedProvince: StateFlow<String> = _selectedProvince.asStateFlow()
+
+    private val _appointmentDate = MutableStateFlow(prefs.getString("appointment_date", "") ?: "")
+    val appointmentDate: StateFlow<String> = _appointmentDate.asStateFlow()
+
+    private val _appointmentTime = MutableStateFlow(prefs.getString("appointment_time", "") ?: "")
+    val appointmentTime: StateFlow<String> = _appointmentTime.asStateFlow()
+
+    private val _appointmentLocation = MutableStateFlow(prefs.getString("appointment_location", "Questura di Milano") ?: "Questura di Milano")
+    val appointmentLocation: StateFlow<String> = _appointmentLocation.asStateFlow()
+
+    private val _checkedDocs = MutableStateFlow<Set<String>>(
+        prefs.getStringSet("checked_docs", emptySet()) ?: emptySet()
+    )
+    val checkedDocs: StateFlow<Set<String>> = _checkedDocs.asStateFlow()
+
     init {
         viewModelScope.launch {
             // Check if there are existing credentials in DB first directly
@@ -64,6 +90,44 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
         
         // Start background worker
         WorkScheduler.scheduleDailyCheck(application)
+    }
+
+    // EXTRA FEATURE HANDLERS
+    fun selectLanguage(langCode: String) {
+        _selectedLanguage.value = langCode
+        prefs.edit().putString("selected_language", langCode).apply()
+    }
+
+    fun completeOnboarding() {
+        _onboardingCompleted.value = true
+        prefs.edit().putBoolean("onboarding_completed", true).apply()
+    }
+
+    fun selectProvince(province: String) {
+        _selectedProvince.value = province
+        prefs.edit().putString("selected_province", province).apply()
+    }
+
+    fun updateAppointment(date: String, time: String, location: String) {
+        _appointmentDate.value = date
+        _appointmentTime.value = time
+        _appointmentLocation.value = location
+        prefs.edit()
+            .putString("appointment_date", date)
+            .putString("appointment_time", time)
+            .putString("appointment_location", location)
+            .apply()
+    }
+
+    fun toggleDocument(docId: String) {
+        val current = _checkedDocs.value.toMutableSet()
+        if (current.contains(docId)) {
+            current.remove(docId)
+        } else {
+            current.add(docId)
+        }
+        _checkedDocs.value = current
+        prefs.edit().putStringSet("checked_docs", current).apply()
     }
 
     fun saveCredentials() {

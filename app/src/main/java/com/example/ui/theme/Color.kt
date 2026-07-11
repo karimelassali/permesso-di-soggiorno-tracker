@@ -1,6 +1,8 @@
 package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.Composable
+import androidx.compose.foundation.isSystemInDarkTheme
 
 // Brand Semantic Colors
 val ItalianNavy = Color(0xFF0C2340)
@@ -19,18 +21,18 @@ val ItalianGreenLight = Color(0xFFE8F5E9)
 val ItalianRedLight = Color(0xFFFFEBEE)
 
 // Bento Grid Palette Colors
-val BentoBackground = Color(0xFFF5F7F6)
-val BentoTextPrimary = Color(0xFF1E293B)
-val BentoTextSecondary = Color(0xFF64748B)
-val BentoTextHeading = Color(0xFF0F172A)
-val BentoCardPrimaryBg = Color(0xFFE8F5E9)
-val BentoCardPrimaryText = Color(0xFF1B5E20)
+val BentoBackground @Composable get() = if (isSystemInDarkTheme()) DarkBackground else Color(0xFFF5F7F6)
+val BentoTextPrimary @Composable get() = if (isSystemInDarkTheme()) DarkOnBackground else Color(0xFF1E293B)
+val BentoTextSecondary @Composable get() = if (isSystemInDarkTheme()) Color(0xFF94A3B8) else Color(0xFF64748B)
+val BentoTextHeading @Composable get() = if (isSystemInDarkTheme()) DarkOnSurface else Color(0xFF0F172A)
+val BentoCardPrimaryBg @Composable get() = if (isSystemInDarkTheme()) Color(0xFF1B3B2B) else Color(0xFFE8F5E9)
+val BentoCardPrimaryText @Composable get() = if (isSystemInDarkTheme()) Color(0xFFA5D6A7) else Color(0xFF1B5E20)
 val BentoBadgeGreen = Color(0xFF008C45)
-val BentoBadgeGreenBg = Color(0xFFE8F5E9)
-val BentoCardBorder = Color(0xFFE2E8F0)
-val BentoCardLightBg = Color(0xFFF1F5F9)
-val BentoAvatarBg = Color(0xFFE2E8F0)
-val BentoAvatarBorder = Color(0xFF94A3B8)
+val BentoBadgeGreenBg @Composable get() = if (isSystemInDarkTheme()) Color(0xFF1B3B2B) else Color(0xFFE8F5E9)
+val BentoCardBorder @Composable get() = if (isSystemInDarkTheme()) Color(0xFF2D3748) else Color(0xFFE2E8F0)
+val BentoCardLightBg @Composable get() = if (isSystemInDarkTheme()) Color(0xFF1E2530) else Color(0xFFF1F5F9)
+val BentoAvatarBg @Composable get() = if (isSystemInDarkTheme()) Color(0xFF1C2541) else Color(0xFFE2E8F0)
+val BentoAvatarBorder @Composable get() = if (isSystemInDarkTheme()) Color(0xFF475569) else Color(0xFF94A3B8)
 val BentoAlertRed = Color(0xFFCD212A)
 
 val LightPrimary = Color(0xFF0F4C81) // Classic blue

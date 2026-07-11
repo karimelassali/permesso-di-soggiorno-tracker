@@ -16,6 +16,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -48,6 +50,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.StatusHistory
 import com.example.data.UserCredentials
 import com.example.ui.theme.*
+import com.example.util.Localization
+import com.example.util.AppLanguage
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -110,6 +114,7 @@ fun PermessoAppScreen(
     val credentials by viewModel.credentials.collectAsStateWithLifecycle()
     val historyList by viewModel.history.collectAsStateWithLifecycle()
     val checkState by viewModel.checkState.collectAsStateWithLifecycle()
+    val selectedLanguageCode by viewModel.selectedLanguage.collectAsStateWithLifecycle()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
@@ -124,7 +129,22 @@ fun PermessoAppScreen(
         }
     }
 
-    Scaffold(
+    val onboardingCompleted by viewModel.onboardingCompleted.collectAsStateWithLifecycle()
+
+    val layoutDirection = if (selectedLanguageCode == "ar") {
+        androidx.compose.ui.unit.LayoutDirection.Rtl
+    } else {
+        androidx.compose.ui.unit.LayoutDirection.Ltr
+    }
+
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides layoutDirection) {
+        if (!onboardingCompleted) {
+            OnboardingScreen(
+                viewModel = viewModel,
+                onComplete = { viewModel.completeOnboarding() }
+            )
+        } else {
+            Scaffold(
         topBar = {
             val initials = remember(credentials) {
                 val name = credentials?.fullName?.trim() ?: ""
@@ -153,7 +173,7 @@ fun PermessoAppScreen(
                                 modifier = Modifier.size(28.dp)
                             )
                             Text(
-                                text = "Permesso Soggiorno",
+                                text = Localization.string("app_name", selectedLanguageCode),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 20.sp,
                                 fontFamily = FontFamily.SansSerif,
@@ -206,7 +226,7 @@ fun PermessoAppScreen(
                         selected = selectedTabIndex == 0,
                         onClick = { selectedTabIndex = 0 },
                         icon = { Icon(Icons.Default.Home, contentDescription = "Dashboard") },
-                        label = { Text("Stato") },
+                        label = { Text(Localization.string("tab_status", selectedLanguageCode)) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = BentoCardPrimaryText,
                             selectedTextColor = BentoCardPrimaryText,
@@ -220,7 +240,7 @@ fun PermessoAppScreen(
                         selected = selectedTabIndex == 1,
                         onClick = { selectedTabIndex = 1 },
                         icon = { Icon(Icons.Default.Language, contentDescription = "Portale Web") },
-                        label = { Text("Portale") },
+                        label = { Text(Localization.string("tab_portal", selectedLanguageCode)) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = BentoCardPrimaryText,
                             selectedTextColor = BentoCardPrimaryText,
@@ -234,7 +254,7 @@ fun PermessoAppScreen(
                         selected = selectedTabIndex == 2,
                         onClick = { selectedTabIndex = 2 },
                         icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = "Dati Ricevuta") },
-                        label = { Text("Ricevuta") },
+                        label = { Text(Localization.string("tab_receipt", selectedLanguageCode)) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = BentoCardPrimaryText,
                             selectedTextColor = BentoCardPrimaryText,
@@ -243,6 +263,20 @@ fun PermessoAppScreen(
                             unselectedTextColor = BentoTextSecondary
                         ),
                         modifier = Modifier.testTag("nav_ricevuta")
+                    )
+                    NavigationBarItem(
+                        selected = selectedTabIndex == 3,
+                        onClick = { selectedTabIndex = 3 },
+                        icon = { Icon(Icons.Default.AccountCircle, contentDescription = "Profilo") },
+                        label = { Text(Localization.string("tab_profile", selectedLanguageCode)) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = BentoCardPrimaryText,
+                            selectedTextColor = BentoCardPrimaryText,
+                            indicatorColor = BentoAvatarBg,
+                            unselectedIconColor = BentoTextSecondary,
+                            unselectedTextColor = BentoTextSecondary
+                        ),
+                        modifier = Modifier.testTag("nav_profile")
                     )
                 }
             }
@@ -278,20 +312,38 @@ fun PermessoAppScreen(
                 .fillMaxSize()
         ) {
             when (selectedTabIndex) {
-                0 -> DashboardTab(
-                    credentials = credentials,
-                    history = historyList,
-                    checkState = checkState,
-                    onCheckNow = { viewModel.checkStatusNow() },
-                    onResetCheckState = { viewModel.resetCheckState() },
-                    onClearHistory = { viewModel.clearCheckHistory() },
-                    onGoToCredentials = { selectedTabIndex = 2 }
-                )
+                0 -> {
+                    val selectedProvince by viewModel.selectedProvince.collectAsStateWithLifecycle()
+                    val appointmentDate by viewModel.appointmentDate.collectAsStateWithLifecycle()
+                    val appointmentTime by viewModel.appointmentTime.collectAsStateWithLifecycle()
+                    val appointmentLocation by viewModel.appointmentLocation.collectAsStateWithLifecycle()
+                    val checkedDocs by viewModel.checkedDocs.collectAsStateWithLifecycle()
+
+                    DashboardTab(
+                        credentials = credentials,
+                        history = historyList,
+                        checkState = checkState,
+                        selectedProvince = selectedProvince,
+                        onProvinceSelected = { viewModel.selectProvince(it) },
+                        appointmentDate = appointmentDate,
+                        appointmentTime = appointmentTime,
+                        appointmentLocation = appointmentLocation,
+                        onUpdateAppointment = { d, t, l -> viewModel.updateAppointment(d, t, l) },
+                        checkedDocs = checkedDocs,
+                        onToggleDocument = { viewModel.toggleDocument(it) },
+                        onCheckNow = { viewModel.checkStatusNow() },
+                        onResetCheckState = { viewModel.resetCheckState() },
+                        onClearHistory = { viewModel.clearCheckHistory() },
+                        onGoToCredentials = { selectedTabIndex = 2 },
+                        selectedLanguageCode = selectedLanguageCode
+                    )
+                }
                 1 -> PortalWebViewTab(
                     credentials = credentials,
                     onStatusDetected = { poliziaStatus, portaleStatus ->
                         viewModel.updateLoggedStatus(poliziaStatus, portaleStatus)
-                    }
+                    },
+                    selectedLanguageCode = selectedLanguageCode
                 )
                 2 -> {
                     val formFullName by viewModel.formFullName.collectAsStateWithLifecycle()
@@ -314,11 +366,20 @@ fun PermessoAppScreen(
                         onSave = {
                             viewModel.saveCredentials()
                             selectedTabIndex = 0 // Go back to status check
-                        }
+                        },
+                        selectedLanguageCode = selectedLanguageCode
+                    )
+                }
+                3 -> {
+                    ProfileTab(
+                        viewModel = viewModel,
+                        selectedLanguageCode = selectedLanguageCode
                     )
                 }
             }
         }
+    }
+    }
     }
 }
 
@@ -327,13 +388,24 @@ fun DashboardTab(
     credentials: UserCredentials?,
     history: List<StatusHistory>,
     checkState: CheckUiState,
+    selectedProvince: String,
+    onProvinceSelected: (String) -> Unit,
+    appointmentDate: String,
+    appointmentTime: String,
+    appointmentLocation: String,
+    onUpdateAppointment: (String, String, String) -> Unit,
+    checkedDocs: Set<String>,
+    onToggleDocument: (String) -> Unit,
     onCheckNow: () -> Unit,
     onResetCheckState: () -> Unit,
     onClearHistory: () -> Unit,
-    onGoToCredentials: () -> Unit
+    onGoToCredentials: () -> Unit,
+    selectedLanguageCode: String
 ) {
     val hasCode = credentials != null && 
             (credentials.numeroAssicurata.isNotBlank() || credentials.numeroPratica.isNotBlank())
+
+    var activeSubTab by remember { mutableStateOf(0) }
 
     LazyColumn(
         modifier = Modifier
@@ -343,10 +415,10 @@ fun DashboardTab(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
     ) {
-        // Welcome and Header Card
+        // Welcome and Header Card (Always Visible)
         item {
             val name = credentials?.fullName?.trim() ?: ""
-            val greetName = if (name.isNotBlank()) name else "Amico"
+            val greetName = if (name.isNotBlank()) name else Localization.string("friend", selectedLanguageCode)
             val context = androidx.compose.ui.platform.LocalContext.current
             Row(
                 modifier = Modifier
@@ -364,9 +436,9 @@ fun DashboardTab(
                     )
                     val lastCheckedStr = if (credentials?.lastCheckedTime != 0L) {
                         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                        "Ultimo controllo: " + sdf.format(Date(credentials?.lastCheckedTime ?: 0L))
+                        Localization.string("last_checked", selectedLanguageCode, sdf.format(Date(credentials?.lastCheckedTime ?: 0L)))
                     } else {
-                        "Nessun controllo effettuato"
+                        Localization.string("no_checks", selectedLanguageCode)
                     }
                     Text(
                         text = lastCheckedStr,
@@ -380,8 +452,8 @@ fun DashboardTab(
                     onClick = {
                         com.example.util.NotificationHelper.showStatusNotification(
                             context,
-                            "Notifiche Attive 🔔",
-                            "Il sistema di monitoraggio automatico di PermessoSoggiorno è attivo!"
+                            Localization.string("notif_active", selectedLanguageCode),
+                            Localization.string("notif_active_desc", selectedLanguageCode)
                         )
                     },
                     border = BorderStroke(1.dp, BentoCardBorder),
@@ -395,190 +467,280 @@ fun DashboardTab(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Test", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(Localization.string("test_button", selectedLanguageCode), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        // BENTO CARD 1: Primary Status Card
-        item {
-            BentoPrimaryStatusCard(credentials = credentials)
-        }
-
-        // BENTO CARDS 2 & 3: Portale Status & Polizia Status side-by-side
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    BentoPortalStatusCard(credentials = credentials)
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    BentoPoliziaStatusCard(credentials = credentials)
-                }
-            }
-        }
-
-        // BENTO CARD 4: Credentials Card
-        item {
-            BentoCredentialsCard(credentials = credentials, onGoToCredentials = onGoToCredentials)
-        }
-
-        // Configuration request helper card (if !hasCode)
-        if (!hasCode) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = BentoAlertRed.copy(alpha = 0.08f)),
-                    border = BorderStroke(1.dp, BentoCardBorder)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Configurazione Richiesta",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = BentoAlertRed,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Start
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Inserisci il numero dell'assicurata per tracciare lo stato della tua pratica.",
-                            fontSize = 12.sp,
-                            color = BentoTextSecondary,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(
-                            onClick = onGoToCredentials,
-                            colors = ButtonDefaults.buttonColors(containerColor = BentoBadgeGreen),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp)
-                                .testTag("setup_ricevuta_btn")
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Configura Dati Ricevuta", fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                    }
-                }
-            }
-        } else {
-            // Controlla Ora full-width bento card action
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = BentoBadgeGreen),
-                    onClick = onCheckNow
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Controlla Ora",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            modifier = Modifier.testTag("check_status_btn")
-                        )
-                    }
-                }
-            }
-        }
-
-        // Status Feedback Dialog/Section
-        if (checkState !is CheckUiState.Idle) {
-            item {
-                CheckStateCard(checkState = checkState, onDismiss = onResetCheckState)
-            }
-        }
-
-        // Status check history logs section
+        // Sub-Tab Switcher Row (Always Visible)
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "Cronologia Controlli",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = BentoTextHeading
+                val subTabs = listOf(
+                    0 to Localization.string("subtab_status", selectedLanguageCode),
+                    1 to Localization.string("subtab_appointments", selectedLanguageCode),
+                    2 to Localization.string("subtab_stats", selectedLanguageCode)
                 )
-                if (history.isNotEmpty()) {
-                    TextButton(onClick = onClearHistory) {
-                        Icon(Icons.Default.Delete, contentDescription = "Cancella", modifier = Modifier.size(16.dp), tint = BentoBadgeGreen)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Cancella tutto", fontSize = 13.sp, color = BentoBadgeGreen)
+                subTabs.forEach { (index, title) ->
+                    val isSelected = activeSubTab == index
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isSelected) BentoBadgeGreen else MaterialTheme.colorScheme.surface)
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) Color.Transparent else BentoCardBorder,
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .clickable { activeSubTab = index }
+                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = title,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) Color.White else BentoTextSecondary,
+                            maxLines = 1,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             }
         }
 
-        if (history.isEmpty()) {
+        // SUB-TAB 0: Stato & Cronologia
+        if (activeSubTab == 0) {
+            // BENTO CARD 1: Primary Status Card
             item {
-                Card(
+                BentoPrimaryStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
+            }
+
+            // BENTO CARDS 2 & 3: Portale Status & Polizia Status side-by-side
+            item {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, BentoCardBorder)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(24.dp)
-                            .fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = "Nessuna cronologia",
-                            tint = BentoTextSecondary.copy(alpha = 0.5f),
-                            modifier = Modifier.size(44.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Nessun controllo registrato",
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 14.sp,
-                            color = BentoTextSecondary
-                        )
-                        Text(
-                            text = "I controlli automatici giornalieri e manuali appariranno qui.",
-                            fontSize = 12.sp,
-                            color = BentoTextSecondary.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
+                    Box(modifier = Modifier.weight(1f)) {
+                        BentoPortalStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        BentoPoliziaStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
                     }
                 }
             }
-        } else {
-            items(history) { record ->
-                HistoryRecordItem(record = record)
+
+            // PREMIUM FEATURE: Progressive Visual Timeline Stepper
+            if (credentials != null && credentials?.lastCheckedTime != 0L) {
+                item {
+                    BentoPermessoTimelineCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
+                }
+            }
+
+            // Configuration request helper card (if !hasCode)
+            if (!hasCode) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = BentoAlertRed.copy(alpha = 0.08f)),
+                        border = BorderStroke(1.dp, BentoCardBorder)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = Localization.string("config_required", selectedLanguageCode),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = BentoAlertRed,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Start
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = Localization.string("config_required_desc", selectedLanguageCode),
+                                fontSize = 12.sp,
+                                color = BentoTextSecondary,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = onGoToCredentials,
+                                colors = ButtonDefaults.buttonColors(containerColor = BentoBadgeGreen),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp)
+                                    .testTag("setup_ricevuta_btn")
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(Localization.string("config_receipt_btn", selectedLanguageCode), fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Controlla Ora full-width bento card action
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = BentoBadgeGreen),
+                        onClick = onCheckNow
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = Localization.string("button_check_now", selectedLanguageCode),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                modifier = Modifier.testTag("check_status_btn")
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Status Feedback Dialog/Section
+            if (checkState !is CheckUiState.Idle) {
+                item {
+                    CheckStateCard(checkState = checkState, onDismiss = onResetCheckState, selectedLanguageCode = selectedLanguageCode)
+                }
+            }
+
+            // Status check history logs section
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = Localization.string("history_title", selectedLanguageCode),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = BentoTextHeading
+                    )
+                    if (history.isNotEmpty()) {
+                        TextButton(onClick = onClearHistory) {
+                            Icon(Icons.Default.Delete, contentDescription = "Cancella", modifier = Modifier.size(16.dp), tint = BentoBadgeGreen)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(Localization.string("history_clear", selectedLanguageCode), fontSize = 13.sp, color = BentoBadgeGreen)
+                        }
+                    }
+                }
+            }
+
+            if (history.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(24.dp),
+                        border = BorderStroke(1.dp, BentoCardBorder)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .padding(24.dp)
+                                .fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "Nessuna cronologia",
+                                tint = BentoTextSecondary.copy(alpha = 0.5f),
+                                modifier = Modifier.size(44.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = Localization.string("no_history_recorded", selectedLanguageCode),
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp,
+                                color = BentoTextSecondary
+                            )
+                            Text(
+                                text = Localization.string("history_help_desc", selectedLanguageCode),
+                                fontSize = 12.sp,
+                                color = BentoTextSecondary.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(history) { record ->
+                    HistoryRecordItem(record = record, selectedLanguageCode = selectedLanguageCode)
+                }
+            }
+        }
+
+        // SUB-TAB 1: Appuntamenti & Strumenti
+        if (activeSubTab == 1) {
+            // PREMIUM FEATURE: Appointment countdown tracker & Document Vault checklist
+            item {
+                BentoAppointmentsAndVaultCard(
+                    appointmentDate = appointmentDate,
+                    appointmentTime = appointmentTime,
+                    appointmentLocation = appointmentLocation,
+                    onUpdateAppointment = onUpdateAppointment,
+                    checkedDocs = checkedDocs,
+                    onToggleDocument = onToggleDocument,
+                    selectedLanguageCode = selectedLanguageCode
+                )
+            }
+
+            // PREMIUM FEATURE: Interactive Status Interpreter & AI Advisor Chat Box
+            item {
+                BentoStatusAdvisorCard(selectedLanguageCode = selectedLanguageCode)
+            }
+        }
+
+        // SUB-TAB 2: Statistiche, Portali & Credenziali
+        if (activeSubTab == 2) {
+            // PREMIUM FEATURE: Community Waiting Estimations & Comparative Stats
+            item {
+                BentoCommunityStatsCard(
+                    selectedProvince = selectedProvince,
+                    onProvinceSelected = onProvinceSelected,
+                    selectedLanguageCode = selectedLanguageCode
+                )
+            }
+
+            // PREMIUM FEATURE: Portal monitoring & secure anti-scam advice
+            item {
+                BentoPortalMonitorCard(selectedLanguageCode = selectedLanguageCode)
+            }
+
+            // BENTO CARD 4: Credentials Card
+            item {
+                BentoCredentialsCard(credentials = credentials, onGoToCredentials = onGoToCredentials, selectedLanguageCode = selectedLanguageCode)
             }
         }
     }
 }
 
 @Composable
-fun BentoPrimaryStatusCard(credentials: UserCredentials?) {
+fun BentoPrimaryStatusCard(credentials: UserCredentials?, selectedLanguageCode: String) {
     val hasPolizia = credentials != null && 
             (credentials.numeroAssicurata.isNotBlank() || credentials.numeroPratica.isNotBlank())
     val hasPortale = credentials != null && 
@@ -599,20 +761,20 @@ fun BentoPrimaryStatusCard(credentials: UserCredentials?) {
             } else if (portaleStatus != "No checks yet") {
                 portaleStatus
             } else {
-                "In attesa di controllo"
+                Localization.string("awaiting_check", selectedLanguageCode)
             }
         }
         hasPolizia -> {
-            if (poliziaStatus != "No checks yet") poliziaStatus else "In attesa di controllo"
+            if (poliziaStatus != "No checks yet") poliziaStatus else Localization.string("awaiting_check", selectedLanguageCode)
         }
         hasPortale -> {
-            if (portaleStatus != "No checks yet") portaleStatus else "In attesa di controllo"
+            if (portaleStatus != "No checks yet") portaleStatus else Localization.string("awaiting_check", selectedLanguageCode)
         }
-        else -> "Configurazione richiesta"
+        else -> Localization.string("config_required", selectedLanguageCode)
     }
 
     val statusLabel = if (credentials == null || (!hasPolizia && !hasPortale)) {
-        "Da configurare"
+        Localization.string("tracking_to_configure", selectedLanguageCode)
     } else {
         combinedStatus
     }
@@ -661,7 +823,7 @@ fun BentoPrimaryStatusCard(credentials: UserCredentials?) {
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = if (isActiveTracking) "Tracciamento Attivo" else "Da Configurare",
+                        text = if (isActiveTracking) Localization.string("tracking_active", selectedLanguageCode) else Localization.string("tracking_to_configure", selectedLanguageCode),
                         color = BentoBadgeGreen,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -672,7 +834,7 @@ fun BentoPrimaryStatusCard(credentials: UserCredentials?) {
 
             Column {
                 Text(
-                    text = "Stato Documento",
+                    text = Localization.string("document_status", selectedLanguageCode),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = BentoTextSecondary
@@ -689,19 +851,19 @@ fun BentoPrimaryStatusCard(credentials: UserCredentials?) {
 }
 
 @Composable
-fun BentoPortalStatusCard(credentials: UserCredentials?) {
+fun BentoPortalStatusCard(credentials: UserCredentials?, selectedLanguageCode: String) {
     val hasCredentials = credentials != null && 
             credentials.userId.isNotBlank() && credentials.password.isNotBlank()
 
     val statusText = credentials?.lastPortaleStatus ?: "No checks yet"
     val (titleText, descText) = when {
-        !hasCredentials -> Pair("Non Attivo", "Configura credenziali")
-        statusText == "No checks yet" -> Pair("Non Verificato", "Fai un controllo manuale o automatico")
+        !hasCredentials -> Pair(Localization.string("not_active", selectedLanguageCode), Localization.string("configure_credentials_desc", selectedLanguageCode))
+        statusText == "No checks yet" -> Pair(Localization.string("not_verified", selectedLanguageCode), Localization.string("manual_check_desc", selectedLanguageCode))
         statusText.contains(" - ") -> {
             val parts = statusText.split(" - ", limit = 2)
             Pair(parts[0], parts[1])
         }
-        else -> Pair("Stato", statusText)
+        else -> Pair(Localization.string("status", selectedLanguageCode), statusText)
     }
 
     Card(
@@ -719,7 +881,7 @@ fun BentoPortalStatusCard(credentials: UserCredentials?) {
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "STATO PORTALE",
+                text = Localization.string("portal_status_header", selectedLanguageCode),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = BentoAvatarBorder,
@@ -759,7 +921,7 @@ fun BentoPortalStatusCard(credentials: UserCredentials?) {
                         .background(dotColor)
                 )
                 Text(
-                    text = "Portale Immigrazione",
+                    text = Localization.string("immigration_portal", selectedLanguageCode),
                     fontSize = 10.sp,
                     color = BentoTextSecondary,
                     fontWeight = FontWeight.Medium
@@ -770,16 +932,16 @@ fun BentoPortalStatusCard(credentials: UserCredentials?) {
 }
 
 @Composable
-fun BentoPoliziaStatusCard(credentials: UserCredentials?) {
+fun BentoPoliziaStatusCard(credentials: UserCredentials?, selectedLanguageCode: String) {
     val statusText = credentials?.lastPoliziaStatus ?: "No checks yet"
     val hasCode = credentials != null && 
             (credentials.numeroAssicurata.isNotBlank() || credentials.numeroPratica.isNotBlank())
 
     val (titleText, descText) = when {
-        !hasCode -> Pair("Non Attivo", "Configura ricevuta")
-        statusText == "No checks yet" -> Pair("Non Verificato", "Fai un controllo manuale")
-        statusText.contains("consegna", ignoreCase = true) || statusText.contains("Pronto", ignoreCase = true) -> Pair("Pronto", statusText)
-        else -> Pair("In Trattazione", statusText)
+        !hasCode -> Pair(Localization.string("not_active", selectedLanguageCode), Localization.string("configure_receipt_desc", selectedLanguageCode))
+        statusText == "No checks yet" -> Pair(Localization.string("not_verified", selectedLanguageCode), Localization.string("manual_check_desc", selectedLanguageCode))
+        statusText.contains("consegna", ignoreCase = true) || statusText.contains("Pronto", ignoreCase = true) -> Pair(Localization.string("ready", selectedLanguageCode), statusText)
+        else -> Pair(Localization.string("in_processing", selectedLanguageCode), statusText)
     }
 
     val isReady = statusText.contains("Pronto", ignoreCase = true) || statusText.contains("consegna", ignoreCase = true)
@@ -799,7 +961,7 @@ fun BentoPoliziaStatusCard(credentials: UserCredentials?) {
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "POLIZIA STATO",
+                text = Localization.string("state_police_header", selectedLanguageCode),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = BentoAvatarBorder,
@@ -834,10 +996,10 @@ fun BentoPoliziaStatusCard(credentials: UserCredentials?) {
                     else -> Color(0xFFFF9800) // Amber
                 }
                 val label = when {
-                    !hasCode -> "Nessun codice"
-                    statusText == "No checks yet" -> "Non controllato"
-                    isReady -> "Pronto per il ritiro"
-                    else -> "In trattazione"
+                    !hasCode -> Localization.string("no_code", selectedLanguageCode)
+                    statusText == "No checks yet" -> Localization.string("not_checked", selectedLanguageCode)
+                    isReady -> Localization.string("ready_for_pickup", selectedLanguageCode)
+                    else -> Localization.string("in_processing", selectedLanguageCode)
                 }
 
                 Box(
@@ -860,7 +1022,8 @@ fun BentoPoliziaStatusCard(credentials: UserCredentials?) {
 @Composable
 fun BentoCredentialsCard(
     credentials: UserCredentials?,
-    onGoToCredentials: () -> Unit
+    onGoToCredentials: () -> Unit,
+    selectedLanguageCode: String
 ) {
     val maskedUser = remember(credentials?.userId) {
         val uid = credentials?.userId ?: ""
@@ -873,7 +1036,8 @@ fun BentoCredentialsCard(
         }
     }
 
-    val passLabel = if (credentials?.password?.isNotBlank() == true) "••••••••" else "Non inserita"
+    val passLabel = if (credentials?.password?.isNotBlank() == true) "••••••••" else Localization.string("not_entered_f", selectedLanguageCode)
+    val userDisplay = if (maskedUser == "Non inserito") Localization.string("not_entered", selectedLanguageCode) else maskedUser
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -906,13 +1070,13 @@ fun BentoCredentialsCard(
             // Text details
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Account Sicuro",
+                    text = Localization.string("secure_account", selectedLanguageCode),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = BentoTextHeading
                 )
                 Text(
-                    text = "User: $maskedUser • Pass: $passLabel",
+                    text = Localization.string("credentials_summary", selectedLanguageCode, userDisplay, passLabel),
                     fontSize = 12.sp,
                     color = BentoTextSecondary
                 )
@@ -928,7 +1092,7 @@ fun BentoCredentialsCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = "Modifica credenziali",
+                    contentDescription = Localization.string("edit_credentials_desc", selectedLanguageCode),
                     tint = BentoTextHeading,
                     modifier = Modifier.size(18.dp)
                 )
@@ -938,7 +1102,7 @@ fun BentoCredentialsCard(
 }
 
 @Composable
-fun BiometricPermessoCard(credentials: UserCredentials?) {
+fun BiometricPermessoCard(credentials: UserCredentials?, selectedLanguageCode: String) {
     val statusText = credentials?.lastPoliziaStatus ?: "Nessun controllo effettuato"
     val isReady = statusText.contains("Pronto", ignoreCase = true)
     val isNotFound = statusText.contains("Non presente", ignoreCase = true)
@@ -1006,7 +1170,7 @@ fun BiometricPermessoCard(credentials: UserCredentials?) {
                             letterSpacing = 1.sp
                         )
                         Text(
-                            text = "PERMESSO DI SOGGIORNO",
+                            text = Localization.string("residency_permit", selectedLanguageCode),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.primary,
@@ -1030,7 +1194,7 @@ fun BiometricPermessoCard(credentials: UserCredentials?) {
                 // Middle: Display user code and names
                 Column {
                     Text(
-                        text = credentials?.fullName?.uppercase() ?: "INTESTATARIO DA CONFIGURARE",
+                        text = credentials?.fullName?.uppercase() ?: Localization.string("holder_not_configured", selectedLanguageCode),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -1040,10 +1204,10 @@ fun BiometricPermessoCard(credentials: UserCredentials?) {
                     val postCode = credentials?.numeroAssicurata ?: ""
                     val questuraCode = credentials?.numeroPratica ?: ""
                     val displayCode = when {
-                        postCode.isNotBlank() && questuraCode.isNotBlank() -> "Assicurata: $postCode | Pratica: $questuraCode"
-                        postCode.isNotBlank() -> "Assicurata: $postCode"
-                        questuraCode.isNotBlank() -> "Numero Pratica: $questuraCode"
-                        else -> "Nessun codice registrato"
+                        postCode.isNotBlank() && questuraCode.isNotBlank() -> Localization.string("code_both", selectedLanguageCode, postCode, questuraCode)
+                        postCode.isNotBlank() -> Localization.string("code_assicurata", selectedLanguageCode, postCode)
+                        questuraCode.isNotBlank() -> Localization.string("code_pratica", selectedLanguageCode, questuraCode)
+                        else -> Localization.string("no_code_registered", selectedLanguageCode)
                     }
 
                     Text(
@@ -1062,7 +1226,7 @@ fun BiometricPermessoCard(credentials: UserCredentials?) {
                 ) {
                     Column {
                         Text(
-                            text = "ULTIMO CONTROLLO",
+                            text = Localization.string("last_checked_header", selectedLanguageCode),
                             fontSize = 9.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
@@ -1070,7 +1234,7 @@ fun BiometricPermessoCard(credentials: UserCredentials?) {
                             val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                             sdf.format(Date(credentials?.lastCheckedTime ?: 0L))
                         } else {
-                            "Mai controllato"
+                            Localization.string("never_checked", selectedLanguageCode)
                         }
                         Text(
                             text = lastCheckedStr,
@@ -1111,7 +1275,8 @@ fun BiometricPermessoCard(credentials: UserCredentials?) {
 @Composable
 fun CheckStateCard(
     checkState: CheckUiState,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    selectedLanguageCode: String
 ) {
     val isSuccess = checkState is CheckUiState.Success
     val isError = checkState is CheckUiState.Error
@@ -1152,17 +1317,17 @@ fun CheckStateCard(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Interrogazione portale...", fontWeight = FontWeight.Bold, color = contentColor)
+                            Text(Localization.string("querying_portal", selectedLanguageCode), fontWeight = FontWeight.Bold, color = contentColor)
                         }
                         is CheckUiState.Success -> {
                             Icon(Icons.Default.CheckCircle, contentDescription = "Success", tint = Color.White)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Risposta Ricevuta!", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(Localization.string("response_received", selectedLanguageCode), fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         is CheckUiState.Error -> {
                             Icon(Icons.Default.Error, contentDescription = "Errore", tint = Color.White)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Errore Controllo", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(Localization.string("check_error", selectedLanguageCode), fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         else -> {}
                     }
@@ -1206,7 +1371,7 @@ fun CheckStateCard(
                 }
                 is CheckUiState.Loading -> {
                     Text(
-                        text = "Il sistema si sta connettendo ai portali ufficiali per analizzare lo stato della pratica...",
+                        text = Localization.string("querying_portal_desc", selectedLanguageCode),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1218,7 +1383,7 @@ fun CheckStateCard(
 }
 
 @Composable
-fun HistoryRecordItem(record: StatusHistory) {
+fun HistoryRecordItem(record: StatusHistory, selectedLanguageCode: String) {
     val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
     val dateStr = sdf.format(Date(record.timestamp))
 
@@ -1296,7 +1461,8 @@ fun HistoryRecordItem(record: StatusHistory) {
 @Composable
 fun PortalWebViewTab(
     credentials: UserCredentials?,
-    onStatusDetected: (String?, String?) -> Unit
+    onStatusDetected: (String?, String?) -> Unit,
+    selectedLanguageCode: String
 ) {
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var webProgress by remember { mutableIntStateOf(0) }
@@ -1325,7 +1491,7 @@ fun PortalWebViewTab(
             Tab(
                 selected = currentSite == 0,
                 onClick = { currentSite = 0 },
-                text = { Text("Portale Immigrazione", fontWeight = FontWeight.Bold, fontSize = 13.sp) },
+                text = { Text(Localization.string("immigration_portal", selectedLanguageCode), fontWeight = FontWeight.Bold, fontSize = 13.sp) },
                 icon = { Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(18.dp)) }
             )
             Tab(
@@ -1349,16 +1515,16 @@ fun PortalWebViewTab(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (currentSite == 0) "Portale Immigrazione (Sportello Amico)" else "Polizia di Stato (Questura)",
+                        text = if (currentSite == 0) Localization.string("portal_banner_immigrazione", selectedLanguageCode) else Localization.string("portal_banner_polizia", selectedLanguageCode),
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Text(
                         text = if (currentSite == 0) {
-                            "Premi Auto-fill per inserire automaticamente User ID e Password."
+                            Localization.string("portal_autofill_help_portale", selectedLanguageCode)
                         } else {
-                            "Premi Auto-fill per inserire automaticamente il Numero Assicurata."
+                            Localization.string("portal_autofill_help_polizia", selectedLanguageCode)
                         },
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
@@ -1659,6 +1825,7 @@ fun PortalWebViewTab(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CredentialsTab(
     fullName: String,
@@ -1671,7 +1838,8 @@ fun CredentialsTab(
     onNumeroAssicurataChange: (String) -> Unit,
     numeroPratica: String,
     onNumeroPraticaChange: (String) -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    selectedLanguageCode: String
 ) {
     var isPasswordVisible by remember { mutableStateOf(false) }
 
@@ -1680,17 +1848,17 @@ fun CredentialsTab(
             .fillMaxSize()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp)
+        contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)
     ) {
         // Info card explaining Italian permit receipts
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(12.dp)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.Top
                 ) {
                     Icon(
@@ -1699,20 +1867,19 @@ fun CredentialsTab(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Guida alla ricevuta (Cedolino)",
+                            text = Localization.string("guide_title", selectedLanguageCode),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "1. Il Numero Assicurata (12 cifre, es: 0608...) serve per controllare lo stato su Poste Italiane e Polizia di Stato.\n" +
-                                   "2. L'Area Riservata Stranieri usa l'ID utente (12 cifre, spesso l'assicurata senza l'ultima cifra o come stampato sulla ricevuta) e la Password (il codice di sicurezza sulla ricevuta dell'assicurata poste).",
+                            text = Localization.string("guide_body", selectedLanguageCode),
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
                             lineHeight = 16.sp
                         )
                     }
@@ -1720,126 +1887,1688 @@ fun CredentialsTab(
             }
         }
 
-        // Section header
+        // Card Section 1: Dati Personali & Portale
         item {
-            Text(
-                text = "Dati Personali",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        // Intestatario / Full Name
-        item {
-            OutlinedTextField(
-                value = fullName,
-                onValueChange = onFullNameChange,
-                label = { Text("Nome Completo dell'Intestatario") },
-                placeholder = { Text("Es: Mario Rossi") },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().testTag("input_fullname")
-            )
-        }
-
-        // Section header
-        item {
-            Text(
-                text = "Credenziali Portale Immigrazione",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        // User ID / Login (12 cifre)
-        item {
-            OutlinedTextField(
-                value = userId,
-                onValueChange = onUserIdChange,
-                label = { Text("User ID (12 Cifre ricevuta)") },
-                placeholder = { Text("Es: 061234567890") },
-                leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().testTag("input_userid")
-            )
-        }
-
-        // Password (da ricevuta)
-        item {
-            OutlinedTextField(
-                value = password,
-                onValueChange = onPasswordChange,
-                label = { Text("Password Portale") },
-                placeholder = { Text("Codice di sicurezza (es: 12ab34...)") },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                trailingIcon = {
-                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+            Card(
+                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = "Mostra password"
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = Localization.string("portal_data_title", selectedLanguageCode),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = BentoTextHeading
                         )
                     }
-                },
-                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().testTag("input_password")
-            )
+
+                    Text(
+                        text = Localization.string("portal_data_desc", selectedLanguageCode),
+                        fontSize = 12.sp,
+                        color = BentoTextSecondary
+                    )
+
+                    OutlinedTextField(
+                        value = fullName,
+                        onValueChange = onFullNameChange,
+                        label = { Text(Localization.string("input_fullname", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("input_fullname_placeholder", selectedLanguageCode)) },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("input_fullname")
+                    )
+
+                    OutlinedTextField(
+                        value = userId,
+                        onValueChange = onUserIdChange,
+                        label = { Text(Localization.string("input_userid", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("input_userid_placeholder", selectedLanguageCode)) },
+                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("input_userid")
+                    )
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = onPasswordChange,
+                        label = { Text(Localization.string("input_password", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("input_password_placeholder", selectedLanguageCode)) },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = Localization.string("show_password_desc", selectedLanguageCode),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        },
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("input_password")
+                    )
+                }
+            }
         }
 
-        // Section header
+        // Card Section 2: Polizia di Stato
         item {
-            Text(
-                text = "Codici per Verifica Polizia di Stato",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+            Card(
+                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = Localization.string("polizia_tracking_title", selectedLanguageCode),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = BentoTextHeading
+                        )
+                    }
 
-        // Numero Assicurata (Poste)
-        item {
-            OutlinedTextField(
-                value = numeroAssicurata,
-                onValueChange = onNumeroAssicurataChange,
-                label = { Text("Numero Assicurata (12 cifre)") },
-                placeholder = { Text("Es: 060812345678") },
-                leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().testTag("input_assicurata")
-            )
-        }
+                    Text(
+                        text = Localization.string("polizia_tracking_desc", selectedLanguageCode),
+                        fontSize = 12.sp,
+                        color = BentoTextSecondary
+                    )
 
-        // Numero Pratica (Questura)
-        item {
-            OutlinedTextField(
-                value = numeroPratica,
-                onValueChange = onNumeroPraticaChange,
-                label = { Text("Numero Pratica Questura (Opzionale)") },
-                placeholder = { Text("Es: MI01234567") },
-                leadingIcon = { Icon(Icons.Default.Assignment, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().testTag("input_pratica")
-            )
+                    OutlinedTextField(
+                        value = numeroAssicurata,
+                        onValueChange = onNumeroAssicurataChange,
+                        label = { Text(Localization.string("input_assicurata", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("input_assicurata_placeholder", selectedLanguageCode)) },
+                        leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("input_assicurata")
+                    )
+
+                    OutlinedTextField(
+                        value = numeroPratica,
+                        onValueChange = onNumeroPraticaChange,
+                        label = { Text(Localization.string("input_pratica", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("input_pratica_placeholder", selectedLanguageCode)) },
+                        leadingIcon = { Icon(Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("input_pratica")
+                    )
+                }
+            }
         }
 
         // Save Button
         item {
             Button(
                 onClick = onSave,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = ItalianGreen),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp)
-                    .height(50.dp)
+                    .height(54.dp)
                     .testTag("save_creds_btn")
             ) {
-                Icon(Icons.Default.Save, contentDescription = null)
+                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Salva e Attiva Notifiche", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(Localization.string("button_save", selectedLanguageCode), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
     }
 }
+
+@Composable
+fun BentoPermessoTimelineCard(credentials: UserCredentials?, selectedLanguageCode: String) {
+    val polStatus = credentials?.lastPoliziaStatus?.lowercase(Locale.getDefault()) ?: ""
+    val portStatus = credentials?.lastPortaleStatus?.lowercase(Locale.getDefault()) ?: ""
+    
+    val currentStep = when {
+        polStatus.contains("consegna") || polStatus.contains("pronto") -> 5
+        polStatus.contains("produzione") || portStatus.contains("stampa") || portStatus.contains("step 3") -> 4
+        polStatus.contains("trattazione") || portStatus.contains("step 2") || portStatus.contains("istruttoria") -> 3
+        portStatus.contains("step 1") || credentials?.numeroAssicurata?.isNotBlank() == true -> 2
+        else -> 1
+    }
+
+    val stepLabels = listOf(
+        Localization.string("step_1_poste", selectedLanguageCode) to Localization.string("step_1_received", selectedLanguageCode),
+        Localization.string("step_2_questura", selectedLanguageCode) to Localization.string("step_2_fingerprinting", selectedLanguageCode),
+        Localization.string("step_3_processing", selectedLanguageCode) to Localization.string("step_3_under_investigation", selectedLanguageCode),
+        Localization.string("step_4_printing", selectedLanguageCode) to Localization.string("step_4_in_production", selectedLanguageCode),
+        Localization.string("step_5_delivery", selectedLanguageCode) to Localization.string("step_5_ready", selectedLanguageCode)
+    )
+
+    val explanation = when (currentStep) {
+        1 -> Localization.string("timeline_desc_1", selectedLanguageCode)
+        2 -> Localization.string("timeline_desc_2", selectedLanguageCode)
+        3 -> Localization.string("timeline_desc_3", selectedLanguageCode)
+        4 -> Localization.string("timeline_desc_4", selectedLanguageCode)
+        5 -> Localization.string("timeline_desc_5", selectedLanguageCode)
+        else -> Localization.string("timeline_desc_inactive", selectedLanguageCode)
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp))
+            .testTag("timeline_card"),
+        colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Timeline,
+                    contentDescription = "Timeline",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = Localization.string("timeline_card_title", selectedLanguageCode),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = BentoTextHeading
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Stepper Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                stepLabels.forEachIndexed { index, pair ->
+                    val stepNum = index + 1
+                    val isCompleted = stepNum < currentStep
+                    val isActive = stepNum == currentStep
+                    
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when {
+                                        isCompleted -> ItalianGreen.copy(alpha = 0.2f)
+                                        isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                        else -> BentoCardBorder
+                                    }
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = when {
+                                        isCompleted -> ItalianGreen
+                                        isActive -> MaterialTheme.colorScheme.primary
+                                        else -> Color.Gray.copy(alpha = 0.4f)
+                                    },
+                                    shape = CircleShape
+                                )
+                        ) {
+                            if (isCompleted) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Done",
+                                    tint = ItalianGreen,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = stepNum.toString(),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = pair.first,
+                            fontSize = 10.sp,
+                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isActive) MaterialTheme.colorScheme.primary else BentoTextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = pair.second,
+                            fontSize = 9.sp,
+                            color = if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else BentoTextSecondary.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    
+                    if (index < stepLabels.size - 1) {
+                        Box(
+                            modifier = Modifier
+                                .weight(0.5f)
+                                .height(2.dp)
+                                .background(
+                                    if (stepNum < currentStep) ItalianGreen else Color.Gray.copy(alpha = 0.3f)
+                                )
+                                .align(Alignment.CenterVertically)
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Explanation box
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = Localization.string("current_status_explanation", selectedLanguageCode),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = explanation,
+                        fontSize = 12.sp,
+                        color = BentoTextPrimary,
+                        lineHeight = 16.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BentoCommunityStatsCard(
+    selectedProvince: String,
+    onProvinceSelected: (String) -> Unit,
+    selectedLanguageCode: String
+) {
+    val provinces = listOf("Milano", "Roma", "Torino", "Firenze", "Bologna", "Bergamo", "Piacenza")
+    
+    val stats = when (selectedProvince) {
+        "Milano" -> Triple("4.2", "3.8", "8.0")
+        "Roma" -> Triple("5.5", "4.5", "10.0")
+        "Torino" -> Triple("3.9", "3.5", "7.4")
+        "Firenze" -> Triple("4.5", "4.0", "8.5")
+        "Bologna" -> Triple("3.5", "3.0", "6.5")
+        "Bergamo" -> Triple("3.0", "2.5", "5.5")
+        else -> Triple("4.8", "3.9", "8.7")
+    }
+
+    val monthsLabel = when(selectedLanguageCode) {
+        "en" -> "months"
+        "es" -> "meses"
+        "fr" -> "mois"
+        "ar" -> "أشهر"
+        else -> "mesi"
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp))
+            .testTag("community_stats_card"),
+        colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Groups,
+                        contentDescription = "Community",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = Localization.string("community_wait_estimates_title", selectedLanguageCode),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = BentoTextHeading
+                    )
+                }
+                
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = Localization.string("live_estimates", selectedLanguageCode),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = Localization.string("select_province_stats_desc", selectedLanguageCode),
+                fontSize = 12.sp,
+                color = BentoTextSecondary
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Horizontal scroll of Provinces
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                provinces.forEach { province ->
+                    val isSelected = province == selectedProvince
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onProvinceSelected(province) },
+                        label = { Text(province) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(14.dp))
+            
+            // Grid of stats
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(Localization.string("wait_fingerprints", selectedLanguageCode), fontSize = 10.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("${stats.first} $monthsLabel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(Localization.string("wait_post_to_fingerprints", selectedLanguageCode), fontSize = 8.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
+                    }
+                }
+                
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(Localization.string("wait_printing", selectedLanguageCode), fontSize = 10.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("${stats.second} $monthsLabel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(Localization.string("wait_fingerprints_to_ready", selectedLanguageCode), fontSize = 8.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
+                    }
+                }
+                
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(Localization.string("wait_total", selectedLanguageCode), fontSize = 10.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("${stats.third} $monthsLabel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(Localization.string("global_average", selectedLanguageCode), fontSize = 8.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(14.dp))
+            
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PersonSearch,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = Localization.string("people_like_you", selectedLanguageCode, selectedProvince),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = Localization.string("people_like_you_desc", selectedLanguageCode),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BentoStatusAdvisorCard(selectedLanguageCode: String) {
+    var selectedQuestionIndex by remember { mutableStateOf<Int?>(null) }
+    
+    val questions = listOf(
+        Localization.string("advisor_q1", selectedLanguageCode) to Localization.string("advisor_a1", selectedLanguageCode),
+        Localization.string("advisor_q2", selectedLanguageCode) to Localization.string("advisor_a2", selectedLanguageCode),
+        Localization.string("advisor_q3", selectedLanguageCode) to Localization.string("advisor_a3", selectedLanguageCode),
+        Localization.string("advisor_q4", selectedLanguageCode) to Localization.string("advisor_a4", selectedLanguageCode)
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp))
+            .testTag("status_advisor_card"),
+        colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.SupportAgent,
+                    contentDescription = "Advisor",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = Localization.string("ai_advisor_title", selectedLanguageCode),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = BentoTextHeading
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = Localization.string("ai_advisor_desc", selectedLanguageCode),
+                fontSize = 12.sp,
+                color = BentoTextSecondary
+            )
+            
+            Spacer(modifier = Modifier.height(10.dp))
+            
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                questions.forEachIndexed { index, pair ->
+                    val isExpanded = selectedQuestionIndex == index
+                    
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedQuestionIndex = if (isExpanded) null else index },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isExpanded) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
+                                             else MaterialTheme.colorScheme.surface
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = pair.first,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isExpanded) MaterialTheme.colorScheme.primary else BentoTextPrimary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Toggle",
+                                    tint = if (isExpanded) MaterialTheme.colorScheme.primary else BentoTextSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            
+                            if (isExpanded) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = pair.second,
+                                    fontSize = 11.sp,
+                                    color = BentoTextPrimary,
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BentoAppointmentsAndVaultCard(
+    appointmentDate: String,
+    appointmentTime: String,
+    appointmentLocation: String,
+    onUpdateAppointment: (String, String, String) -> Unit,
+    checkedDocs: Set<String>,
+    onToggleDocument: (String) -> Unit,
+    selectedLanguageCode: String
+) {
+    var showEditDialog by remember { mutableStateOf(false) }
+    
+    val documents = listOf(
+        "pass" to Localization.string("doc_passport", selectedLanguageCode),
+        "rec" to Localization.string("doc_receipt", selectedLanguageCode),
+        "marca" to Localization.string("doc_revenue_stamp", selectedLanguageCode),
+        "photo" to Localization.string("doc_photos", selectedLanguageCode),
+        "res" to Localization.string("doc_accommodation", selectedLanguageCode),
+        "work" to Localization.string("doc_work_contract", selectedLanguageCode)
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp))
+            .testTag("appointment_vault_card"),
+        colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Section 1: Appointment Countdown
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = "Calendar",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = Localization.string("questura_appointments_title", selectedLanguageCode),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = BentoTextHeading
+                    )
+                }
+                
+                IconButton(
+                    onClick = { showEditDialog = true },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = Localization.string("edit_appointment_desc", selectedLanguageCode),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            if (appointmentDate.isNotBlank()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = Localization.string("next_appointment", selectedLanguageCode),
+                                fontSize = 10.sp,
+                                color = BentoTextSecondary
+                            )
+                            Text(
+                                text = Localization.string("appointment_formatted", selectedLanguageCode, appointmentDate, appointmentTime),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = appointmentLocation,
+                                fontSize = 11.sp,
+                                color = BentoTextSecondary
+                            )
+                        }
+                        
+                        Icon(
+                            imageVector = Icons.Default.EventAvailable,
+                            contentDescription = "Confirmed",
+                            tint = ItalianGreen,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            } else {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { showEditDialog = true }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = Localization.string("no_appointment_desc", selectedLanguageCode),
+                            fontSize = 12.sp,
+                            color = BentoTextSecondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.AddCircleOutline,
+                            contentDescription = "Add",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Section 2: Document Vault Checklist
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Folder,
+                    contentDescription = "Vault",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = Localization.string("doc_vault_title", selectedLanguageCode),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = BentoTextHeading
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = Localization.string("doc_vault_desc", selectedLanguageCode),
+                fontSize = 12.sp,
+                color = BentoTextSecondary
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            
+            // Checklist grid
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                documents.forEach { (id, label) ->
+                    val isChecked = checkedDocs.contains(id)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (isChecked) MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                                else MaterialTheme.colorScheme.surface
+                            )
+                            .clickable { onToggleDocument(id) }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = isChecked,
+                            onCheckedChange = { onToggleDocument(id) },
+                            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = label,
+                            fontSize = 12.sp,
+                            color = if (isChecked) BentoTextPrimary else BentoTextPrimary.copy(alpha = 0.8f),
+                            fontWeight = if (isChecked) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+    
+    if (showEditDialog) {
+        var dateVal by remember { mutableStateOf(appointmentDate) }
+        var timeVal by remember { mutableStateOf(appointmentTime) }
+        var locVal by remember { mutableStateOf(appointmentLocation) }
+        
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text(Localization.string("appointment_details_title", selectedLanguageCode), fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = dateVal,
+                        onValueChange = { dateVal = it },
+                        label = { Text(Localization.string("appointment_date_label", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("appointment_date_placeholder", selectedLanguageCode)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = timeVal,
+                        onValueChange = { timeVal = it },
+                        label = { Text(Localization.string("appointment_time_label", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("appointment_time_placeholder", selectedLanguageCode)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = locVal,
+                        onValueChange = { locVal = it },
+                        label = { Text(Localization.string("appointment_location_label", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("appointment_location_placeholder", selectedLanguageCode)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateAppointment(dateVal, timeVal, locVal)
+                        showEditDialog = false
+                    }
+                ) {
+                    Text(Localization.string("save", selectedLanguageCode))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text(Localization.string("cancel", selectedLanguageCode))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun BentoPortalMonitorCard(selectedLanguageCode: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp))
+            .testTag("portal_monitor_card"),
+        colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.RssFeed,
+                    contentDescription = "Monitor",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = Localization.string("portal_status_monitor_title", selectedLanguageCode),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = BentoTextHeading
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(ItalianGreen)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
+                            Text("Polizia di Stato", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(Localization.string("online_status", selectedLanguageCode), fontSize = 9.sp, color = ItalianGreen)
+                        }
+                    }
+                }
+                
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(ItalianGreen)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
+                            Text("Portale Immigrazione", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(Localization.string("online_status", selectedLanguageCode), fontSize = 9.sp, color = ItalianGreen)
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(14.dp))
+            
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Security,
+                        contentDescription = "Shield Security",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = Localization.string("anti_scam_warning_title", selectedLanguageCode),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = Localization.string("anti_scam_warning_desc", selectedLanguageCode),
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
+                            lineHeight = 14.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OnboardingScreen(
+    viewModel: PermessoViewModel,
+    onComplete: () -> Unit
+) {
+    var currentPage by remember { mutableIntStateOf(0) }
+    val selectedLanguageCode by viewModel.selectedLanguage.collectAsStateWithLifecycle()
+    
+    val name by viewModel.formFullName.collectAsStateWithLifecycle()
+    val userId by viewModel.formUserId.collectAsStateWithLifecycle()
+    val password by viewModel.formPassword.collectAsStateWithLifecycle()
+    val numeroAssicurata by viewModel.formNumeroAssicurata.collectAsStateWithLifecycle()
+    
+    var isPasswordVisible by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .windowInsetsPadding(WindowInsets.safeDrawing),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Top Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Fingerprint,
+                        contentDescription = null,
+                        tint = ItalianGreen,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Permesso Status Tracker",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                
+                if (currentPage < 3) {
+                    TextButton(onClick = { currentPage = 3 }) {
+                        Text(
+                            text = Localization.string("button_skip", selectedLanguageCode),
+                            color = ItalianGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+
+            // Central Content based on page
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                when (currentPage) {
+                    0 -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth().padding(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = null,
+                                tint = ItalianGreen,
+                                modifier = Modifier.size(56.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = Localization.string("onboarding_lang_title", selectedLanguageCode),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = Localization.string("onboarding_lang_subtitle", selectedLanguageCode),
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            val languages = listOf(
+                                AppLanguage.ITALIAN,
+                                AppLanguage.ENGLISH,
+                                AppLanguage.ARABIC,
+                                AppLanguage.SPANISH,
+                                AppLanguage.FRENCH
+                            )
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                languages.forEach { lang ->
+                                    val isSelected = selectedLanguageCode == lang.code
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { viewModel.selectLanguage(lang.code) }
+                                            .border(
+                                                width = if (isSelected) 2.dp else 1.dp,
+                                                color = if (isSelected) ItalianGreen else BentoCardBorder,
+                                                shape = RoundedCornerShape(12.dp)
+                                            ),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isSelected) ItalianGreenLight else BentoCardLightBg
+                                        ),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                Text(text = lang.flag, fontSize = 24.sp)
+                                                Text(
+                                                    text = lang.displayName,
+                                                    fontSize = 16.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    color = if (isSelected) ItalianGreen else BentoTextHeading
+                                                )
+                                            }
+                                            if (isSelected) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = "Selected",
+                                                    tint = ItalianGreen,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    1 -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .clip(CircleShape)
+                                    .background(ItalianGreen.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Fingerprint,
+                                    contentDescription = "Welcome Logo",
+                                    tint = ItalianGreen,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(24.dp))
+                            
+                            Text(
+                                text = Localization.string("welcome_title", selectedLanguageCode),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center
+                            )
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Text(
+                                text = Localization.string("welcome_body", selectedLanguageCode),
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Center,
+                                lineHeight = 20.sp
+                            )
+                        }
+                    }
+                    2 -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Security,
+                                    contentDescription = "Security Logo",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(24.dp))
+                            
+                            Text(
+                                text = Localization.string("privacy_title", selectedLanguageCode),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center
+                            )
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Text(
+                                text = Localization.string("privacy_body", selectedLanguageCode),
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Center,
+                                lineHeight = 20.sp
+                            )
+                        }
+                    }
+                    3 -> {
+                        LazyColumn(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(vertical = 16.dp)
+                        ) {
+                            item {
+                                Text(
+                                    text = Localization.string("credentials_card_title", selectedLanguageCode),
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = Localization.string("profile_subtitle", selectedLanguageCode),
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                            
+                            item {
+                                OutlinedTextField(
+                                    value = name,
+                                    onValueChange = { viewModel.formFullName.value = it },
+                                    label = { Text(Localization.string("input_fullname", selectedLanguageCode)) },
+                                    placeholder = { Text(Localization.string("input_fullname_placeholder", selectedLanguageCode)) },
+                                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            
+                            item {
+                                OutlinedTextField(
+                                    value = numeroAssicurata,
+                                    onValueChange = { viewModel.formNumeroAssicurata.value = it },
+                                    label = { Text(Localization.string("input_assicurata", selectedLanguageCode)) },
+                                    placeholder = { Text(Localization.string("input_assicurata_placeholder", selectedLanguageCode)) },
+                                    leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null) },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+
+                            item {
+                                OutlinedTextField(
+                                    value = userId,
+                                    onValueChange = { viewModel.formUserId.value = it },
+                                    label = { Text(Localization.string("input_userid", selectedLanguageCode)) },
+                                    placeholder = { Text(Localization.string("input_userid_placeholder", selectedLanguageCode)) },
+                                    leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+
+                            item {
+                                OutlinedTextField(
+                                    value = password,
+                                    onValueChange = { viewModel.formPassword.value = it },
+                                    label = { Text(Localization.string("input_password", selectedLanguageCode)) },
+                                    placeholder = { Text(Localization.string("input_password_placeholder", selectedLanguageCode)) },
+                                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                                    trailingIcon = {
+                                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                            Icon(
+                                                imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                                contentDescription = Localization.string("show_password_desc", selectedLanguageCode)
+                                            )
+                                        }
+                                    },
+                                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Bottom Navigation Actions
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Page Indicator Dots
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    repeat(4) { index ->
+                        val isSelected = index == currentPage
+                        val dotWidth = if (isSelected) 18.dp else 8.dp
+                        val dotColor = if (isSelected) ItalianGreen else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
+                        
+                        Box(
+                            modifier = Modifier
+                                .height(8.dp)
+                                .width(dotWidth)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(dotColor)
+                        )
+                    }
+                }
+
+                // Action Button
+                Button(
+                    onClick = {
+                        if (currentPage < 3) {
+                            currentPage++
+                        } else {
+                            viewModel.saveCredentials()
+                            onComplete()
+                        }
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ItalianGreen
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .testTag("onboarding_action_btn")
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (currentPage < 3) {
+                                Localization.string("button_continue", selectedLanguageCode)
+                            } else {
+                                Localization.string("button_start", selectedLanguageCode)
+                            },
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = if (currentPage < 3) Icons.Default.ArrowForward else Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileTab(
+    viewModel: PermessoViewModel,
+    selectedLanguageCode: String
+) {
+    val context = LocalContext.current
+    val fullName by viewModel.formFullName.collectAsStateWithLifecycle()
+    val userId by viewModel.formUserId.collectAsStateWithLifecycle()
+    val password by viewModel.formPassword.collectAsStateWithLifecycle()
+    val numeroAssicurata by viewModel.formNumeroAssicurata.collectAsStateWithLifecycle()
+    val numeroPratica by viewModel.formNumeroPratica.collectAsStateWithLifecycle()
+    
+    var isPasswordVisible by remember { mutableStateOf(false) }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)
+    ) {
+        // User Profile Header
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = ItalianGreenLight.copy(alpha = 0.4f)),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(ItalianGreen)
+                            .border(2.dp, Color.White, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val initials = if (fullName.isNotBlank()) {
+                            fullName.split("\\s+".toRegex()).take(2).map { it.take(1).uppercase() }.joinToString("")
+                        } else "AM"
+                        Text(
+                            text = initials,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = fullName.ifBlank { Localization.string("friend", selectedLanguageCode) },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = BentoTextHeading
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = Localization.string("profile_subtitle", selectedLanguageCode),
+                            fontSize = 12.sp,
+                            color = BentoTextSecondary
+                        )
+                    }
+                }
+            }
+        }
+
+        // Section 1: Seleziona Lingua (Select Language)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Language,
+                            contentDescription = null,
+                            tint = ItalianGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = Localization.string("select_language", selectedLanguageCode),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = BentoTextHeading
+                        )
+                    }
+
+                    val languages = listOf(
+                        AppLanguage.ITALIAN,
+                        AppLanguage.ENGLISH,
+                        AppLanguage.ARABIC,
+                        AppLanguage.SPANISH,
+                        AppLanguage.FRENCH
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        languages.forEach { lang ->
+                            val isSelected = selectedLanguageCode == lang.code
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.selectLanguage(lang.code) },
+                                label = {
+                                    Text("${lang.flag} ${lang.displayName}", fontSize = 13.sp)
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = ItalianGreenLight,
+                                    selectedLabelColor = ItalianGreen,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    labelColor = BentoTextSecondary
+                                ),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = if (isSelected) ItalianGreen else BentoCardBorder
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 2: Edit Profile Data (Dati Personali)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = ItalianGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = Localization.string("profile_title", selectedLanguageCode),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = BentoTextHeading
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = fullName,
+                        onValueChange = { viewModel.formFullName.value = it },
+                        label = { Text(Localization.string("input_fullname", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("input_fullname_placeholder", selectedLanguageCode)) },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = numeroAssicurata,
+                        onValueChange = { viewModel.formNumeroAssicurata.value = it },
+                        label = { Text(Localization.string("input_assicurata", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("input_assicurata_placeholder", selectedLanguageCode)) },
+                        leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = userId,
+                        onValueChange = { viewModel.formUserId.value = it },
+                        label = { Text(Localization.string("input_userid", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("input_userid_placeholder", selectedLanguageCode)) },
+                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { viewModel.formPassword.value = it },
+                        label = { Text(Localization.string("input_password", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("input_password_placeholder", selectedLanguageCode)) },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = Localization.string("show_password_desc", selectedLanguageCode),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        },
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = numeroPratica,
+                        onValueChange = { viewModel.formNumeroPratica.value = it },
+                        label = { Text(Localization.string("input_pratica", selectedLanguageCode)) },
+                        placeholder = { Text(Localization.string("input_pratica_placeholder", selectedLanguageCode)) },
+                        leadingIcon = { Icon(Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Button(
+                        onClick = {
+                            viewModel.saveCredentials()
+                            android.widget.Toast.makeText(
+                                context,
+                                Localization.string("profile_edit_success", selectedLanguageCode),
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ItalianGreen),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(Localization.string("button_save", selectedLanguageCode), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // Section 3: App Settings (Informazioni)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = ItalianGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = Localization.string("about_section", selectedLanguageCode),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = BentoTextHeading
+                        )
+                    }
+
+                    Text(
+                        text = Localization.string("about_text", selectedLanguageCode),
+                        fontSize = 12.sp,
+                        color = BentoTextSecondary,
+                        lineHeight = 16.sp
+                    )
+
+                    HorizontalDivider(color = BentoCardBorder, thickness = 1.dp, modifier = Modifier.padding(vertical = 4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = Localization.string("bg_sync", selectedLanguageCode),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = BentoTextHeading
+                        )
+                        Switch(
+                            checked = true,
+                            onCheckedChange = { /* Always enabled for real-time checks */ },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = ItalianGreen
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
