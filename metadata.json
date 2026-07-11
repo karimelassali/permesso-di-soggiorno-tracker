@@ -1,0 +1,6 @@
+{
+  "name": "Permesso Status Tracker",
+  "description": "Track your Italian Permesso di Soggiorno status automatically with daily background updates, in-app portal views, and auto-filled credential management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
