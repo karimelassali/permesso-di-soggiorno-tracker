@@ -14,9 +14,28 @@ class AppRepository(private val context: Context) {
     private val database = AppDatabase.getDatabase(context)
     private val credentialsDao = database.userCredentialsDao()
     private val historyDao = database.statusHistoryDao()
+    private val bookmarkDao = database.guideBookmarkDao()
+    private val checklistDao = database.documentChecklistDao()
 
     val credentialsFlow: Flow<UserCredentials?> = credentialsDao.getCredentialsFlow()
     val historyFlow: Flow<List<StatusHistory>> = historyDao.getAllHistoryFlow()
+    val bookmarksFlow: Flow<List<GuideBookmark>> = bookmarkDao.getAllBookmarksFlow()
+
+    fun getChecklistStatesFlow(guideId: String): Flow<List<DocumentChecklistState>> {
+        return checklistDao.getChecklistStatesFlow(guideId)
+    }
+
+    suspend fun toggleBookmark(guideId: String, isBookmarked: Boolean) {
+        if (isBookmarked) {
+            bookmarkDao.insert(GuideBookmark(guideId))
+        } else {
+            bookmarkDao.delete(guideId)
+        }
+    }
+
+    suspend fun saveChecklistState(guideId: String, documentId: String, isChecked: Boolean) {
+        checklistDao.insertOrUpdate(DocumentChecklistState(guideId, documentId, isChecked))
+    }
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)

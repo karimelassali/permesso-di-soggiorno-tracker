@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 class PermessoViewModel(application: Application) : AndroidViewModel(application) {
@@ -29,6 +31,36 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    val bookmarkedGuideIds: StateFlow<Set<String>> = repository.bookmarksFlow
+        .map { list -> list.map { it.guideId }.toSet() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptySet()
+        )
+
+    val guideSearchQuery = MutableStateFlow("")
+    val activeGuideId = MutableStateFlow<String?>(null)
+
+    // Ask AI state flows
+    val aiResponse = MutableStateFlow<String?>(null)
+    val aiLoading = MutableStateFlow(false)
+
+    fun askGuideAssistant(prompt: String, guideContentJson: String) {
+        aiLoading.value = true
+        aiResponse.value = null
+        viewModelScope.launch {
+            val response = com.example.util.GeminiHelper.askAssistant(prompt, guideContentJson)
+            aiResponse.value = response
+            aiLoading.value = false
+        }
+    }
+
+    fun clearAiResponse() {
+        aiResponse.value = null
+        aiLoading.value = false
+    }
 
     // UI Interactive state for manual check
     private val _checkState = MutableStateFlow<CheckUiState>(CheckUiState.Idle)
@@ -271,6 +303,24 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
                 // Just update the last checked time so we know a check was made
                 repository.saveCredentials(updated.copy(lastCheckedTime = System.currentTimeMillis()))
             }
+        }
+    }
+
+    fun toggleGuideBookmark(guideId: String) {
+        viewModelScope.launch {
+            val current = bookmarkedGuideIds.value
+            val isBookmarked = current.contains(guideId)
+            repository.toggleBookmark(guideId, !isBookmarked)
+        }
+    }
+
+    fun getGuideChecklistStates(guideId: String): Flow<List<com.example.data.DocumentChecklistState>> {
+        return repository.getChecklistStatesFlow(guideId)
+    }
+
+    fun toggleGuideDocument(guideId: String, documentId: String, isChecked: Boolean) {
+        viewModelScope.launch {
+            repository.saveChecklistState(guideId, documentId, isChecked)
         }
     }
 

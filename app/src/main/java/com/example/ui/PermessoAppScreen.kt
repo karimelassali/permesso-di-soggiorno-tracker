@@ -117,6 +117,7 @@ fun PermessoAppScreen(
     val selectedLanguageCode by viewModel.selectedLanguage.collectAsStateWithLifecycle()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var showingGuidesScreen by remember { mutableStateOf(false) }
 
     // Request permissions for notifications on Android 13+
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -318,25 +319,38 @@ fun PermessoAppScreen(
                     val appointmentTime by viewModel.appointmentTime.collectAsStateWithLifecycle()
                     val appointmentLocation by viewModel.appointmentLocation.collectAsStateWithLifecycle()
                     val checkedDocs by viewModel.checkedDocs.collectAsStateWithLifecycle()
+                    val activeGuideId by viewModel.activeGuideId.collectAsStateWithLifecycle()
 
-                    DashboardTab(
-                        credentials = credentials,
-                        history = historyList,
-                        checkState = checkState,
-                        selectedProvince = selectedProvince,
-                        onProvinceSelected = { viewModel.selectProvince(it) },
-                        appointmentDate = appointmentDate,
-                        appointmentTime = appointmentTime,
-                        appointmentLocation = appointmentLocation,
-                        onUpdateAppointment = { d, t, l -> viewModel.updateAppointment(d, t, l) },
-                        checkedDocs = checkedDocs,
-                        onToggleDocument = { viewModel.toggleDocument(it) },
-                        onCheckNow = { viewModel.checkStatusNow() },
-                        onResetCheckState = { viewModel.resetCheckState() },
-                        onClearHistory = { viewModel.clearCheckHistory() },
-                        onGoToCredentials = { selectedTabIndex = 2 },
-                        selectedLanguageCode = selectedLanguageCode
-                    )
+                    if (showingGuidesScreen || activeGuideId != null) {
+                        ImmigrationGuidesScreen(
+                            viewModel = viewModel,
+                            onBack = {
+                                showingGuidesScreen = false
+                                viewModel.activeGuideId.value = null
+                            },
+                            selectedLanguageCode = selectedLanguageCode
+                        )
+                    } else {
+                        DashboardTab(
+                            credentials = credentials,
+                            history = historyList,
+                            checkState = checkState,
+                            selectedProvince = selectedProvince,
+                            onProvinceSelected = { viewModel.selectProvince(it) },
+                            appointmentDate = appointmentDate,
+                            appointmentTime = appointmentTime,
+                            appointmentLocation = appointmentLocation,
+                            onUpdateAppointment = { d, t, l -> viewModel.updateAppointment(d, t, l) },
+                            checkedDocs = checkedDocs,
+                            onToggleDocument = { viewModel.toggleDocument(it) },
+                            onCheckNow = { viewModel.checkStatusNow() },
+                            onResetCheckState = { viewModel.resetCheckState() },
+                            onClearHistory = { viewModel.clearCheckHistory() },
+                            onGoToCredentials = { selectedTabIndex = 2 },
+                            onOpenGuides = { showingGuidesScreen = true },
+                            selectedLanguageCode = selectedLanguageCode
+                        )
+                    }
                 }
                 1 -> PortalWebViewTab(
                     credentials = credentials,
@@ -400,6 +414,7 @@ fun DashboardTab(
     onResetCheckState: () -> Unit,
     onClearHistory: () -> Unit,
     onGoToCredentials: () -> Unit,
+    onOpenGuides: () -> Unit,
     selectedLanguageCode: String
 ) {
     val hasCode = credentials != null && 
@@ -468,6 +483,49 @@ fun DashboardTab(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(Localization.string("test_button", selectedLanguageCode), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        // NEW: Immigration Guides Card
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenGuides() }
+                    .testTag("immigration_guides_card"),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = Localization.string("guides_card_title", selectedLanguageCode),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = Localization.string("guides_card_desc", selectedLanguageCode),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }

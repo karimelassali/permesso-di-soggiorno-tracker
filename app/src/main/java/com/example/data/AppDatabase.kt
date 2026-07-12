@@ -34,10 +34,33 @@ interface StatusHistoryDao {
     suspend fun clearAll()
 }
 
-@Database(entities = [UserCredentials::class, StatusHistory::class], version = 1, exportSchema = false)
+@Dao
+interface GuideBookmarkDao {
+    @Query("SELECT * FROM guide_bookmarks")
+    fun getAllBookmarksFlow(): Flow<List<GuideBookmark>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(bookmark: GuideBookmark)
+
+    @Query("DELETE FROM guide_bookmarks WHERE guideId = :guideId")
+    suspend fun delete(guideId: String)
+}
+
+@Dao
+interface DocumentChecklistDao {
+    @Query("SELECT * FROM document_checklist_states WHERE guideId = :guideId")
+    fun getChecklistStatesFlow(guideId: String): Flow<List<DocumentChecklistState>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdate(state: DocumentChecklistState)
+}
+
+@Database(entities = [UserCredentials::class, StatusHistory::class, GuideBookmark::class, DocumentChecklistState::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userCredentialsDao(): UserCredentialsDao
     abstract fun statusHistoryDao(): StatusHistoryDao
+    abstract fun guideBookmarkDao(): GuideBookmarkDao
+    abstract fun documentChecklistDao(): DocumentChecklistDao
 
     companion object {
         @Volatile
@@ -49,7 +72,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "permesso_status_db"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }
