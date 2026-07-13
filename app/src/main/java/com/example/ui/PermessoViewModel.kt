@@ -140,6 +140,32 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putString("selected_province", province).apply()
     }
 
+    fun selectQuesturaAndProvince(questuraId: String?, provinceCode: String?, provinceName: String?) {
+        viewModelScope.launch {
+            val currentCreds = credentials.value ?: UserCredentials()
+            val updated = currentCreds.copy(
+                selectedQuesturaId = questuraId,
+                selectedProvinceCode = provinceCode
+            )
+            repository.saveCredentials(updated)
+            
+            if (provinceName != null) {
+                _selectedProvince.value = provinceName
+                prefs.edit().putString("selected_province", provinceName).apply()
+            }
+        }
+    }
+
+    fun selectPermitType(permitType: String?) {
+        viewModelScope.launch {
+            val currentCreds = credentials.value ?: UserCredentials()
+            val updated = currentCreds.copy(
+                selectedPermitType = permitType
+            )
+            repository.saveCredentials(updated)
+        }
+    }
+
     fun updateAppointment(date: String, time: String, location: String) {
         _appointmentDate.value = date
         _appointmentTime.value = time

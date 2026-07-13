@@ -13,5 +13,8 @@ data class UserCredentials(
     val numeroPratica: String = "", // 10-character Pratica number for Polizia di Stato (e.g. MI12345678)
     val lastCheckedTime: Long = 0L,
     val lastPoliziaStatus: String = "No checks yet",
-    val lastPortaleStatus: String = "No checks yet"
+    val lastPortaleStatus: String = "No checks yet",
+    val selectedQuesturaId: String? = null,
+    val selectedProvinceCode: String? = null,
+    val selectedPermitType: String? = null
 )
