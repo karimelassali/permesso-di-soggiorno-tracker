@@ -181,13 +181,18 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
         if (text.trim().isEmpty()) return
 
         viewModelScope.launch {
+            // Get history BEFORE inserting the new message to avoid role inconsistency in AI
+            val historyBefore = _activeMessages.value.map {
+                AiMessage(sender = it.sender, text = it.text)
+            }
+
             // Save user message to DB
             repository.insertSofiaMessage(
                 SofiaMessage(
                     conversationId = convId,
                     sender = "user",
                     text = text,
-                    sourceType = "official" // User queries are local
+                    sourceType = "official" 
                 )
             )
 
@@ -197,8 +202,8 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
                 repository.updateConversation(currentConv.copy(lastActive = System.currentTimeMillis()))
             }
 
-            // Perform AI response generation
-            generateAiResponse(convId, text, selectedLanguageCode)
+            // Perform AI response generation with explicit history
+            generateAiResponse(convId, text, selectedLanguageCode, historyBefore)
         }
     }
 
@@ -212,25 +217,21 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
 
         // Find the last user message
         val lastUserMessage = messagesList.findLast { it.sender == "user" } ?: return
+        
+        // Build history up to that user message (exclusive)
+        val userIndex = messagesList.indexOf(lastUserMessage)
+        val historyUpToUser = if (userIndex > 0) {
+            messagesList.subList(0, userIndex).map { AiMessage(sender = it.sender, text = it.text) }
+        } else {
+            emptyList()
+        }
 
         viewModelScope.launch {
-            // Delete any trailing assistant responses after this user message
-            val lastUserIndex = messagesList.indexOf(lastUserMessage)
-            if (lastUserIndex < messagesList.size - 1) {
-                // Delete everything after last user message or just remove from list
-                // For simplicity, we can delete the assistant message from Room directly:
-                val assistantMsgs = messagesList.subList(lastUserIndex + 1, messagesList.size)
-                assistantMsgs.forEach { 
-                    // No direct delete method in repository, but we can clear and reinsert or just filter
-                    // We can just keep it simple and generate a new response which adds to the tail
-                }
-            }
-
-            generateAiResponse(convId, lastUserMessage.text, selectedLanguageCode)
+            generateAiResponse(convId, lastUserMessage.text, selectedLanguageCode, historyUpToUser)
         }
     }
 
-    private suspend fun generateAiResponse(convId: Long, userQuery: String, selectedLanguageCode: String) {
+    private suspend fun generateAiResponse(convId: Long, userQuery: String, selectedLanguageCode: String, history: List<AiMessage>) {
         isAiLoading.value = true
         _typingResponseText.value = ""
 
@@ -238,15 +239,10 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
             // Build the dynamic, context-aware system instructions
             val systemInstructions = buildContextSystemInstructions(selectedLanguageCode)
 
-            // Prepare history for API
-            val historyForApi = _activeMessages.value.map {
-                AiMessage(sender = it.sender, text = it.text)
-            }
-
             // Call abstracted AI provider
             val rawResponse = aiProvider.generateResponse(
                 systemInstruction = systemInstructions,
-                history = historyForApi,
+                history = history,
                 userMessage = userQuery
             )
 
@@ -255,7 +251,7 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
                     "it" -> "Chiave API Gemini mancante. Configurala nella sezione Segreti di AI Studio."
                     "ar" -> "مفتاح API الخاص بـ Gemini غير متوفر. يرجى تكوينه في لوحة الأسرار."
                     "es" -> "Falta la clave de API de Gemini. Configúrala en el panel de secretos."
-                    "fr" -> "Clé API Gemini manquante. Veuillez la configurer dans les secrets."
+                    "fr" -> "Clé API Gemini mancante. Veuillez la configurer dans les secrets."
                     else -> "Gemini API key is missing. Please configure it in the Secrets Panel of AI Studio."
                 }
             } else {
@@ -277,7 +273,6 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Save the finalized AI message to local DB
-            // Distinguish source type based on content
             val source = when {
                 parsedResponse.contains("Official", ignoreCase = true) || parsedResponse.contains("Portale", ignoreCase = true) || parsedResponse.contains("Polizia", ignoreCase = true) -> "official"
                 parsedResponse.contains("Community", ignoreCase = true) || parsedResponse.contains("forum", ignoreCase = true) || parsedResponse.contains("esperienze", ignoreCase = true) -> "community"

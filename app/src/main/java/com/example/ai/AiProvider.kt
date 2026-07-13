@@ -32,10 +32,10 @@ interface AiProvider {
 }
 
 /**
- * Direct REST implementation of the Google Gemini 3.5 Flash Model.
+ * Direct REST implementation of the Google Gemini AI Model with NVIDIA Fallback.
  */
 class GeminiAiProvider : AiProvider {
-    private val modelName = "gemini-3.5-flash"
+    private val modelName = "gemini-1.5-flash"
     private val baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent"
 
     override suspend fun generateResponse(
@@ -44,8 +44,15 @@ class GeminiAiProvider : AiProvider {
         userMessage: String
     ): String = withContext(Dispatchers.IO) {
         val apiKey = BuildConfig.GEMINI_API_KEY
+        
+        // Log the key format (safely)
+        if (apiKey.length > 5) {
+            Log.d("GeminiAi", "Using Gemini API Key starting with: ${apiKey.take(4)}")
+        }
+
+        // Removed the 'AIza' check to support different key formats.
         if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") {
-            Log.e("GeminiAiProvider", "Gemini API key is not configured or is placeholder. Falling back to NVIDIA AI.")
+            Log.w("GeminiAi", "Gemini API key is missing or placeholder. Falling back to NVIDIA.")
             return@withContext generateNvidiaResponse(systemInstruction, history, userMessage)
         }
 
@@ -53,46 +60,52 @@ class GeminiAiProvider : AiProvider {
             val url = URL("$baseUrl?key=$apiKey")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
-            conn.setRequestProperty("Content-Type", "application/json; utf-8")
+            conn.setRequestProperty("Content-Type", "application/json")
             conn.setRequestProperty("Accept", "application/json")
             conn.doOutput = true
-            conn.connectTimeout = 15000
-            conn.readTimeout = 15000
+            conn.connectTimeout = 30000
+            conn.readTimeout = 30000
 
-            // 1. Root Object
             val root = JSONObject()
-
-            // 2. Contents Array (History + Current query)
             val contentsArray = JSONArray()
 
-            // Append historical messages
+            // Gemini REQUIRES alternating roles: user, model, user, model...
+            val processedHistory = mutableListOf<AiMessage>()
             history.forEach { msg ->
+                if (processedHistory.isEmpty()) {
+                    if (msg.sender == "user") processedHistory.add(msg)
+                } else {
+                    val last = processedHistory.last()
+                    if (last.sender != msg.sender) {
+                        processedHistory.add(msg)
+                    } else {
+                        // Merge consecutive messages from same sender
+                        processedHistory[processedHistory.size - 1] = last.copy(text = last.text + "\n" + msg.text)
+                    }
+                }
+            }
+
+            // Add current user message
+            if (processedHistory.isNotEmpty() && processedHistory.last().sender == "user") {
+                val last = processedHistory.last()
+                processedHistory[processedHistory.size - 1] = last.copy(text = last.text + "\n" + userMessage)
+            } else {
+                processedHistory.add(AiMessage("user", userMessage))
+            }
+
+            processedHistory.forEach { msg ->
                 val contentObj = JSONObject()
-                val role = if (msg.sender == "user") "user" else "model"
-                contentObj.put("role", role)
-                
+                contentObj.put("role", if (msg.sender == "user") "user" else "model")
                 val partsArray = JSONArray()
                 val partObj = JSONObject()
                 partObj.put("text", msg.text)
                 partsArray.put(partObj)
                 contentObj.put("parts", partsArray)
-                
                 contentsArray.put(contentObj)
             }
 
-            // Append final user message
-            val lastContentObj = JSONObject()
-            lastContentObj.put("role", "user")
-            val lastPartsArray = JSONArray()
-            val lastPartObj = JSONObject()
-            lastPartObj.put("text", userMessage)
-            lastPartsArray.put(lastPartObj)
-            lastContentObj.put("parts", lastPartsArray)
-            contentsArray.put(lastContentObj)
-
             root.put("contents", contentsArray)
 
-            // 3. System Instructions
             if (systemInstruction.isNotBlank()) {
                 val sysInstructionObj = JSONObject()
                 val sysPartsArray = JSONArray()
@@ -103,48 +116,30 @@ class GeminiAiProvider : AiProvider {
                 root.put("systemInstruction", sysInstructionObj)
             }
 
-            // Write output stream
-            OutputStreamWriter(conn.outputStream, "UTF-8").use { writer ->
-                writer.write(root.toString())
-                writer.flush()
-            }
+            OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(root.toString()) }
 
             val responseCode = conn.responseCode
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                BufferedReader(InputStreamReader(conn.inputStream, "utf-8")).use { reader ->
-                    val response = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        response.append(line)
-                    }
-                    
-                    val jsonResponse = JSONObject(response.toString())
-                    val candidates = jsonResponse.optJSONArray("candidates")
-                    if (candidates != null && candidates.length() > 0) {
-                        val firstCandidate = candidates.getJSONObject(0)
-                        val content = firstCandidate.optJSONObject("content")
-                        if (content != null) {
-                            val parts = content.optJSONArray("parts")
-                            if (parts != null && parts.length() > 0) {
-                                return@withContext parts.getJSONObject(0).optString("text", "No response text.")
-                            }
-                        }
-                    }
-                    return@withContext "Error: No text response from AI Service."
+                val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                val jsonResponse = JSONObject(responseText)
+                val candidates = jsonResponse.optJSONArray("candidates")
+                if (candidates != null && candidates.length() > 0) {
+                    val text = candidates.getJSONObject(0)
+                        .optJSONObject("content")
+                        ?.optJSONArray("parts")
+                        ?.optJSONObject(0)
+                        ?.optString("text")
+                    if (text != null) return@withContext text
                 }
+                return@withContext "Error: The AI returned an empty response."
             } else {
-                BufferedReader(InputStreamReader(conn.errorStream, "utf-8")).use { reader ->
-                    val errorResponse = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        errorResponse.append(line)
-                    }
-                    Log.e("GeminiAiProvider", "Error from Gemini API: code=$responseCode, response=$errorResponse. Falling back to NVIDIA.")
-                }
+                val errorMsg = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+                Log.e("GeminiAi", "HTTP $responseCode: $errorMsg")
+                // Fallback on failure
                 return@withContext generateNvidiaResponse(systemInstruction, history, userMessage)
             }
         } catch (e: Exception) {
-            Log.e("GeminiAiProvider", "Exception during Gemini API call. Falling back to NVIDIA.", e)
+            Log.e("GeminiAi", "Connection failed: ${e.message}")
             return@withContext generateNvidiaResponse(systemInstruction, history, userMessage)
         }
     }
@@ -154,7 +149,13 @@ class GeminiAiProvider : AiProvider {
         history: List<AiMessage>,
         userMessage: String
     ): String = withContext(Dispatchers.IO) {
-        val apiKey = "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"
+        // Use key from BuildConfig if available, otherwise fallback to hardcoded
+        val apiKey = if (BuildConfig.NVIDIA_API_KEY.isNotBlank() && BuildConfig.NVIDIA_API_KEY != "MY_NVIDIA_API_KEY") {
+            BuildConfig.NVIDIA_API_KEY
+        } else {
+            "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"
+        }
+        
         val model = "meta/llama-3.3-70b-instruct"
         val baseUrl = "https://integrate.api.nvidia.com/v1/chat/completions"
 
@@ -162,8 +163,7 @@ class GeminiAiProvider : AiProvider {
             val url = URL(baseUrl)
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
-            conn.setRequestProperty("Content-Type", "application/json; utf-8")
-            conn.setRequestProperty("Accept", "application/json")
+            conn.setRequestProperty("Content-Type", "application/json")
             conn.setRequestProperty("Authorization", "Bearer $apiKey")
             conn.doOutput = true
             conn.connectTimeout = 15000
@@ -176,70 +176,44 @@ class GeminiAiProvider : AiProvider {
 
             val messagesArray = JSONArray()
 
-            // 1. System Instruction as system role message
             if (systemInstruction.isNotBlank()) {
-                val systemMsg = JSONObject()
-                systemMsg.put("role", "system")
-                systemMsg.put("content", systemInstruction)
-                messagesArray.put(systemMsg)
+                messagesArray.put(JSONObject().apply {
+                    put("role", "system")
+                    put("content", systemInstruction)
+                })
             }
 
-            // 2. Chat history
             history.forEach { msg ->
-                val msgObj = JSONObject()
-                val role = if (msg.sender == "user") "user" else "assistant"
-                msgObj.put("role", role)
-                msgObj.put("content", msg.text)
-                messagesArray.put(msgObj)
+                messagesArray.put(JSONObject().apply {
+                    put("role", if (msg.sender == "user") "user" else "assistant")
+                    put("content", msg.text)
+                })
             }
 
-            // 3. User current message
-            val userMsgObj = JSONObject()
-            userMsgObj.put("role", "user")
-            userMsgObj.put("content", userMessage)
-            messagesArray.put(userMsgObj)
+            messagesArray.put(JSONObject().apply {
+                put("role", "user")
+                put("content", userMessage)
+            })
 
             root.put("messages", messagesArray)
 
-            OutputStreamWriter(conn.outputStream, "UTF-8").use { writer ->
-                writer.write(root.toString())
-                writer.flush()
-            }
+            OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(root.toString()) }
 
-            val responseCode = conn.responseCode
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                BufferedReader(InputStreamReader(conn.inputStream, "utf-8")).use { reader ->
-                    val response = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        response.append(line)
-                    }
-
-                    val jsonResponse = JSONObject(response.toString())
-                    val choices = jsonResponse.optJSONArray("choices")
-                    if (choices != null && choices.length() > 0) {
-                        val firstChoice = choices.getJSONObject(0)
-                        val message = firstChoice.optJSONObject("message")
-                        if (message != null) {
-                            return@withContext message.optString("content", "No content text.")
-                        }
-                    }
-                    return@withContext "Error: No text response from NVIDIA AI Service."
-                }
+            if (conn.responseCode == 200) {
+                val response = conn.inputStream.bufferedReader().use { it.readText() }
+                return@withContext JSONObject(response)
+                    .getJSONArray("choices")
+                    .getJSONObject(0)
+                    .getJSONObject("message")
+                    .getString("content")
             } else {
-                BufferedReader(InputStreamReader(conn.errorStream, "utf-8")).use { reader ->
-                    val errorResponse = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        errorResponse.append(line)
-                    }
-                    Log.e("NvidiaAi", "Error from Nvidia API: code=$responseCode, response=$errorResponse")
-                    return@withContext "Error: NVIDIA Service responded with HTTP $responseCode"
-                }
+                val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+                Log.e("NvidiaAi", "HTTP ${conn.responseCode}: $err")
+                return@withContext "Error: Sofia is currently offline. Please check your internet or API keys."
             }
         } catch (e: Exception) {
-            Log.e("NvidiaAi", "Exception during NVIDIA API call", e)
-            return@withContext "Failed to connect to NVIDIA AI Service. Error: ${e.message}"
+            Log.e("NvidiaAi", "Connection failed: ${e.message}")
+            return@withContext "Connection failed. Please check your internet connection."
         }
     }
 }

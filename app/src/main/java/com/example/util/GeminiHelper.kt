@@ -14,7 +14,8 @@ import java.net.URL
 
 object GeminiHelper {
     private const val TAG = "GeminiHelper"
-    private const val MODEL_NAME = "gemini-3.5-flash"
+    // Corrected model name to a valid Gemini model
+    private const val MODEL_NAME = "gemini-1.5-flash"
     private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/$MODEL_NAME:generateContent"
 
     suspend fun askAssistant(prompt: String, guideContentJson: String): String = withContext(Dispatchers.IO) {
