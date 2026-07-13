@@ -45,8 +45,8 @@ class GeminiAiProvider : AiProvider {
     ): String = withContext(Dispatchers.IO) {
         val apiKey = BuildConfig.GEMINI_API_KEY
         if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") {
-            Log.e("GeminiAiProvider", "Gemini API key is not configured or is placeholder.")
-            return@withContext "ERR_NO_KEY"
+            Log.e("GeminiAiProvider", "Gemini API key is not configured or is placeholder. Falling back to NVIDIA AI.")
+            return@withContext generateNvidiaResponse(systemInstruction, history, userMessage)
         }
 
         try {
@@ -139,13 +139,107 @@ class GeminiAiProvider : AiProvider {
                     while (reader.readLine().also { line = it } != null) {
                         errorResponse.append(line)
                     }
-                    Log.e("GeminiAiProvider", "Error from Gemini API: code=$responseCode, response=$errorResponse")
-                    return@withContext "Error: AI Service responded with HTTP $responseCode"
+                    Log.e("GeminiAiProvider", "Error from Gemini API: code=$responseCode, response=$errorResponse. Falling back to NVIDIA.")
+                }
+                return@withContext generateNvidiaResponse(systemInstruction, history, userMessage)
+            }
+        } catch (e: Exception) {
+            Log.e("GeminiAiProvider", "Exception during Gemini API call. Falling back to NVIDIA.", e)
+            return@withContext generateNvidiaResponse(systemInstruction, history, userMessage)
+        }
+    }
+
+    private suspend fun generateNvidiaResponse(
+        systemInstruction: String,
+        history: List<AiMessage>,
+        userMessage: String
+    ): String = withContext(Dispatchers.IO) {
+        val apiKey = "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"
+        val model = "meta/llama-3.3-70b-instruct"
+        val baseUrl = "https://integrate.api.nvidia.com/v1/chat/completions"
+
+        try {
+            val url = URL(baseUrl)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json; utf-8")
+            conn.setRequestProperty("Accept", "application/json")
+            conn.setRequestProperty("Authorization", "Bearer $apiKey")
+            conn.doOutput = true
+            conn.connectTimeout = 15000
+            conn.readTimeout = 15000
+
+            val root = JSONObject()
+            root.put("model", model)
+            root.put("temperature", 0.3)
+            root.put("max_tokens", 1024)
+
+            val messagesArray = JSONArray()
+
+            // 1. System Instruction as system role message
+            if (systemInstruction.isNotBlank()) {
+                val systemMsg = JSONObject()
+                systemMsg.put("role", "system")
+                systemMsg.put("content", systemInstruction)
+                messagesArray.put(systemMsg)
+            }
+
+            // 2. Chat history
+            history.forEach { msg ->
+                val msgObj = JSONObject()
+                val role = if (msg.sender == "user") "user" else "assistant"
+                msgObj.put("role", role)
+                msgObj.put("content", msg.text)
+                messagesArray.put(msgObj)
+            }
+
+            // 3. User current message
+            val userMsgObj = JSONObject()
+            userMsgObj.put("role", "user")
+            userMsgObj.put("content", userMessage)
+            messagesArray.put(userMsgObj)
+
+            root.put("messages", messagesArray)
+
+            OutputStreamWriter(conn.outputStream, "UTF-8").use { writer ->
+                writer.write(root.toString())
+                writer.flush()
+            }
+
+            val responseCode = conn.responseCode
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                BufferedReader(InputStreamReader(conn.inputStream, "utf-8")).use { reader ->
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+
+                    val jsonResponse = JSONObject(response.toString())
+                    val choices = jsonResponse.optJSONArray("choices")
+                    if (choices != null && choices.length() > 0) {
+                        val firstChoice = choices.getJSONObject(0)
+                        val message = firstChoice.optJSONObject("message")
+                        if (message != null) {
+                            return@withContext message.optString("content", "No content text.")
+                        }
+                    }
+                    return@withContext "Error: No text response from NVIDIA AI Service."
+                }
+            } else {
+                BufferedReader(InputStreamReader(conn.errorStream, "utf-8")).use { reader ->
+                    val errorResponse = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        errorResponse.append(line)
+                    }
+                    Log.e("NvidiaAi", "Error from Nvidia API: code=$responseCode, response=$errorResponse")
+                    return@withContext "Error: NVIDIA Service responded with HTTP $responseCode"
                 }
             }
         } catch (e: Exception) {
-            Log.e("GeminiAiProvider", "Exception during Gemini API call", e)
-            return@withContext "Failed to connect to AI Service. Error: ${e.message}"
+            Log.e("NvidiaAi", "Exception during NVIDIA API call", e)
+            return@withContext "Failed to connect to NVIDIA AI Service. Error: ${e.message}"
         }
     }
 }
