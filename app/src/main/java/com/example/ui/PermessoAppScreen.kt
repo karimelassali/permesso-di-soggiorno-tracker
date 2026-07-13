@@ -118,6 +118,7 @@ fun PermessoAppScreen(
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var showingGuidesScreen by remember { mutableStateOf(false) }
+    var showingQuestureExplorer by remember { mutableStateOf(false) }
 
     // Request permissions for notifications on Android 13+
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -321,7 +322,16 @@ fun PermessoAppScreen(
                     val checkedDocs by viewModel.checkedDocs.collectAsStateWithLifecycle()
                     val activeGuideId by viewModel.activeGuideId.collectAsStateWithLifecycle()
 
-                    if (showingGuidesScreen || activeGuideId != null) {
+                    if (showingQuestureExplorer) {
+                        QuestureExplorerScreen(
+                            onBack = { showingQuestureExplorer = false },
+                            onSelectQuestura = { questura ->
+                                viewModel.selectQuesturaAndProvince(questura.id, questura.provinceCode, questura.province)
+                                showingQuestureExplorer = false
+                            },
+                            selectedLanguageCode = selectedLanguageCode
+                        )
+                    } else if (showingGuidesScreen || activeGuideId != null) {
                         ImmigrationGuidesScreen(
                             viewModel = viewModel,
                             onBack = {
@@ -348,6 +358,7 @@ fun PermessoAppScreen(
                             onClearHistory = { viewModel.clearCheckHistory() },
                             onGoToCredentials = { selectedTabIndex = 2 },
                             onOpenGuides = { showingGuidesScreen = true },
+                            onChooseQuestura = { showingQuestureExplorer = true },
                             selectedLanguageCode = selectedLanguageCode
                         )
                     }
@@ -415,6 +426,7 @@ fun DashboardTab(
     onClearHistory: () -> Unit,
     onGoToCredentials: () -> Unit,
     onOpenGuides: () -> Unit,
+    onChooseQuestura: () -> Unit,
     selectedLanguageCode: String
 ) {
     val hasCode = credentials != null && 
@@ -592,6 +604,15 @@ fun DashboardTab(
                         BentoPoliziaStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
                     }
                 }
+            }
+
+            // PERSONALIZED QUESTURA CARD
+            item {
+                PersonalizedQuesturaCard(
+                    credentials = credentials,
+                    onChooseQuestura = onChooseQuestura,
+                    selectedLanguageCode = selectedLanguageCode
+                )
             }
 
             // PREMIUM FEATURE: Progressive Visual Timeline Stepper
@@ -2932,6 +2953,7 @@ fun OnboardingScreen(
 ) {
     var currentPage by remember { mutableIntStateOf(0) }
     val selectedLanguageCode by viewModel.selectedLanguage.collectAsStateWithLifecycle()
+    val credentials by viewModel.credentials.collectAsStateWithLifecycle()
     
     val name by viewModel.formFullName.collectAsStateWithLifecycle()
     val userId by viewModel.formUserId.collectAsStateWithLifecycle()
@@ -2940,389 +2962,651 @@ fun OnboardingScreen(
     
     var isPasswordVisible by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        Column(
+    val layoutDirection = if (selectedLanguageCode == "ar") {
+        androidx.compose.ui.unit.LayoutDirection.Rtl
+    } else {
+        androidx.compose.ui.unit.LayoutDirection.Ltr
+    }
+
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides layoutDirection) {
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
-                .windowInsetsPadding(WindowInsets.safeDrawing),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // Top Bar
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .windowInsetsPadding(WindowInsets.safeDrawing),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Top Bar
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Fingerprint,
-                        contentDescription = null,
-                        tint = ItalianGreen,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        text = "Permesso Status Tracker",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-                
-                if (currentPage < 3) {
-                    TextButton(onClick = { currentPage = 3 }) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Fingerprint,
+                            contentDescription = null,
+                            tint = ItalianGreen,
+                            modifier = Modifier.size(24.dp)
+                        )
                         Text(
-                            text = Localization.string("button_skip", selectedLanguageCode),
-                            color = ItalianGreen,
+                            text = "Permesso Status Tracker",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
+                    
+                    if (currentPage < 5) {
+                        TextButton(onClick = { currentPage = 5 }) {
+                            Text(
+                                text = Localization.string("button_skip", selectedLanguageCode),
+                                color = ItalianGreen,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
                 }
-            }
 
-            // Central Content based on page
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                when (currentPage) {
-                    0 -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(16.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Language,
-                                contentDescription = null,
-                                tint = ItalianGreen,
-                                modifier = Modifier.size(56.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = Localization.string("onboarding_lang_title", selectedLanguageCode),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = Localization.string("onboarding_lang_subtitle", selectedLanguageCode),
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            val languages = listOf(
-                                AppLanguage.ITALIAN,
-                                AppLanguage.ENGLISH,
-                                AppLanguage.ARABIC,
-                                AppLanguage.SPANISH,
-                                AppLanguage.FRENCH
-                            )
-
+                // Central Content based on page
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when (currentPage) {
+                        0 -> {
                             Column(
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.fillMaxWidth()
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth().padding(16.dp)
                             ) {
-                                languages.forEach { lang ->
-                                    val isSelected = selectedLanguageCode == lang.code
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { viewModel.selectLanguage(lang.code) }
-                                            .border(
-                                                width = if (isSelected) 2.dp else 1.dp,
-                                                color = if (isSelected) ItalianGreen else BentoCardBorder,
-                                                shape = RoundedCornerShape(12.dp)
-                                            ),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = if (isSelected) ItalianGreenLight else BentoCardLightBg
-                                        ),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Row(
+                                Icon(
+                                    imageVector = Icons.Default.Language,
+                                    contentDescription = null,
+                                    tint = ItalianGreen,
+                                    modifier = Modifier.size(56.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = Localization.string("onboarding_lang_title", selectedLanguageCode),
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = Localization.string("onboarding_lang_subtitle", selectedLanguageCode),
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                val languages = listOf(
+                                    AppLanguage.ITALIAN,
+                                    AppLanguage.ENGLISH,
+                                    AppLanguage.ARABIC,
+                                    AppLanguage.SPANISH,
+                                    AppLanguage.FRENCH
+                                )
+
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    languages.forEach { lang ->
+                                        val isSelected = selectedLanguageCode == lang.code
+                                        Card(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
+                                                .clickable { viewModel.selectLanguage(lang.code) }
+                                                .border(
+                                                    width = if (isSelected) 2.dp else 1.dp,
+                                                    color = if (isSelected) ItalianGreen else BentoCardBorder,
+                                                    shape = RoundedCornerShape(12.dp)
+                                                ),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = if (isSelected) ItalianGreenLight else BentoCardLightBg
+                                            ),
+                                            shape = RoundedCornerShape(12.dp)
                                         ) {
                                             Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text(text = lang.flag, fontSize = 24.sp)
-                                                Text(
-                                                    text = lang.displayName,
-                                                    fontSize = 16.sp,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                    color = if (isSelected) ItalianGreen else BentoTextHeading
-                                                )
-                                            }
-                                            if (isSelected) {
-                                                Icon(
-                                                    imageVector = Icons.Default.CheckCircle,
-                                                    contentDescription = "Selected",
-                                                    tint = ItalianGreen,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                ) {
+                                                    Text(text = lang.flag, fontSize = 24.sp)
+                                                    Text(
+                                                        text = lang.displayName,
+                                                        fontSize = 16.sp,
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                        color = if (isSelected) ItalianGreen else BentoTextHeading
+                                                    )
+                                                }
+                                                if (isSelected) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.CheckCircle,
+                                                        contentDescription = "Selected",
+                                                        tint = ItalianGreen,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                    1 -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(120.dp)
-                                    .clip(CircleShape)
-                                    .background(ItalianGreen.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center
+                        1 -> {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(16.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Fingerprint,
-                                    contentDescription = "Welcome Logo",
-                                    tint = ItalianGreen,
-                                    modifier = Modifier.size(64.dp)
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(24.dp))
-                            
-                            Text(
-                                text = Localization.string("welcome_title", selectedLanguageCode),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                textAlign = TextAlign.Center
-                            )
-                            
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            Text(
-                                text = Localization.string("welcome_body", selectedLanguageCode),
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                                textAlign = TextAlign.Center,
-                                lineHeight = 20.sp
-                            )
-                        }
-                    }
-                    2 -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(120.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Security,
-                                    contentDescription = "Security Logo",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(64.dp)
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(24.dp))
-                            
-                            Text(
-                                text = Localization.string("privacy_title", selectedLanguageCode),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                textAlign = TextAlign.Center
-                            )
-                            
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            Text(
-                                text = Localization.string("privacy_body", selectedLanguageCode),
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                                textAlign = TextAlign.Center,
-                                lineHeight = 20.sp
-                            )
-                        }
-                    }
-                    3 -> {
-                        LazyColumn(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(vertical = 16.dp)
-                        ) {
-                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .background(ItalianGreen.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Fingerprint,
+                                        contentDescription = "Welcome Logo",
+                                        tint = ItalianGreen,
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(24.dp))
+                                
                                 Text(
-                                    text = Localization.string("credentials_card_title", selectedLanguageCode),
-                                    fontSize = 22.sp,
+                                    text = Localization.string("welcome_title", selectedLanguageCode),
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    textAlign = TextAlign.Center
+                                )
+                                
+                                Spacer(modifier = Modifier.height(12.dp))
+                                
+                                Text(
+                                    text = Localization.string("welcome_body", selectedLanguageCode),
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 20.sp
+                                )
+                            }
+                        }
+                        2 -> {
+                            // Questura & Province Personalization Setup
+                            var searchQuery by remember { mutableStateOf("") }
+                            val results = remember(searchQuery) { com.example.data.QuesturaCatalog.search(searchQuery) }
+                            
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Top,
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = Localization.string("onboarding_questura_title", selectedLanguageCode),
+                                    fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onBackground,
                                     textAlign = TextAlign.Center
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = Localization.string("profile_subtitle", selectedLanguageCode),
-                                    fontSize = 13.sp,
+                                    text = Localization.string("onboarding_personalize_desc", selectedLanguageCode),
+                                    fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                                     textAlign = TextAlign.Center
                                 )
-                                Spacer(modifier = Modifier.height(12.dp))
-                            }
-                            
-                            item {
+                                Spacer(modifier = Modifier.height(14.dp))
+                                
+                                // Search Bar
                                 OutlinedTextField(
-                                    value = name,
-                                    onValueChange = { viewModel.formFullName.value = it },
-                                    label = { Text(Localization.string("input_fullname", selectedLanguageCode)) },
-                                    placeholder = { Text(Localization.string("input_fullname_placeholder", selectedLanguageCode)) },
-                                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                            
-                            item {
-                                OutlinedTextField(
-                                    value = numeroAssicurata,
-                                    onValueChange = { viewModel.formNumeroAssicurata.value = it },
-                                    label = { Text(Localization.string("input_assicurata", selectedLanguageCode)) },
-                                    placeholder = { Text(Localization.string("input_assicurata_placeholder", selectedLanguageCode)) },
-                                    leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null) },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-
-                            item {
-                                OutlinedTextField(
-                                    value = userId,
-                                    onValueChange = { viewModel.formUserId.value = it },
-                                    label = { Text(Localization.string("input_userid", selectedLanguageCode)) },
-                                    placeholder = { Text(Localization.string("input_userid_placeholder", selectedLanguageCode)) },
-                                    leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-
-                            item {
-                                OutlinedTextField(
-                                    value = password,
-                                    onValueChange = { viewModel.formPassword.value = it },
-                                    label = { Text(Localization.string("input_password", selectedLanguageCode)) },
-                                    placeholder = { Text(Localization.string("input_password_placeholder", selectedLanguageCode)) },
-                                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    placeholder = { Text(Localization.string("onboarding_search_placeholder", selectedLanguageCode)) },
+                                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                                     trailingIcon = {
-                                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                                            Icon(
-                                                imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                                contentDescription = Localization.string("show_password_desc", selectedLanguageCode)
-                                            )
+                                        if (searchQuery.isNotEmpty()) {
+                                            IconButton(onClick = { searchQuery = "" }) {
+                                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                            }
                                         }
                                     },
-                                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                     singleLine = true,
-                                    modifier = Modifier.fillMaxWidth()
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth().testTag("questura_search_input")
                                 )
+                                Spacer(modifier = Modifier.height(14.dp))
+                                
+                                // Results List
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.weight(1f).fillMaxWidth()
+                                ) {
+                                    items(results) { questura ->
+                                        val isSelected = credentials?.selectedQuesturaId == questura.id
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    viewModel.selectQuesturaAndProvince(questura.id, questura.provinceCode, questura.province)
+                                                    currentPage++
+                                                }
+                                                .border(
+                                                    width = if (isSelected) 2.dp else 1.dp,
+                                                    color = if (isSelected) ItalianGreen else BentoCardBorder,
+                                                    shape = RoundedCornerShape(12.dp)
+                                                ),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = if (isSelected) ItalianGreenLight else BentoCardLightBg
+                                            ),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(36.dp)
+                                                            .clip(CircleShape)
+                                                            .background(ItalianGreen.copy(alpha = 0.12f)),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Place,
+                                                            contentDescription = null,
+                                                            tint = ItalianGreen,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                    Column {
+                                                        Text(
+                                                            text = questura.name,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 13.sp,
+                                                            color = BentoTextHeading
+                                                        )
+                                                        Text(
+                                                            text = "${questura.province} (${questura.provinceCode}) - ${questura.region}",
+                                                            fontSize = 11.sp,
+                                                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                                                        )
+                                                    }
+                                                }
+                                                if (isSelected) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.CheckCircle,
+                                                        contentDescription = "Selected",
+                                                        tint = ItalianGreen,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                Spacer(modifier = Modifier.height(6.dp))
+                                TextButton(
+                                    onClick = {
+                                        viewModel.selectQuesturaAndProvince(null, null, null)
+                                        currentPage++
+                                    }
+                                ) {
+                                    Text(
+                                        text = Localization.string("onboarding_choose_later", selectedLanguageCode),
+                                        color = ItalianGreen,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
+                        }
+                        3 -> {
+                            // Permit Type Selection Screen
+                            val permitTypes = listOf(
+                                "work" to (Icons.Default.Work to Localization.string("permit_work", selectedLanguageCode)),
+                                "study" to (Icons.Default.School to Localization.string("permit_study", selectedLanguageCode)),
+                                "family_reunification" to (Icons.Default.Group to Localization.string("permit_family_reunification", selectedLanguageCode)),
+                                "family_cohesion" to (Icons.Default.Home to Localization.string("permit_family_cohesion", selectedLanguageCode)),
+                                "asylum" to (Icons.Default.Shield to Localization.string("permit_asylum", selectedLanguageCode)),
+                                "eu_family" to (Icons.Default.Public to Localization.string("permit_eu_family", selectedLanguageCode)),
+                                "long_term" to (Icons.Default.Description to Localization.string("permit_long_term", selectedLanguageCode)),
+                                "renewal" to (Icons.Default.Autorenew to Localization.string("permit_renewal", selectedLanguageCode)),
+                                "not_sure" to (Icons.Default.Help to Localization.string("permit_not_sure", selectedLanguageCode))
+                            )
+                            
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Top,
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = Localization.string("onboarding_permit_type_title", selectedLanguageCode),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = Localization.string("onboarding_permit_type_desc", selectedLanguageCode),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
+                                
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.weight(1f).fillMaxWidth()
+                                ) {
+                                    items(permitTypes) { (typeKey, pair) ->
+                                        val (icon, label) = pair
+                                        val isSelected = credentials?.selectedPermitType == typeKey
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    viewModel.selectPermitType(typeKey)
+                                                    currentPage++
+                                                }
+                                                .border(
+                                                    width = if (isSelected) 2.dp else 1.dp,
+                                                    color = if (isSelected) ItalianGreen else BentoCardBorder,
+                                                    shape = RoundedCornerShape(12.dp)
+                                                ),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = if (isSelected) ItalianGreenLight else BentoCardLightBg
+                                            ),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(36.dp)
+                                                            .clip(CircleShape)
+                                                            .background(ItalianGreen.copy(alpha = 0.12f)),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = icon,
+                                                            contentDescription = null,
+                                                            tint = ItalianGreen,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                    Text(
+                                                        text = label,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 14.sp,
+                                                        color = BentoTextHeading
+                                                    )
+                                                }
+                                                if (isSelected) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.CheckCircle,
+                                                        contentDescription = "Selected",
+                                                        tint = ItalianGreen,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                Spacer(modifier = Modifier.height(6.dp))
+                                TextButton(
+                                    onClick = {
+                                        viewModel.selectPermitType(null)
+                                        currentPage++
+                                    }
+                                ) {
+                                    Text(
+                                        text = Localization.string("button_skip", selectedLanguageCode),
+                                        color = ItalianGreen,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
+                        }
+                        4 -> {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Security,
+                                        contentDescription = "Security Logo",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(24.dp))
+                                
+                                Text(
+                                    text = Localization.string("privacy_title", selectedLanguageCode),
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    textAlign = TextAlign.Center
+                                )
+                                
+                                Spacer(modifier = Modifier.height(12.dp))
+                                
+                                Text(
+                                    text = Localization.string("privacy_body", selectedLanguageCode),
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 20.sp
+                                )
+                            }
+                        }
+                        5 -> {
+                            LazyColumn(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(vertical = 16.dp)
+                            ) {
+                                item {
+                                    Text(
+                                        text = Localization.string("credentials_card_title", selectedLanguageCode),
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = Localization.string("profile_subtitle", selectedLanguageCode),
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+                                
+                                item {
+                                    OutlinedTextField(
+                                        value = name,
+                                        onValueChange = { viewModel.formFullName.value = it },
+                                        label = { Text(Localization.string("input_fullname", selectedLanguageCode)) },
+                                        placeholder = { Text(Localization.string("input_fullname_placeholder", selectedLanguageCode)) },
+                                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                
+                                item {
+                                    OutlinedTextField(
+                                        value = numeroAssicurata,
+                                        onValueChange = { viewModel.formNumeroAssicurata.value = it },
+                                        label = { Text(Localization.string("input_assicurata", selectedLanguageCode)) },
+                                        placeholder = { Text(Localization.string("input_assicurata_placeholder", selectedLanguageCode)) },
+                                        leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null) },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+ 
+                                item {
+                                    OutlinedTextField(
+                                        value = userId,
+                                        onValueChange = { viewModel.formUserId.value = it },
+                                        label = { Text(Localization.string("input_userid", selectedLanguageCode)) },
+                                        placeholder = { Text(Localization.string("input_userid_placeholder", selectedLanguageCode)) },
+                                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+ 
+                                item {
+                                    OutlinedTextField(
+                                        value = password,
+                                        onValueChange = { viewModel.formPassword.value = it },
+                                        label = { Text(Localization.string("input_password", selectedLanguageCode)) },
+                                        placeholder = { Text(Localization.string("input_password_placeholder", selectedLanguageCode)) },
+                                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                                        trailingIcon = {
+                                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                                Icon(
+                                                    imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                                    contentDescription = Localization.string("show_password_desc", selectedLanguageCode)
+                                                )
+                                            }
+                                        },
+                                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
-
-            // Bottom Navigation Actions
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Page Indicator Dots
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+ 
+                // Bottom Navigation Actions
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    repeat(4) { index ->
-                        val isSelected = index == currentPage
-                        val dotWidth = if (isSelected) 18.dp else 8.dp
-                        val dotColor = if (isSelected) ItalianGreen else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
-                        
-                        Box(
-                            modifier = Modifier
-                                .height(8.dp)
-                                .width(dotWidth)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(dotColor)
-                        )
-                    }
-                }
-
-                // Action Button
-                Button(
-                    onClick = {
-                        if (currentPage < 3) {
-                            currentPage++
-                        } else {
-                            viewModel.saveCredentials()
-                            onComplete()
-                        }
-                    },
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ItalianGreen
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp)
-                        .testTag("onboarding_action_btn")
-                ) {
+                    // Page Indicator Dots
                     Row(
-                        horizontalArrangement = Arrangement.Center,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = if (currentPage < 3) {
-                                Localization.string("button_continue", selectedLanguageCode)
+                        repeat(6) { index ->
+                            val isSelected = index == currentPage
+                            val dotWidth = if (isSelected) 18.dp else 8.dp
+                            val dotColor = if (isSelected) ItalianGreen else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
+                            
+                            Box(
+                                modifier = Modifier
+                                    .height(8.dp)
+                                    .width(dotWidth)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(dotColor)
+                            )
+                        }
+                    }
+ 
+                    // Action Button
+                    Button(
+                        onClick = {
+                            if (currentPage < 5) {
+                                currentPage++
                             } else {
-                                Localization.string("button_start", selectedLanguageCode)
-                            },
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            imageVector = if (currentPage < 3) Icons.Default.ArrowForward else Icons.Default.Check,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
+                                viewModel.saveCredentials()
+                                onComplete()
+                            }
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ItalianGreen
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                            .testTag("onboarding_action_btn")
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (currentPage < 5) {
+                                    Localization.string("button_continue", selectedLanguageCode)
+                                } else {
+                                    Localization.string("button_start", selectedLanguageCode)
+                                },
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = if (currentPage < 5) Icons.Default.ArrowForward else Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }

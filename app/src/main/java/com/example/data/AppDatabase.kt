@@ -55,7 +55,7 @@ interface DocumentChecklistDao {
     suspend fun insertOrUpdate(state: DocumentChecklistState)
 }
 
-@Database(entities = [UserCredentials::class, StatusHistory::class, GuideBookmark::class, DocumentChecklistState::class], version = 2, exportSchema = false)
+@Database(entities = [UserCredentials::class, StatusHistory::class, GuideBookmark::class, DocumentChecklistState::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userCredentialsDao(): UserCredentialsDao
     abstract fun statusHistoryDao(): StatusHistoryDao

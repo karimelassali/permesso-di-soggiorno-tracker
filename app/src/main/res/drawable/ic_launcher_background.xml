@@ -5,25 +5,43 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#0052D4"
-        android:pathData="M0,0h108v108h-108z" />
+    
+    <!-- Background: Smooth green diagonal gradient -->
     <path
         android:pathData="M0,0h108v108h-108z">
         <aapt:attr name="android:fillColor">
             <gradient
-                android:endX="108"
-                android:endY="108"
                 android:startX="0"
                 android:startY="0"
+                android:endX="108"
+                android:endY="108"
                 android:type="linear">
-                <item
-                    android:color="#4361EE"
-                    android:offset="0.0" />
-                <item
-                    android:color="#3A0CA3"
-                    android:offset="1.0" />
+                <item android:offset="0.0" android:color="#0B3C1A" /> <!-- Dark Forest Green -->
+                <item android:offset="0.5" android:color="#006622" /> <!-- Rich Italian Green -->
+                <item android:offset="1.0" android:color="#2E7D32" /> <!-- Brighter Accent Green -->
             </gradient>
         </aapt:attr>
     </path>
+    
+    <!-- Italian flag circular outer borders framing the center safe zone -->
+    <!-- Inner Green circle ring -->
+    <path
+        android:pathData="M 54,14 A 40,40 0 1,1 53.9,14"
+        android:strokeColor="#009F3D"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000" />
+        
+    <!-- Middle White circle ring -->
+    <path
+        android:pathData="M 54,11.5 A 42.5,42.5 0 1,1 53.9,11.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000" />
+        
+    <!-- Outer Red circle ring -->
+    <path
+        android:pathData="M 54,9 A 45,45 0 1,1 53.9,9"
+        android:strokeColor="#CD212A"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000" />
 </vector>

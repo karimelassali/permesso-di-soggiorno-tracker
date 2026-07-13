@@ -111,6 +111,13 @@ A comprehensive, production-grade immigration assistant that transforms Soggiorn
 * **Direct Action Integrations**: Embedded hotkeys to directly phone help numbers (dialer intent integration) or open official application portals (browser intent integration).
 * **Mandatory Legal Disclaimer**: Every page features a prominent regulatory warning advising users that instructions are informational and do not replace professional immigration advisors.
 
+### 12. Personalized Province & Questura Setup Onboarding 🗺️
+* **Step-by-Step Onboarding**: A complete, native 6-page onboarding flow welcomes new users and assists them in selecting their preferred language, learning about privacy standards, personalizing their application location, selecting their permit type, and entering their optional receipt credentials safely.
+* **Offline Questura Catalog & Search**: Users can search and filter the fast, pre-bundled catalog of over 100+ Questure and provinces in Italy. No network API calls are made, keeping user location data completely confidential.
+* **Permit Type Personalization**: Captures user permit categories (Work, Study, Family, Asylum, EU Family, etc.) with beautiful iconography to personalize guides and status workflows.
+* **Personalized Questura Card**: Displays details of the selected Questura directly on the main status dashboard tab, featuring telephone links (one-click dialer integration), website links, PEC email copiers, custom local warnings (e.g. queue alerts, timing alerts), and an instant Google Maps locator button.
+* **Active Questura Explorer**: A dedicated search and exploration screen lets the user browse and change their selected Questura anytime directly from the dashboard card.
+
 ---
 
 ## 🛠️ Architecture & Tech Stack
