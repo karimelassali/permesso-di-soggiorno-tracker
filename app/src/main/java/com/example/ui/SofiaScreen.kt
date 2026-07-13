@@ -88,7 +88,10 @@ object SofiaLocalization {
             "delete_dialog_title" to "Elimina Conversazione",
             "delete_dialog_msg" to "Sei sicuro di voler eliminare questa conversazione?",
             "confirm" to "Conferma",
-            "cancel" to "Annulla"
+            "cancel" to "Annulla",
+            "conv_starters" to "Spunti di conversazione",
+            "suggestions" to "Suggerimenti",
+            "starter_initial_query" to "Parlami dei requisiti per: %s"
         ),
         "en" to mapOf(
             "sofia_title" to "Sofia AI",
@@ -125,7 +128,10 @@ object SofiaLocalization {
             "delete_dialog_title" to "Delete Conversation",
             "delete_dialog_msg" to "Are you sure you want to delete this conversation?",
             "confirm" to "Confirm",
-            "cancel" to "Cancel"
+            "cancel" to "Cancel",
+            "conv_starters" to "Conversation Starters",
+            "suggestions" to "Suggestions",
+            "starter_initial_query" to "Tell me about the requirements for: %s"
         ),
         "ar" to mapOf(
             "sofia_title" to "صوفيا الذكية",
@@ -162,7 +168,10 @@ object SofiaLocalization {
             "delete_dialog_title" to "حذف المحادثة",
             "delete_dialog_msg" to "هل أنت متأكد من رغبتك في حذف هذه المحادثة؟",
             "confirm" to "تأكيد",
-            "cancel" to "إلغاء"
+            "cancel" to "إلغاء",
+            "conv_starters" to "مواضيع لبدء المحادثة",
+            "suggestions" to "اقتراحات",
+            "starter_initial_query" to "أخبرني عن متطلبات: %s"
         ),
         "es" to mapOf(
             "sofia_title" to "Sofía AI",
@@ -199,7 +208,10 @@ object SofiaLocalization {
             "delete_dialog_title" to "Eliminar Conversación",
             "delete_dialog_msg" to "¿Estás seguro de que deseas eliminar esta conversación?",
             "confirm" to "Confirmar",
-            "cancel" to "Cancelar"
+            "cancel" to "Cancelar",
+            "conv_starters" to "Temas de conversación",
+            "suggestions" to "Sugerencias",
+            "starter_initial_query" to "Cuéntame sobre los requisitos para: %s"
         ),
         "fr" to mapOf(
             "sofia_title" to "Sofia AI",
@@ -236,7 +248,10 @@ object SofiaLocalization {
             "delete_dialog_title" to "Supprimer la Conversation",
             "delete_dialog_msg" to "Êtes-vous sûr de vouloir supprimer cette conversation ?",
             "confirm" to "Confirmer",
-            "cancel" to "Annuler"
+            "cancel" to "Annuler",
+            "conv_starters" to "Sujets de conversation",
+            "suggestions" to "Suggestions",
+            "starter_initial_query" to "Parlez-moi des exigences pour : %s"
         )
     )
 
@@ -886,19 +901,19 @@ fun SofiaConversationStarters(
     selectedLanguageCode: String
 ) {
     val starters = listOf(
-        Triple("📄 Documents", "Document Checklist", "documents"),
-        Triple("✈️ Travel", "Travel Guidance", "travel"),
-        Triple("💼 Work", "Work Permit", "work"),
-        Triple("👨\u200D👩\u200D👧 Family", "Family Reunification", "family"),
-        Triple("🏢 Offices", "Questure Offices", "offices"),
-        Triple("📅 Appointments", "Questura Fingerprints", "appointments"),
-        Triple("🛂 Permit Types", "Permits Guide", "permits"),
-        Triple("⚖️ Legal Questions", "Legal Advice", "legal")
+        Triple("📄", "documents", "documents"),
+        Triple("✈️", "travel", "travel"),
+        Triple("💼", "work", "work"),
+        Triple("👨\u200D👩\u200D👧", "family_reunification", "family"),
+        Triple("🏢", "questure", "offices"),
+        Triple("📅", "appointments", "appointments"),
+        Triple("🛂", "residence_permits", "permits"),
+        Triple("⚖️", "bureaucracy", "legal")
     )
 
     Column(modifier = Modifier.padding(top = 20.dp)) {
         Text(
-            text = "Conversation Starters",
+            text = SofiaLocalization.string("conv_starters", selectedLanguageCode),
             color = SofiaTextPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
@@ -909,10 +924,13 @@ fun SofiaConversationStarters(
         Row(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
                 starters.take(4).forEach { item ->
-                    SofiaStarterCard(title = item.first, onClick = {
+                    val localizedTitle = SofiaLocalization.string(item.second, selectedLanguageCode)
+                    val cardTitle = "${item.first} $localizedTitle"
+                    SofiaStarterCard(title = cardTitle, onClick = {
+                        val initialMsgPattern = SofiaLocalization.string("starter_initial_query", selectedLanguageCode)
                         viewModel.startNewConversation(
-                            title = item.second,
-                            initialMessage = "Tell me about ${item.second} requirements.",
+                            title = localizedTitle,
+                            initialMessage = String.format(initialMsgPattern, localizedTitle),
                             category = item.third,
                             selectedLanguageCode = selectedLanguageCode
                         )
@@ -922,10 +940,13 @@ fun SofiaConversationStarters(
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 starters.drop(4).forEach { item ->
-                    SofiaStarterCard(title = item.first, onClick = {
+                    val localizedTitle = SofiaLocalization.string(item.second, selectedLanguageCode)
+                    val cardTitle = "${item.first} $localizedTitle"
+                    SofiaStarterCard(title = cardTitle, onClick = {
+                        val initialMsgPattern = SofiaLocalization.string("starter_initial_query", selectedLanguageCode)
                         viewModel.startNewConversation(
-                            title = item.second,
-                            initialMessage = "Tell me about ${item.second} requirements.",
+                            title = localizedTitle,
+                            initialMessage = String.format(initialMsgPattern, localizedTitle),
                             category = item.third,
                             selectedLanguageCode = selectedLanguageCode
                         )
@@ -967,28 +988,102 @@ fun SofiaSuggestionChips(
     viewModel: SofiaViewModel,
     selectedLanguageCode: String
 ) {
-    val chips = listOf(
-        "Can I travel?",
-        "Can I work?",
-        "What documents do I need?",
-        "Explain my current status",
-        "When should I renew?",
-        "Where is my Questura?",
-        "What should I bring to my appointment?",
-        "How long does this process take?",
-        "What does Step 2 mean?",
-        "What happens next?",
-        "Lost my receipt",
-        "Family reunification",
-        "Article 31",
-        "Political asylum",
-        "Long-term residence",
-        "Citizenship"
-    )
+    val chips = when (selectedLanguageCode) {
+        "it" -> listOf(
+            "Posso viaggiare?",
+            "Posso lavorare?",
+            "Di quali documenti ho bisogno?",
+            "Spiega il mio stato attuale",
+            "Quando devo rinnovare?",
+            "Dov'è la mia Questura?",
+            "Cosa portare all'appuntamento?",
+            "Quanto tempo dura il processo?",
+            "Cosa significa Step 2?",
+            "Cosa succede ora?",
+            "Ho perso la ricevuta",
+            "Ricongiungimento familiare",
+            "Articolo 31",
+            "Asilo politico",
+            "Soggiorno lungo termine",
+            "Cittadinanza"
+        )
+        "ar" -> listOf(
+            "هل يمكنني السفر؟",
+            "هل يمكنني العمل؟",
+            "ما هي المستندات المطلوبة؟",
+            "شرح حالتي الحالية",
+            "متى يجب علي التجديد؟",
+            "أين هو مركز الكويستورا الخاص بي؟",
+            "ما الذي يجب أن أحضره للموعد؟",
+            "كم من الوقت تستغرق هذه العملية؟",
+            "ماذا تعني الخطوة الثانية؟",
+            "ماذا يحدث بعد ذلك؟",
+            "فقدت الإيصال الخاص بي",
+            "لم شمل الأسرة",
+            "المادة 31",
+            "اللجوء السياسي",
+            "الإقامة طويلة الأجل",
+            "الجنسية"
+        )
+        "es" -> listOf(
+            "¿Puedo viajar?",
+            "¿Puedo trabajar?",
+            "¿Qué documentos necesito?",
+            "Explicar mi estado actual",
+            "¿Cuándo debo renovar?",
+            "¿Dónde está mi Questura?",
+            "¿Qué debo llevar a mi cita?",
+            "¿Cuánto dura este proceso?",
+            "¿Qué significa el Paso 2?",
+            "¿Qué pasa ahora?",
+            "Perdí mi recibo",
+            "Reagrupación familiar",
+            "Artículo 31",
+            "Asilo político",
+            "Residencia de larga duración",
+            "Ciudadanía"
+        )
+        "fr" -> listOf(
+            "Puis-je voyager ?",
+            "Puis-je travailler ?",
+            "Quels documents faut-il ?",
+            "Expliquer mon statut actuel",
+            "Quand dois-je renouveler ?",
+            "Où est ma Questura ?",
+            "Que dois-je apporter au RDV ?",
+            "Combien de temps ça prend ?",
+            "Que signifie l'Étape 2 ?",
+            "Que se passe-t-il ensuite ?",
+            "J'ai perdu mon récépissé",
+            "Regroupement familial",
+            "Article 31",
+            "Asile politique",
+            "Résidence longue durée",
+            "Citoyenneté"
+        )
+        else -> listOf(
+            "Can I travel?",
+            "Can I work?",
+            "What documents do I need?",
+            "Explain my current status",
+            "When should I renew?",
+            "Where is my Questura?",
+            "What should I bring to my appointment?",
+            "How long does this process take?",
+            "What does Step 2 mean?",
+            "What happens next?",
+            "Lost my receipt",
+            "Family reunification",
+            "Article 31",
+            "Political asylum",
+            "Long-term residence",
+            "Citizenship"
+        )
+    }
 
     Column(modifier = Modifier.padding(top = 18.dp)) {
         Text(
-            text = "Suggestions",
+            text = SofiaLocalization.string("suggestions", selectedLanguageCode),
             color = SofiaTextPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
@@ -1024,11 +1119,33 @@ fun SofiaPopularQuestions(
     viewModel: SofiaViewModel,
     selectedLanguageCode: String
 ) {
-    val popular = listOf(
-        "How do I apply for family reunification in Italy?" to "Family Reunification",
-        "Can I travel while my permesso renewal is pending?" to "Travel Rules",
-        "What is Article 31 and who is eligible?" to "Article 31 Guide"
-    )
+    val popular = when (selectedLanguageCode) {
+        "it" -> listOf(
+            "Come posso richiedere il ricongiungimento familiare in Italia?" to "Ricongiungimento Familiare",
+            "Posso viaggiare mentre il mio rinnovo del permesso è in corso?" to "Regole di Viaggio",
+            "Cos'è l'Articolo 31 e chi ne ha diritto?" to "Guida Articolo 31"
+        )
+        "ar" -> listOf(
+            "كيف يمكنني التقدم بطلب لم شمل الأسرة في إيطاليا؟" to "لم شمل الأسرة",
+            "هل يمكنني السفر أثناء فترة انتظار تجديد تصريح الإقامة؟" to "قواعد السفر",
+            "ما هي المادة 31 ومن هو المؤهل لها؟" to "دليل المادة 31"
+        )
+        "es" -> listOf(
+            "¿Cómo solicito la reagrupación familiar en Italia?" to "Reagrupación Familiar",
+            "¿Puedo viajar mientras mi renovación de permesso está pendiente?" to "Reglas de Viaje",
+            "¿Qué es el Artículo 31 y quién es elegible?" to "Guía del Artículo 31"
+        )
+        "fr" -> listOf(
+            "Comment demander un regroupement familial en Italie ?" to "Regroupement Familial",
+            "Puis-je voyager pendant que le renouvellement de mon titre de séjour est en cours ?" to "Règles de Voyage",
+            "Qu'est-ce que l'Article 31 et qui est éligible ?" to "Guide Article 31"
+        )
+        else -> listOf(
+            "How do I apply for family reunification in Italy?" to "Family Reunification",
+            "Can I travel while my permesso renewal is pending?" to "Travel Rules",
+            "What is Article 31 and who is eligible?" to "Article 31 Guide"
+        )
+    }
 
     Column(modifier = Modifier.padding(top = 20.dp)) {
         Text(
