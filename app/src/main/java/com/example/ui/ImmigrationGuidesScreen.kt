@@ -95,7 +95,11 @@ fun GuidesListScreen(
         CategoryFilterItem("work", "work", "🛂", "Lavoro", "Work", "عمل"),
         CategoryFilterItem("study", "school", "🎓", "Studio", "Study", "دراسة"),
         CategoryFilterItem("long_term", "star", "🏆", "Lungo Periodo", "Long-Term", "طويل الأجل"),
-        CategoryFilterItem("renewal", "refresh", "🔄", "Rinnovo", "Renewal", "تجديد")
+        CategoryFilterItem("renewal", "refresh", "🔄", "Rinnovo", "Renewal", "تجديد"),
+        CategoryFilterItem("family_reunification", "group", "👨‍👩‍👧‍👦", "Ricongiungimento", "Reunification", "لم شمل"),
+        CategoryFilterItem("family_cohesion", "home", "🏠", "Coesione", "Cohesion", "تماسك أسري"),
+        CategoryFilterItem("asylum", "shield", "🛡️", "Asilo", "Asylum", "لجوء"),
+        CategoryFilterItem("eu_family", "public", "🇪🇺", "Familiare UE", "EU Family", "عائلة أوروبية")
     )
 
     // Advanced search filter (matches documents, deadlines, categories, and titles)
@@ -1991,18 +1995,24 @@ fun CategoryBadge(
         "family" -> "Family"
         "long_term" -> "Long-Term"
         "renewal" -> "Renewal"
+        "family_reunification" -> "Reunification"
+        "family_cohesion" -> "Cohesion"
+        "asylum" -> "Asylum"
+        "eu_family" -> "EU Family"
         else -> category.replaceFirstChar { it.uppercase() }
     }
     val containerColor = when (category) {
         "work" -> MaterialTheme.colorScheme.primaryContainer
         "study" -> MaterialTheme.colorScheme.secondaryContainer
-        "family" -> MaterialTheme.colorScheme.tertiaryContainer
+        "family", "family_reunification", "family_cohesion", "eu_family" -> MaterialTheme.colorScheme.tertiaryContainer
+        "asylum" -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
     val contentColor = when (category) {
         "work" -> MaterialTheme.colorScheme.onPrimaryContainer
         "study" -> MaterialTheme.colorScheme.onSecondaryContainer
-        "family" -> MaterialTheme.colorScheme.onTertiaryContainer
+        "family", "family_reunification", "family_cohesion", "eu_family" -> MaterialTheme.colorScheme.onTertiaryContainer
+        "asylum" -> MaterialTheme.colorScheme.onErrorContainer
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
