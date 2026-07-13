@@ -16,10 +16,44 @@ class AppRepository(private val context: Context) {
     private val historyDao = database.statusHistoryDao()
     private val bookmarkDao = database.guideBookmarkDao()
     private val checklistDao = database.documentChecklistDao()
+    private val sofiaDao = database.sofiaChatDao()
 
     val credentialsFlow: Flow<UserCredentials?> = credentialsDao.getCredentialsFlow()
     val historyFlow: Flow<List<StatusHistory>> = historyDao.getAllHistoryFlow()
     val bookmarksFlow: Flow<List<GuideBookmark>> = bookmarkDao.getAllBookmarksFlow()
+    val allConversationsFlow: Flow<List<SofiaConversation>> = sofiaDao.getAllConversationsFlow()
+
+    fun getMessagesForConversationFlow(conversationId: Long): Flow<List<SofiaMessage>> {
+        return sofiaDao.getMessagesForConversationFlow(conversationId)
+    }
+
+    suspend fun createConversation(title: String, category: String? = null): Long {
+        return sofiaDao.insertConversation(SofiaConversation(title = title, category = category))
+    }
+
+    suspend fun updateConversation(conversation: SofiaConversation) {
+        sofiaDao.updateConversation(conversation)
+    }
+
+    suspend fun deleteConversation(id: Long) {
+        sofiaDao.deleteConversationById(id)
+    }
+
+    suspend fun insertSofiaMessage(message: SofiaMessage): Long {
+        return sofiaDao.insertMessage(message)
+    }
+
+    suspend fun updateSofiaMessage(message: SofiaMessage) {
+        sofiaDao.updateMessage(message)
+    }
+
+    suspend fun clearSofiaMessages(conversationId: Long) {
+        sofiaDao.deleteMessagesForConversation(conversationId)
+    }
+
+    suspend fun searchConversations(query: String): List<SofiaConversation> {
+        return sofiaDao.searchConversations("%$query%")
+    }
 
     fun getChecklistStatesFlow(guideId: String): Flow<List<DocumentChecklistState>> {
         return checklistDao.getChecklistStatesFlow(guideId)

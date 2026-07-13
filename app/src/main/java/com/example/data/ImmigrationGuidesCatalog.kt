@@ -1025,6 +1025,394 @@ object ImmigrationGuidesCatalog {
                 )
             ),
             recommendations = listOf("renewal", "work_permit")
+        ),
+
+        // 5. FAMILY REUNIFICATION
+        ImmigrationGuide(
+            id = "family_reunification",
+            category = "family_reunification",
+            iconName = "group",
+            title = LocalizedText(
+                it = "Ricongiungimento Familiare (Nulla Osta)",
+                en = "Family Reunification (Nulla Osta)",
+                ar = "لم شمل الأسرة (Nulla Osta)",
+                es = "Reagrupación Familiar (Nulla Osta)",
+                fr = "Regroupement Familial (Nulla Osta)"
+            ),
+            description = LocalizedText(
+                it = "Guida per richiedere il Nulla Osta per portare la famiglia in Italia.",
+                en = "Guide to apply for a Nulla Osta to bring your family to Italy.",
+                ar = "دليل للتقدم بطلب للحصول على Nulla Osta لجلب عائلتك إلى إيطاليا.",
+                es = "Guía para solicitar el Nulla Osta para traer a tu familia a Italia.",
+                fr = "Guide pour demander le Nulla Osta afin de faire venir votre famille en Italie."
+            ),
+            difficulty = LocalizedText(
+                it = "Alto", en = "High", ar = "صعب", es = "Alto", fr = "Difficile"
+            ),
+            estimatedDuration = LocalizedText(
+                it = "6 - 9 Mesi", en = "6 - 9 Months", ar = "٦ - ٩ أشهر", es = "6 - 9 Meses", fr = "6 - 9 Mois"
+            ),
+            estimatedCosts = LocalizedText(
+                it = "ca. €180", en = "approx. €180", ar = "حوالي ١٨٠ يورو", es = "aprox. €180", fr = "env. €180"
+            ),
+            validityPeriod = LocalizedText(
+                it = "Uguale al richiedente", en = "Same as applicant", ar = "نفس صلاحية الكفيل", es = "Igual al solicitante", fr = "Même que le demandeur"
+            ),
+            requiredOffices = listOf("Sportello Unico Immigrazione", "Poste Italiane", "Questura"),
+            overview = GuideOverview(
+                whoIsItFor = LocalizedText(
+                    it = "Cittadini non-UE regolarmente residenti che vogliono farsi raggiungere dai familiari.",
+                    en = "Regularly resident non-EU citizens who want to be joined by family members.",
+                    ar = "مواطنو الدول غير الأعضاء في الاتحاد الأوروبي المقيمون بانتظام والذين يرغبون في جلب عائلاتهم.",
+                    es = "Ciudadanos no comunitarios con residencia regular que desean reagrupar a sus familiares.",
+                    fr = "Citoyens non-UE résidant régulièrement qui souhaitent être rejoints par leur famille."
+                ),
+                whoCanApply = LocalizedText(
+                    it = "Titolari di permesso di soggiorno di durata non inferiore a 1 anno con reddito e alloggio idonei.",
+                    en = "Holders of a residency permit valid for at least 1 year with sufficient income and suitable housing.",
+                    ar = "حاملو تصاريح الإقامة لمدة لا تقل عن سنة واحدة مع دخل كافٍ وسكن مناسب.",
+                    es = "Titulares de un permiso de residencia de al menos 1 año con ingresos y vivienda adecuados.",
+                    fr = "Titolaires d'un titre de séjour d'au moins 1 an disposant de ressources et d'un logement appropriés."
+                ),
+                mainRequirements = listOf(
+                    LocalizedText(
+                        it = "Certificato di idoneità alloggiativa conforme.",
+                        en = "Housing suitability certificate (Certificato Idoneità Alloggiativa).",
+                        ar = "شهادة ملاءمة السكن المطابقة للمواصفات.",
+                        es = "Certificado de habitabilidad de la vivienda conforme.",
+                        fr = "Certificat de conformité du logement."
+                    ),
+                    LocalizedText(
+                        it = "Reddito minimo annuo calcolato in base al numero di familiari da ricongiungere.",
+                        en = "Minimum annual income calculated based on the number of family members.",
+                        ar = "الحد الأدنى للدخل السنوي محسوباً على أساس عدد أفراد الأسرة المراد جمع شملهم.",
+                        es = "Ingreso anual mínimo calculado según el número de familiares a reagrupar.",
+                        fr = "Revenu annuel minimum calculé en fonction du nombre de membres de la famille."
+                    )
+                )
+            ),
+            timeline = listOf(
+                GuideTimelineStep(
+                    1,
+                    LocalizedText(it = "Domanda di Nulla Osta", en = "Nulla Osta Application", ar = "طلب النولا اوستا", es = "Solicitud de Nulla Osta", fr = "Demande de Nulla Osta"),
+                    LocalizedText(
+                        it = "Invia la domanda online allo Sportello Unico Immigrazione del tuo comune.",
+                        en = "Submit the request online to the Sportello Unico Immigrazione of your municipality.",
+                        ar = "أرسل الطلب عبر الإنترنت إلى مكتب الهجرة الموحد (Sportello Unico) في بلديتك.",
+                        es = "Envía la solicitud en línea al Sportello Unico Immigrazione de tu municipio.",
+                        fr = "Soumettez la demande en ligne au Sportello Unico Immigrazione de votre commune."
+                    )
+                ),
+                GuideTimelineStep(
+                    2,
+                    LocalizedText(it = "Rilascio del Nulla Osta", en = "Nulla Osta Release", ar = "إscdار النولا اوستا", es = "Emisión del Nulla Osta", fr = "Délivrance du Nulla Osta"),
+                    LocalizedText(
+                        it = "Dopo le verifiche, lo Sportello Unico rilascia il Nulla Osta e lo invia al consolato.",
+                        en = "After checks, the Sportello Unico releases the clearance and forwards it to the consulate.",
+                        ar = "بعد التدقيق، يصدر مكتب الهجرة تصريح (Nulla Osta) ويرسله تلقائياً إلى القنصلية.",
+                        es = "Tras las verificaciones, el Sportello Unico emite el Nulla Osta y lo envía al consulado.",
+                        fr = "Après vérifications, le Sportello Unico délivre le Nulla Osta et le transmet au consulat."
+                    )
+                ),
+                GuideTimelineStep(
+                    3,
+                    LocalizedText(it = "Visto in Consolato", en = "Consular Visa Request", ar = "طلب التأشيرة من القنصلية", es = "Visa en el Consulado", fr = "Visa au Consulat"),
+                    LocalizedText(
+                        it = "Il familiare richiede il visto di ingresso per motivi familiari presso il consolato italiano all'estero.",
+                        en = "The family member applies for the entry visa at the Italian consulate in their home country.",
+                        ar = "يتقدم فرد العائلة بطلب للحصول على تأشيرة دخول عائلية لدى القنصلية الإيطالية في بلده.",
+                        es = "El familiar solicita la visa de entrada por motivos familiares en el consulado italiano en su país.",
+                        fr = "Le membre de la famille demande le visa d'entrée pour motifs familiaux au consulat italien à l'étranger."
+                    )
+                )
+            ),
+            documents = listOf(
+                GuideDocument("doc_housing_su", LocalizedText(it = "Idoneità Alloggiativa", en = "Housing Suitability", ar = "شهادة ملاءمة السكن", es = "Idoneidad de Vivienda", fr = "Logement Conforme"), LocalizedText(it = "Certificato rilasciato dal comune o ASL.", en = "Certificate issued by the municipality or local health authority.", ar = "شهادة صادرة عن البلدية أو مصلحة الصحة المحلية ASL.", es = "Certificado emitido por el ayuntamiento o ASL.", fr = "Certificat délivré par la mairie ou l'ASL.")),
+                GuideDocument("doc_income", LocalizedText(it = "Documenti di Reddito", en = "Income Proof", ar = "إثبات الدخل المادي", es = "Prueba de Ingresos", fr = "Preuve de Revenu"), LocalizedText(it = "Buste paga, CUD, Unilav o dichiarazione dei redditi.", en = "Payslips, tax returns (CUD), and employment contracts.", ar = "قسائم الراتب، شهادة الدخل CUD، عقد Unilav أو الإقرار الضريبي.", es = "Nóminas, CUD, contrato Unilav o declaración de impuestos.", fr = "Fiches de paie, CUD, contrat Unilav ou déclaration d'impôts."))
+            ),
+            deadlines = listOf(),
+            whereToStart = GuideWhereToStart(
+                mainOffice = LocalizedText(it = "Sportello Unico Immigrazione (SUI)", en = "Sportello Unico Immigrazione (SUI)", ar = "مكتب الهجرة الموحد", es = "Sportello Unico", fr = "Guichet Unique de l'Immigration"),
+                explanation = LocalizedText(
+                    it = "La procedura comincia telematicamente sul portale del Ministero dell'Interno.",
+                    en = "The procedure starts online on the Ministry of Interior portal.",
+                    ar = "تبدأ الإجراءات إلكترونياً عبر بوابة وزارة الداخلية.",
+                    es = "El trámite comienza de forma telemática en el portal del Ministerio del Interior.",
+                    fr = "La procédure commence en ligne sur le portail du Ministère de l'Intérieur."
+                )
+            ),
+            costBreakdown = listOf(),
+            commonMistakes = listOf(),
+            faqs = listOf(),
+            helpfulContacts = listOf(),
+            officialResources = listOf(),
+            lastReviewed = LocalizedText(it = "12 Luglio 2026", en = "12 July 2026", ar = "١٢ يوليو ٢٠٢٦", es = "12 de Julio de 2026", fr = "12 Juillet 2026"),
+            guideVersion = "v1.0",
+            lastUpdated = LocalizedText(it = "12 Luglio 2026", en = "12 July 2026", ar = "١٢ يوليو ٢٠٢٦", es = "12 de Julio de 2026", fr = "12 Juillet 2026"),
+            provinceNotes = listOf(),
+            warnings = listOf(),
+            communityTips = listOf(),
+            aiPrompts = listOf(),
+            estimatedTimelineDetails = GuideEstimatedTimeline(
+                averageTime = LocalizedText(it = "6 - 9 Mesi", en = "6 - 9 Months", ar = "٦ - ٩ أشهر", es = "6 - 9 Meses", fr = "6 - 9 Mois"),
+                fastTrackOption = LocalizedText(it = "N/A", en = "N/A", ar = "غير متوفر", es = "N/A", fr = "N/A"),
+                delayReasons = listOf(),
+                relativeSpeedPercent = 0.4f
+            ),
+            legalReferences = listOf(),
+            recommendations = listOf()
+        ),
+
+        // 6. FAMILY COHESION
+        ImmigrationGuide(
+            id = "family_cohesion",
+            category = "family_cohesion",
+            iconName = "home",
+            title = LocalizedText(
+                it = "Coesione Familiare",
+                en = "Family Cohesion",
+                ar = "تماسك الأسرة",
+                es = "Cohesión Familiar",
+                fr = "Cohésion Familiale"
+            ),
+            description = LocalizedText(
+                it = "Richiesta di permesso per motivi familiari direttamente in Italia.",
+                en = "Apply for a family residency permit directly within Italy.",
+                ar = "طلب تصريح لأسباب عائلية مباشرة من داخل إيطاليا.",
+                es = "Solicitud de permiso por motivos familiares directamente en Italia.",
+                fr = "Demande de titre de séjour pour motifs familiaux directement en Italie."
+            ),
+            difficulty = LocalizedText(
+                it = "Medio", en = "Medium", ar = "متوسط", es = "Medio", fr = "Moyen"
+            ),
+            estimatedDuration = LocalizedText(
+                it = "3 - 5 Mesi", en = "3 - 5 Months", ar = "٣ - ٥ أشهر", es = "3 - 5 Meses", fr = "3 - 5 Mois"
+            ),
+            estimatedCosts = LocalizedText(
+                it = "ca. €120", en = "approx. €120", ar = "حوالي ١٢٠ يورو", es = "aprox. €120", fr = "env. €120"
+            ),
+            validityPeriod = LocalizedText(
+                it = "2 Anni", en = "2 Years", ar = "سنتين", es = "2 Años", fr = "2 Ans"
+            ),
+            requiredOffices = listOf("Poste Italiane", "Questura"),
+            overview = GuideOverview(
+                whoIsItFor = LocalizedText(
+                    it = "Familiari non-UE già presenti in Italia (es. con visto turistico) legati a un residente regolare.",
+                    en = "Non-EU family members already in Italy (e.g., on tourist visa) related to a regular resident.",
+                    ar = "أفراد الأسرة غير الأوروبيين المتواجدين بالفعل في إيطاليا (مثلاً بتأشيرة سياحية) المرتبطين بمقيم قانوني.",
+                    es = "Familiares no comunitarios ya presentes en Italia (ej. con visa de turista) vinculados a un residente regular.",
+                    fr = "Membres de la famille non-UE déjà présents en Italie (ex. avec visa touristique) liés à un résident régulier."
+                ),
+                whoCanApply = LocalizedText(
+                    it = "Coniuge, figli o genitori a carico, in presenza di requisiti di reddito e alloggio.",
+                    en = "Spouse, dependent children or parents, subject to income and housing requirements.",
+                    ar = "الزوج، الأطفال أو الوالدان المعالون، بشرط استيفاء متطلبات الدخل والسكن.",
+                    es = "Cónyuge, hijos o padres dependientes, sujetos a requisitos de ingresos y vivienda.",
+                    fr = "Conjoint, enfants ou parents à charge, sous réserve de ressources et de logement conformes."
+                ),
+                mainRequirements = listOf()
+            ),
+            timeline = listOf(),
+            documents = listOf(),
+            deadlines = listOf(),
+            whereToStart = GuideWhereToStart(
+                mainOffice = LocalizedText(it = "Ufficio Postale (Sportello Amico)", en = "Post Office (Sportello Amico)", ar = "مكتب البريد", es = "Oficina de Correos", fr = "Bureau de Poste"),
+                explanation = LocalizedText(
+                    it = "La domanda si presenta compilando e spedendo il kit postale giallo.",
+                    en = "The application is submitted by compiling and sending the yellow postal kit.",
+                    ar = "يتم تقديم الطلب عن طريق ملء وإرسال الملف البريدي الأصفر.",
+                    es = "La solicitud se presenta completando y enviando el kit postal amarillo.",
+                    fr = "La demande est soumise en remplissant et envoyant le kit postal jaune."
+                )
+            ),
+            costBreakdown = listOf(),
+            commonMistakes = listOf(),
+            faqs = listOf(),
+            helpfulContacts = listOf(),
+            officialResources = listOf(),
+            lastReviewed = LocalizedText(it = "12 Luglio 2026", en = "12 July 2026", ar = "١٢ يوليو ٢٠٢٦", es = "12 de Julio de 2026", fr = "12 Juillet 2026"),
+            guideVersion = "v1.0",
+            lastUpdated = LocalizedText(it = "12 Luglio 2026", en = "12 July 2026", ar = "١٢ يوليو ٢٠٢٦", es = "12 de Julio de 2026", fr = "12 Juillet 2026"),
+            provinceNotes = listOf(),
+            warnings = listOf(),
+            communityTips = listOf(),
+            aiPrompts = listOf(),
+            estimatedTimelineDetails = GuideEstimatedTimeline(
+                averageTime = LocalizedText(it = "3 - 5 Mesi", en = "3 - 5 Months", ar = "٣ - ٥ أشهر", es = "3 - 5 Meses", fr = "3 - 5 Mois"),
+                fastTrackOption = LocalizedText(it = "N/A", en = "N/A", ar = "غير متوفر", es = "N/A", fr = "N/A"),
+                delayReasons = listOf(),
+                relativeSpeedPercent = 0.6f
+            ),
+            legalReferences = listOf(),
+            recommendations = listOf()
+        ),
+
+        // 7. ASYLUM
+        ImmigrationGuide(
+            id = "asylum",
+            category = "asylum",
+            iconName = "shield",
+            title = LocalizedText(
+                it = "Protezione Internazionale (Asilo)",
+                en = "International Protection (Asylum)",
+                ar = "الحماية الدولية (اللجوء)",
+                es = "Protección Internacional (Asilo)",
+                fr = "Protection Internationale (Asile)"
+            ),
+            description = LocalizedText(
+                it = "Guida per la richiesta di asilo politico o protezione speciale.",
+                en = "Guide to apply for political asylum or special protection in Italy.",
+                ar = "دليل لطلب اللجوء السياسي أو الحماية الخاصة في إيطاليا.",
+                es = "Guía para solicitar asilo político o protección especial en Italia.",
+                fr = "Guide pour demander l'asile politique ou la protection spéciale en Italie."
+            ),
+            difficulty = LocalizedText(
+                it = "Medio", en = "Medium", ar = "متوسط", es = "Medio", fr = "Moyen"
+            ),
+            estimatedDuration = LocalizedText(
+                it = "6 - 12 Mesi", en = "6 - 12 Months", ar = "٦ - ١٢ شهراً", es = "6 - 12 Meses", fr = "6 - 12 Mois"
+            ),
+            estimatedCosts = LocalizedText(
+                it = "Gratuito", en = "Free of charge", ar = "مجاني بالكامل", es = "Gratuito", fr = "Gratuit"
+            ),
+            validityPeriod = LocalizedText(
+                it = "5 Anni (Asilo) / 2 Anni (Speciale)", en = "5 Years (Asylum) / 2 Years (Special)", ar = "٥ سنوات للجوء / سنتين للحماية الخاصة", es = "5 Años (Asilo) / 2 Años (Especial)", fr = "5 Ans (Asile) / 2 Ans (Spéciale)"
+            ),
+            requiredOffices = listOf("Polizia di Frontiera", "Questura", "Commissione Territoriale"),
+            overview = GuideOverview(
+                whoIsItFor = LocalizedText(
+                    it = "Persone che fuggono da persecuzioni, guerre o violazioni dei diritti umani.",
+                    en = "People fleeing persecution, war, or human rights violations.",
+                    ar = "الأشخاص الذين يفرون من الاضطهاد، الحرب، أو انتهاكات حقوق الإنسان.",
+                    es = "Personas que huyen de persecuciones, guerras o violaciones de derechos humanos.",
+                    fr = "Personnes fuyant les persécutions, la guerre ou les violations des droits de l'homme."
+                ),
+                whoCanApply = LocalizedText(
+                    it = "Chiunque si trovi sul territorio italiano e non possa tornare nel proprio paese d'origine per motivi di sicurezza.",
+                    en = "Anyone on Italian territory who cannot return to their home country due to safety concerns.",
+                    ar = "أي شخص يتواجد على الأراضي الإيطالية ولا يمكنه العودة إلى بلده الأصلي لأسباب أمنية.",
+                    es = "Cualquier persona en territorio italiano que no pueda regresar a su país por motivos de seguridad.",
+                    fr = "Toute personne sur le territoire italien ne pouvant retourner dans son pays pour des raisons de sécurité."
+                ),
+                mainRequirements = listOf()
+            ),
+            timeline = listOf(),
+            documents = listOf(),
+            deadlines = listOf(),
+            whereToStart = GuideWhereToStart(
+                mainOffice = LocalizedText(it = "Questura o Polizia di Frontiera", en = "Questura or Border Police", ar = "مكتب الكويستورا أو شرطة الحدود", es = "Questura o Policía de Fronteras", fr = "Questura ou Police aux Frontières"),
+                explanation = LocalizedText(
+                    it = "La domanda si presenta di persona presso la polizia di frontiera all'arrivo o in Questura (modello C3).",
+                    en = "The application is presented in person at the border police upon arrival or at the Questura (C3 form).",
+                    ar = "يتم تقديم الطلب شخصياً لدى شرطة الحدود عند الوصول أو في الكويستورا عبر نموذج C3.",
+                    es = "La solicitud se presenta en persona en la policía de fronteras al llegar o en la Questura (modelo C3).",
+                    fr = "La demande est présentée en personne à la police aux frontières à l'arrivée ou à la Questura (formulaire C3)."
+                )
+            ),
+            costBreakdown = listOf(),
+            commonMistakes = listOf(),
+            faqs = listOf(),
+            helpfulContacts = listOf(),
+            officialResources = listOf(),
+            lastReviewed = LocalizedText(it = "12 Luglio 2026", en = "12 July 2026", ar = "١٢ يوليو ٢٠٢٦", es = "12 de Julio de 2026", fr = "12 Juillet 2026"),
+            guideVersion = "v1.0",
+            lastUpdated = LocalizedText(it = "12 Luglio 2026", en = "12 July 2026", ar = "١٢ يوليو ٢٠٢٦", es = "12 de Julio de 2026", fr = "12 Juillet 2026"),
+            provinceNotes = listOf(),
+            warnings = listOf(),
+            communityTips = listOf(),
+            aiPrompts = listOf(),
+            estimatedTimelineDetails = GuideEstimatedTimeline(
+                averageTime = LocalizedText(it = "6 - 12 Mesi", en = "6 - 12 Months", ar = "٦ - ١٢ شهراً", es = "6 - 12 Meses", fr = "6 - 12 Mois"),
+                fastTrackOption = LocalizedText(it = "N/A", en = "N/A", ar = "غير متوفر", es = "N/A", fr = "N/A"),
+                delayReasons = listOf(),
+                relativeSpeedPercent = 0.3f
+            ),
+            legalReferences = listOf(),
+            recommendations = listOf()
+        ),
+
+        // 8. EU FAMILY MEMBER
+        ImmigrationGuide(
+            id = "eu_family",
+            category = "eu_family",
+            iconName = "public",
+            title = LocalizedText(
+                it = "Carta di Soggiorno per Familiare di Cittadino UE",
+                en = "Residency Card for EU Family Member",
+                ar = "بطاقة إقامة لفرد من عائلة مواطن أوروبي",
+                es = "Tarjeta de Residencia de Familiar de Ciudadano de la UE",
+                fr = "Carte de Séjour pour Membre de la Famille d'un Citoyen de l'UE"
+            ),
+            description = LocalizedText(
+                it = "Procedura per familiari extracomunitari di cittadini italiani o dell'Unione Europea.",
+                en = "Procedure for non-EU family members of Italian or EU citizens.",
+                ar = "الإجراءات المخصصة لأفراد العائلة غير الأوروبيين لمواطنين إيطاليين أو أوروبيين.",
+                es = "Procedimiento para familiares no comunitarios de ciudadanos italianos o de la UE.",
+                fr = "Procédure pour les membres de la famille non-UE de citoyens italiens ou de l'UE."
+            ),
+            difficulty = LocalizedText(
+                it = "Facile", en = "Easy", ar = "سهل", es = "Fácil", fr = "Facile"
+            ),
+            estimatedDuration = LocalizedText(
+                it = "2 - 4 Mesi", en = "2 - 4 Months", ar = "٢ - ٤ أشهر", es = "2 - 4 Meses", fr = "2 - 4 Mois"
+            ),
+            estimatedCosts = LocalizedText(
+                it = "ca. €80", en = "approx. €80", ar = "حوالي ٨٠ يورو", es = "aprox. €80", fr = "env. €80"
+            ),
+            validityPeriod = LocalizedText(
+                it = "5 Anni", en = "5 Years", ar = "٥ سنوات", es = "5 Años", fr = "5 Ans"
+            ),
+            requiredOffices = listOf("Poste Italiane o Questura"),
+            overview = GuideOverview(
+                whoIsItFor = LocalizedText(
+                    it = "Familiari non-UE conviventi con cittadino UE regolarmente stabilito in Italia.",
+                    en = "Non-EU family members cohabiting with an EU citizen regularly settled in Italy.",
+                    ar = "أفراد العائلة غير الأوروبيين الذين يعيشون مع مواطن أوروبي مستقر بانتظام في إيطاليا.",
+                    es = "Familiares no comunitarios que conviven con un ciudadano de la UE residente en Italia.",
+                    fr = "Membres de la famille non-UE cohabitant avec un citoyen de l'UE régulièrement établi en Italie."
+                ),
+                whoCanApply = LocalizedText(
+                    it = "Coniuge, figli o genitori dell'avente diritto europeo.",
+                    en = "Spouse, children, or parents of the eligible EU citizen.",
+                    ar = "الزوج، الأولاد أو الوالدان للمواطن الأوروبي صاحب الحق.",
+                    es = "Cónyuge, hijos o padres del ciudadano europeo con derecho.",
+                    fr = "Conjoint, enfants ou parents du citoyen européen éligible."
+                ),
+                mainRequirements = listOf()
+            ),
+            timeline = listOf(),
+            documents = listOf(),
+            deadlines = listOf(),
+            whereToStart = GuideWhereToStart(
+                mainOffice = LocalizedText(it = "Ufficio Postale (Amico) o Questura", en = "Post Office (Amico) or Questura", ar = "مكتب البريد أو الكويستورا", es = "Oficina de Correos o Questura", fr = "Bureau de Poste ou Questura"),
+                explanation = LocalizedText(
+                    it = "A seconda della casistica, la domanda può essere presentata via Poste o direttamente in Questura.",
+                    en = "Depending on the case, the application can be filed via Post Office or directly at the Questura.",
+                    ar = "تبعاً للحالة، يمكن تقديم الطلب عبر البريد أو مباشرة في الكويستورا.",
+                    es = "Según el caso, la solicitud puede presentarse por Correos o directamente en la Questura.",
+                    fr = "Selon le cas, la demande peut être déposée via la Poste ou directement à la Questura."
+                )
+            ),
+            costBreakdown = listOf(),
+            commonMistakes = listOf(),
+            faqs = listOf(),
+            helpfulContacts = listOf(),
+            officialResources = listOf(),
+            lastReviewed = LocalizedText(it = "12 Luglio 2026", en = "12 July 2026", ar = "١٢ يوليو ٢٠٢٦", es = "12 de Julio de 2026", fr = "12 Juillet 2026"),
+            guideVersion = "v1.0",
+            lastUpdated = LocalizedText(it = "12 Luglio 2026", en = "12 July 2026", ar = "١٢ يوليو ٢٠٢٦", es = "12 de Julio de 2026", fr = "12 Juillet 2026"),
+            provinceNotes = listOf(),
+            warnings = listOf(),
+            communityTips = listOf(),
+            aiPrompts = listOf(),
+            estimatedTimelineDetails = GuideEstimatedTimeline(
+                averageTime = LocalizedText(it = "2 - 4 Mesi", en = "2 - 4 Months", ar = "٢ - ٤ أشهر", es = "2 - 4 Meses", fr = "2 - 4 Mois"),
+                fastTrackOption = LocalizedText(it = "N/A", en = "N/A", ar = "غير متوفر", es = "N/A", fr = "N/A"),
+                delayReasons = listOf(),
+                relativeSpeedPercent = 0.8f
+            ),
+            legalReferences = listOf(),
+            recommendations = listOf("renewal", "work_permit")
         )
     )
 }

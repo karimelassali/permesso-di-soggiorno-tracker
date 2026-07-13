@@ -55,12 +55,13 @@ interface DocumentChecklistDao {
     suspend fun insertOrUpdate(state: DocumentChecklistState)
 }
 
-@Database(entities = [UserCredentials::class, StatusHistory::class, GuideBookmark::class, DocumentChecklistState::class], version = 3, exportSchema = false)
+@Database(entities = [UserCredentials::class, StatusHistory::class, GuideBookmark::class, DocumentChecklistState::class, SofiaConversation::class, SofiaMessage::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userCredentialsDao(): UserCredentialsDao
     abstract fun statusHistoryDao(): StatusHistoryDao
     abstract fun guideBookmarkDao(): GuideBookmarkDao
     abstract fun documentChecklistDao(): DocumentChecklistDao
+    abstract fun sofiaChatDao(): SofiaChatDao
 
     companion object {
         @Volatile
