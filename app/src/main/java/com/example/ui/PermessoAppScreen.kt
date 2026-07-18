@@ -133,6 +133,14 @@ fun PermessoAppScreen(
 
     val onboardingCompleted by viewModel.onboardingCompleted.collectAsStateWithLifecycle()
 
+    LaunchedEffect(onboardingCompleted) {
+        if (!onboardingCompleted) {
+            selectedTabIndex = 0
+            showingGuidesScreen = false
+            showingQuestureExplorer = false
+        }
+    }
+
     val layoutDirection = if (selectedLanguageCode == "ar") {
         androidx.compose.ui.unit.LayoutDirection.Rtl
     } else {
@@ -143,7 +151,10 @@ fun PermessoAppScreen(
         if (!onboardingCompleted) {
             OnboardingScreen(
                 viewModel = viewModel,
-                onComplete = { viewModel.completeOnboarding() }
+                onComplete = {
+                    viewModel.completeOnboarding()
+                    selectedTabIndex = 0
+                }
             )
         } else {
             Scaffold(
@@ -4386,6 +4397,115 @@ fun ProfileTab(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = ItalianGreen
                             )
+                        )
+                    }
+                }
+            }
+        }
+
+        // Section 4: Privacy & GDPR (Danger Zone)
+        item {
+            var showDeleteDialog by remember { mutableStateOf(false) }
+            
+            if (showDeleteDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteDialog = false },
+                    title = {
+                        Text(
+                            text = Localization.string("delete_profile_confirm_title", selectedLanguageCode),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = Localization.string("delete_profile_confirm_msg", selectedLanguageCode),
+                            color = BentoTextSecondary,
+                            fontSize = 14.sp
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showDeleteDialog = false
+                                viewModel.deleteProfileAndReset()
+                                android.widget.Toast.makeText(
+                                    context,
+                                    Localization.string("delete_profile_success", selectedLanguageCode),
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text(Localization.string("confirm", selectedLanguageCode), color = Color.White)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteDialog = false }) {
+                            Text(Localization.string("cancel", selectedLanguageCode), color = BentoTextSecondary)
+                        }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Color(0xFFFFCDD2).copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE).copy(alpha = 0.3f)),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = Color(0xFFD32F2F),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "GDPR & Privacy (Danger Zone)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = Color(0xFFC62828)
+                        )
+                    }
+
+                    Text(
+                        text = if (selectedLanguageCode == "it") {
+                            "Ai sensi dell'Art. 17 del GDPR (Diritto alla Cancellazione), hai il diritto di eliminare permanentemente tutte le tue informazioni personali da questa applicazione in qualsiasi momento."
+                        } else if (selectedLanguageCode == "es") {
+                            "Según el Art. 17 del GDPR (Derecho de Supresión), tienes derecho a eliminar permanentemente toda tu información personal de esta aplicación en cualquier momento."
+                        } else if (selectedLanguageCode == "fr") {
+                            "Conformément à l'Art. 17 du RGPD (Droit à l'Effacement), vous avez le droit de supprimer définitivement toutes vos informations personnelles de cette application à tout moment."
+                        } else if (selectedLanguageCode == "ar") {
+                            "بموجب المادة 17 من قانون حماية البيانات العام (GDPR) (الحق في المحو)، يحق لك حذف جميع معلوماتك الشخصية من هذا التطبيق نهائياً في أي وقت."
+                        } else {
+                            "Under GDPR Art. 17 (Right to Erasure), you have the right to permanently delete all your personal identifying information from this application at any time."
+                        },
+                        fontSize = 12.sp,
+                        color = BentoTextSecondary,
+                        lineHeight = 16.sp
+                    )
+
+                    Button(
+                        onClick = { showDeleteDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = Localization.string("delete_profile", selectedLanguageCode),
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
                 }

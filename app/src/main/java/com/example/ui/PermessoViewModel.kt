@@ -67,10 +67,10 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
     val checkState: StateFlow<CheckUiState> = _checkState.asStateFlow()
 
     // Form fields editable state
-    val formFullName = MutableStateFlow("Karim El Assali")
-    val formUserId = MutableStateFlow("550000133317")
-    val formPassword = MutableStateFlow("055987476941")
-    val formNumeroAssicurata = MutableStateFlow("055987476941")
+    val formFullName = MutableStateFlow("")
+    val formUserId = MutableStateFlow("")
+    val formPassword = MutableStateFlow("")
+    val formNumeroAssicurata = MutableStateFlow("")
     val formNumeroPratica = MutableStateFlow("")
 
     // PREMIUM EXTRA FEATURES STATES (Shared Preferences Backed)
@@ -357,6 +357,49 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
     fun clearCheckHistory() {
         viewModelScope.launch {
             repository.clearHistory()
+        }
+    }
+
+    fun deleteProfileAndReset() {
+        viewModelScope.launch {
+            // 1. Reset user credentials DB record to fully blank
+            val emptyCreds = UserCredentials(
+                fullName = "",
+                userId = "",
+                password = "",
+                numeroAssicurata = "",
+                numeroPratica = "",
+                lastCheckedTime = 0L,
+                lastPoliziaStatus = "No checks yet",
+                lastPortaleStatus = "No checks yet",
+                selectedQuesturaId = null,
+                selectedProvinceCode = null,
+                selectedPermitType = null
+            )
+            repository.saveCredentials(emptyCreds)
+            
+            // 2. Clear history
+            repository.clearHistory()
+            
+            // 3. Clear all Sofia conversations / chats
+            repository.clearAllSofiaData()
+            
+            // 4. Clear all shared preferences and onboarding state
+            _onboardingCompleted.value = false
+            _selectedProvince.value = "Milano"
+            _appointmentDate.value = ""
+            _appointmentTime.value = ""
+            _appointmentLocation.value = "Questura di Milano"
+            _checkedDocs.value = emptySet()
+            
+            prefs.edit()
+                .putBoolean("onboarding_completed", false)
+                .putString("selected_province", "Milano")
+                .putString("appointment_date", "")
+                .putString("appointment_time", "")
+                .putString("appointment_location", "Questura di Milano")
+                .putStringSet("checked_docs", emptySet())
+                .apply()
         }
     }
 }

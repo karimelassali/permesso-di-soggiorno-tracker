@@ -818,6 +818,14 @@ fun SofiaMyJourneyCard(
     viewModel: SofiaViewModel,
     selectedLanguageCode: String
 ) {
+    val credentials by viewModel.userCredentialsState.collectAsStateWithLifecycle()
+    val fullName = credentials?.fullName ?: ""
+    val hasCredentials = fullName.isNotBlank()
+    val nameToUse = if (hasCredentials) fullName else if (selectedLanguageCode == "it") "Ospite" else "Guest"
+    
+    val permitType = credentials?.selectedPermitType ?: if (selectedLanguageCode == "it") "Permesso di Soggiorno" else "Residence Permit"
+    val questuraName = credentials?.selectedQuesturaId ?: if (selectedLanguageCode == "it") "Questura di Milano" else "Questura of Milan"
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -850,19 +858,31 @@ fun SofiaMyJourneyCard(
             
             // Custom summary items dynamically loaded in text style
             Text(
-                text = "Hello Karim.",
+                text = if (selectedLanguageCode == "it") "Ciao $nameToUse." 
+                       else if (selectedLanguageCode == "es") "Hola $nameToUse."
+                       else if (selectedLanguageCode == "fr") "Bonjour $nameToUse."
+                       else if (selectedLanguageCode == "ar") "مرحباً $nameToUse."
+                       else "Hello $nameToUse.",
                 color = SofiaTextPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "You are currently tracking: Work Permit Renewal",
+                text = if (selectedLanguageCode == "it") "Stai tracciando: $permitType"
+                       else if (selectedLanguageCode == "es") "Estás siguiendo: $permitType"
+                       else if (selectedLanguageCode == "fr") "Vous suivez : $permitType"
+                       else if (selectedLanguageCode == "ar") "أنت تتابع حالياً: $permitType"
+                       else "You are currently tracking: $permitType",
                 color = SofiaTextPrimary,
                 fontSize = 13.sp
             )
             Text(
-                text = "Questura: Questura di Piacenza",
+                text = if (selectedLanguageCode == "it") "Questura: $questuraName"
+                       else if (selectedLanguageCode == "es") "Questura: $questuraName"
+                       else if (selectedLanguageCode == "fr") "Préfecture : $questuraName"
+                       else if (selectedLanguageCode == "ar") "المديرية: $questuraName"
+                       else "Questura: $questuraName",
                 color = SofiaTextSecondary,
                 fontSize = 12.sp
             )
@@ -873,20 +893,42 @@ fun SofiaMyJourneyCard(
                         .background(BentoBadgeOrange.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
-                    Text(text = "In trattazione", color = BentoBadgeOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (selectedLanguageCode == "it") "In trattazione" 
+                               else if (selectedLanguageCode == "es") "En trámite"
+                               else if (selectedLanguageCode == "fr") "En traitement"
+                               else if (selectedLanguageCode == "ar") "قيد المعالجة"
+                               else "In processing", 
+                        color = BentoBadgeOrange, 
+                        fontSize = 11.sp, 
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Next Appointment: 21 August", color = SofiaTextPrimary, fontSize = 12.sp)
+                val appointmentText = if (selectedLanguageCode == "it") "Pratica attiva" 
+                                      else if (selectedLanguageCode == "es") "Expediente activo"
+                                      else if (selectedLanguageCode == "fr") "Dossier actif"
+                                      else if (selectedLanguageCode == "ar") "ملف نشط"
+                                      else "Active practice"
+                Text(text = appointmentText, color = SofiaTextPrimary, fontSize = 12.sp)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Missing documents: Passport copy, Marca da Bollo",
+                text = if (selectedLanguageCode == "it") "Documenti consigliati: Copia passaporto, marca da bollo, foto tessera"
+                       else if (selectedLanguageCode == "es") "Documentos recomendados: Copia del pasaporte, marca da bollo, fotos de carné"
+                       else if (selectedLanguageCode == "fr") "Documents recommandés : Copie du passeport, timbre fiscal, photos d'identité"
+                       else if (selectedLanguageCode == "ar") "المستندات المطلوبة: نسخة من جواز السفر، طابع بريد، صور شخصية"
+                       else "Recommended documents: Passport copy, stamp duty, passport photos",
                 color = SofiaTextSecondary,
                 fontSize = 12.sp
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Recommended action: Prepare your documents before your fingerprint appointment.",
+                text = if (selectedLanguageCode == "it") "Azione raccomandata: Chiedi a Sofia AI chiarimenti su come completare la tua pratica."
+                       else if (selectedLanguageCode == "es") "Acción recomendada: Pregúntale a Sofia AI sobre cómo completar tu expediente."
+                       else if (selectedLanguageCode == "fr") "Action recommandée : Demandez à Sofia AI comment compléter votre dossier."
+                       else if (selectedLanguageCode == "ar") "الإجراء الموصى به: اسأل صوفيا الذكية عن كيفية استكمال ملفك."
+                       else "Recommended action: Ask Sofia AI about how to complete your permit details.",
                 color = SofiaGreen,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium

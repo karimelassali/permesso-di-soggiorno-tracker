@@ -31,7 +31,7 @@ object GeminiHelper {
         }
 
         // Try stable endpoints
-        val models = listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro")
+        val models = listOf("gemini-3.5-flash", "gemini-3.1-pro-preview")
         
         for (model in models) {
             try {

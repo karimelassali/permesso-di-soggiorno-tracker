@@ -88,6 +88,11 @@ class AppRepository(private val context: Context) {
         historyDao.clearAll()
     }
 
+    suspend fun clearAllSofiaData() {
+        sofiaDao.deleteAllConversations()
+        sofiaDao.deleteAllMessages()
+    }
+
     suspend fun insertHistory(history: StatusHistory) {
         historyDao.insert(history)
     }

@@ -1526,6 +1526,46 @@ object Localization {
     )
 
     fun string(key: String, lang: String): String {
+        val custom = when (key) {
+            "confirm" -> when (lang) {
+                "en" -> "Confirm"
+                "ar" -> "تأكيد"
+                "es" -> "Confirmar"
+                "fr" -> "Confirmer"
+                else -> "Conferma"
+            }
+            "delete_profile" -> when (lang) {
+                "en" -> "Delete Profile & Data"
+                "ar" -> "حذف الملف الشخصي والبيانات"
+                "es" -> "Eliminar Perfil y Datos"
+                "fr" -> "Supprimer le Profil et les Données"
+                else -> "Elimina Profilo e Dati"
+            }
+            "delete_profile_confirm_title" -> when (lang) {
+                "en" -> "Delete Profile"
+                "ar" -> "حذف الملف الشخصي"
+                "es" -> "Eliminar Perfil"
+                "fr" -> "Supprimer le Profil"
+                else -> "Elimina Profilo"
+            }
+            "delete_profile_confirm_msg" -> when (lang) {
+                "en" -> "This action will permanently delete your profile, all credentials, checking history, and Sofia AI messages. This cannot be undone."
+                "ar" -> "سيؤدي هذا الإجراء إلى حذف ملفك الشخصي وجميع بياناتك وسجل الفحوصات ومحادثات صوفيا نهائياً. لا يمكن التراجع عن هذا الإجراء."
+                "es" -> "Esta acción eliminará permanentemente tu perfil, credenciales, historial de controles y mensajes de Sofia AI. No se puede deshacer."
+                "fr" -> "Cette action supprimera définitivement votre profil, vos identifiants, l'historique des contrôles et les messages de Sofia AI. Cette action est irréversible."
+                else -> "Questa azione eliminerà definitivamente il tuo profilo, tutte le credenziali, la cronologia dei controlli e i messaggi di Sofia AI dal tuo dispositivo. Questa operazione non può essere annullata."
+            }
+            "delete_profile_success" -> when (lang) {
+                "en" -> "All local data has been successfully deleted."
+                "ar" -> "تم حذف جميع البيانات المحلية بنجاح."
+                "es" -> "Todos los datos locales han sido eliminados con éxito."
+                "fr" -> "Toutes les données locales ont été supprimées avec succès."
+                else -> "Tutti i dati locali sono stati eliminati con successo dal tuo dispositivo."
+            }
+            else -> null
+        }
+        if (custom != null) return custom
+
         return translations[lang]?.get(key)
             ?: translations["it"]?.get(key)
             ?: key

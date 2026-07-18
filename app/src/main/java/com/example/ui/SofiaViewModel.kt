@@ -74,6 +74,7 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
 
     // Gather overall app context dynamically for the AI prompt
     private val credentials = repository.credentialsFlow.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val userCredentialsState: StateFlow<UserCredentials?> = credentials
     private val checkHistory = repository.historyFlow.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     private val bookmarkedGuideIds = repository.bookmarksFlow
         .map { list -> list.map { it.guideId }.toSet() }

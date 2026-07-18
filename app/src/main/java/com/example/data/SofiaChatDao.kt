@@ -36,6 +36,12 @@ interface SofiaChatDao {
     @Query("DELETE FROM sofia_messages WHERE conversationId = :conversationId")
     suspend fun deleteMessagesForConversation(conversationId: Long)
     
+    @Query("DELETE FROM sofia_conversations")
+    suspend fun deleteAllConversations()
+
+    @Query("DELETE FROM sofia_messages")
+    suspend fun deleteAllMessages()
+    
     @Query("SELECT * FROM sofia_conversations WHERE title LIKE :query ORDER BY lastActive DESC")
     suspend fun searchConversations(query: String): List<SofiaConversation>
 }

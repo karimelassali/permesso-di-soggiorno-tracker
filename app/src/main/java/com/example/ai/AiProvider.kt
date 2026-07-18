@@ -34,10 +34,10 @@ class GeminiAiProvider : AiProvider {
             return@withContext generateNvidiaResponse(systemInstruction, history, userMessage)
         }
 
-        // Try stable v1 first, then v1beta if needed
+        // Try stable v1beta first, then v1 if needed
         val endpoints = listOf(
-            "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent",
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent"
         )
 
         var lastError = ""
