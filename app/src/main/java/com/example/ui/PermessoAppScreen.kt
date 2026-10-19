@@ -519,7 +519,9 @@ fun DashboardTab(
     selectedLanguageCode: String
 ) {
     val hasCode = credentials != null && 
-            (credentials.numeroAssicurata.isNotBlank() || credentials.numeroPratica.isNotBlank())
+            (credentials.numeroAssicurata.isNotBlank() || 
+             credentials.numeroPratica.isNotBlank() || 
+             (credentials.userId.isNotBlank() && credentials.password.isNotBlank()))
 
     var activeSubTab by remember { mutableStateOf(0) }
 
@@ -692,6 +694,13 @@ fun DashboardTab(
                     Box(modifier = Modifier.weight(1f)) {
                         BentoPoliziaStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
                     }
+                }
+            }
+
+            // REAL PORTALE IMMIGRAZIONE DETTAGLIO ISTANZA & CONVOCAZIONE CARD
+            if (credentials != null && (credentials.codiceIstanza.isNotBlank() || credentials.convocazioneDate.isNotBlank() || credentials.dettaglioAnomalie.isNotBlank())) {
+                item {
+                    BentoIstanzaDetailsCard(credentials = credentials)
                 }
             }
 
@@ -917,26 +926,30 @@ fun BentoPrimaryStatusCard(credentials: UserCredentials?, selectedLanguageCode: 
     val poliziaStatus = credentials?.lastPoliziaStatus ?: "No checks yet"
     val portaleStatus = credentials?.lastPortaleStatus ?: "No checks yet"
 
+    val isPoliziaNotFound = poliziaStatus.contains("Non presente", ignoreCase = true) ||
+            poliziaStatus.contains("non trovato", ignoreCase = true)
+
     val combinedStatus = when {
         hasPolizia && hasPortale -> {
-            if (poliziaStatus != "No checks yet" && portaleStatus != "No checks yet") {
-                // Shorten status if combined to avoid UI overflows
+            if (portaleStatus != "No checks yet" && (poliziaStatus == "No checks yet" || isPoliziaNotFound)) {
+                portaleStatus
+            } else if (poliziaStatus != "No checks yet" && portaleStatus != "No checks yet") {
                 val shortPolizia = if (poliziaStatus.length > 20) poliziaStatus.take(17) + "..." else poliziaStatus
                 val shortPortale = if (portaleStatus.length > 20) portaleStatus.take(17) + "..." else portaleStatus
-                "$shortPolizia | $shortPortale"
-            } else if (poliziaStatus != "No checks yet") {
-                poliziaStatus
+                "$shortPortale | $shortPolizia"
             } else if (portaleStatus != "No checks yet") {
                 portaleStatus
+            } else if (poliziaStatus != "No checks yet") {
+                poliziaStatus
             } else {
                 Localization.string("awaiting_check", selectedLanguageCode)
             }
         }
-        hasPolizia -> {
-            if (poliziaStatus != "No checks yet") poliziaStatus else Localization.string("awaiting_check", selectedLanguageCode)
-        }
         hasPortale -> {
             if (portaleStatus != "No checks yet") portaleStatus else Localization.string("awaiting_check", selectedLanguageCode)
+        }
+        hasPolizia -> {
+            if (poliziaStatus != "No checks yet") poliziaStatus else Localization.string("awaiting_check", selectedLanguageCode)
         }
         else -> Localization.string("config_required", selectedLanguageCode)
     }
@@ -1100,15 +1113,135 @@ fun BentoPortalStatusCard(credentials: UserCredentials?, selectedLanguageCode: S
 }
 
 @Composable
+fun BentoIstanzaDetailsCard(credentials: UserCredentials) {
+    val statoAttuale = credentials.lastPortaleStatus.substringBefore(" - ").ifBlank { "In Preistruttoria" }
+    val assicurata = credentials.numeroAssicurata.ifBlank { credentials.password }
+    val istanza = credentials.codiceIstanza.ifBlank { credentials.numeroPratica }
+    val ologramma = credentials.codiceOlogramma.ifBlank { credentials.userId }
+    val anomalie = credentials.dettaglioAnomalie.ifBlank { "Nessuna Anomalia Documentale" }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("istanza_details_card"),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, BentoCardBorder)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.VerifiedUser,
+                        contentDescription = null,
+                        tint = BentoBadgeGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Dettaglio Istanza 1 di 1 (Portale Immigrazione)",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BentoTextHeading
+                    )
+                }
+            }
+
+            HorizontalDivider(color = BentoCardBorder)
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Codice Assicurata:", fontSize = 12.sp, color = BentoTextSecondary, fontWeight = FontWeight.Medium)
+                Text(assicurata, fontSize = 12.sp, color = BentoTextHeading, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+            }
+            if (istanza.isNotBlank()) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Codice Istanza:", fontSize = 12.sp, color = BentoTextSecondary, fontWeight = FontWeight.Medium)
+                    Text(istanza, fontSize = 12.sp, color = BentoTextHeading, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                }
+            }
+            if (ologramma.isNotBlank()) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Codice Ologramma:", fontSize = 12.sp, color = BentoTextSecondary, fontWeight = FontWeight.Medium)
+                    Text(ologramma, fontSize = 12.sp, color = BentoTextHeading, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Stato Attuale:", fontSize = 12.sp, color = BentoTextSecondary, fontWeight = FontWeight.Medium)
+                Text(statoAttuale, fontSize = 12.sp, color = BentoBadgeGreen, fontWeight = FontWeight.Bold)
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Anomalie Documentali:", fontSize = 12.sp, color = BentoTextSecondary, fontWeight = FontWeight.Medium)
+                Text(anomalie, fontSize = 12.sp, color = BentoTextHeading, fontWeight = FontWeight.SemiBold)
+            }
+
+            if (credentials.convocazioneDate.isNotBlank()) {
+                HorizontalDivider(color = BentoCardBorder)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(BentoCardPrimaryBg)
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Convocazione Questura",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BentoCardPrimaryText
+                    )
+                    Text(
+                        text = "📅 ${credentials.convocazioneDate}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = BentoTextHeading
+                    )
+                    if (credentials.convocazioneLocation.isNotBlank()) {
+                        Text(
+                            text = "📍 ${credentials.convocazioneLocation}",
+                            fontSize = 12.sp,
+                            color = BentoTextHeading
+                        )
+                    }
+                    if (credentials.convocazioneMotivo.isNotBlank()) {
+                        Text(
+                            text = "📝 Motivo: ${credentials.convocazioneMotivo}",
+                            fontSize = 12.sp,
+                            color = BentoTextSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun BentoPoliziaStatusCard(credentials: UserCredentials?, selectedLanguageCode: String) {
     val statusText = credentials?.lastPoliziaStatus ?: "No checks yet"
     val hasCode = credentials != null && 
             (credentials.numeroAssicurata.isNotBlank() || credentials.numeroPratica.isNotBlank())
 
+    val isNotFoundOrError = statusText.contains("non presente", ignoreCase = true) || 
+            statusText.contains("non trovato", ignoreCase = true) || 
+            statusText.contains("non valido", ignoreCase = true) || 
+            statusText.contains("Errore", ignoreCase = true)
+
     val (titleText, descText) = when {
         !hasCode -> Pair(Localization.string("not_active", selectedLanguageCode), Localization.string("configure_receipt_desc", selectedLanguageCode))
         statusText == "No checks yet" -> Pair(Localization.string("not_verified", selectedLanguageCode), Localization.string("manual_check_desc", selectedLanguageCode))
         statusText.contains("consegna", ignoreCase = true) || statusText.contains("Pronto", ignoreCase = true) -> Pair(Localization.string("ready", selectedLanguageCode), statusText)
+        isNotFoundOrError -> Pair("Non Trovato / Errore", statusText)
         else -> Pair(Localization.string("in_processing", selectedLanguageCode), statusText)
     }
 
@@ -1161,12 +1294,14 @@ fun BentoPoliziaStatusCard(credentials: UserCredentials?, selectedLanguageCode: 
                     !hasCode -> BentoTextSecondary.copy(alpha = 0.4f)
                     statusText == "No checks yet" -> BentoTextSecondary.copy(alpha = 0.6f)
                     isReady -> BentoBadgeGreen
+                    isNotFoundOrError -> BentoAlertRed
                     else -> Color(0xFFFF9800) // Amber
                 }
                 val label = when {
                     !hasCode -> Localization.string("no_code", selectedLanguageCode)
                     statusText == "No checks yet" -> Localization.string("not_checked", selectedLanguageCode)
                     isReady -> Localization.string("ready_for_pickup", selectedLanguageCode)
+                    isNotFoundOrError -> "Non Trovato / Errore"
                     else -> Localization.string("in_processing", selectedLanguageCode)
                 }
 
@@ -1709,30 +1844,39 @@ fun PortalWebViewTab(
                     onClick = {
                         webViewInstance?.let { wv ->
                             if (currentSite == 0) {
-                                val user = credentials?.userId ?: ""
-                                val pass = credentials?.password ?: ""
+                                val user = (credentials?.userId ?: "").replace("-", "").replace(" ", "").trim()
+                                val pass = (credentials?.password ?: "").replace("-", "").replace(" ", "").trim()
                                 
                                 val jsCode = """
                                     (function() {
+                                        var uField = document.getElementById('UC_LogIn1_txtUtente') || document.getElementsByName('UC_LogIn1:txtUtente')[0];
+                                        var pField = document.getElementById('UC_LogIn1_txtPassword') || document.getElementsByName('UC_LogIn1:txtPassword')[0];
+                                        var btn = document.getElementById('UC_LogIn1_btnConferma') || document.getElementsByName('UC_LogIn1:btnConferma')[0];
+                                        if (uField && pField) {
+                                            uField.value = '$user';
+                                            pField.value = '$pass';
+                                            if (btn) {
+                                                btn.disabled = false;
+                                                btn.removeAttribute('disabled');
+                                                btn.click();
+                                            }
+                                            return true;
+                                        }
                                         var inputs = document.getElementsByTagName('input');
                                         var filledUser = false;
                                         var filledPass = false;
                                         for (var i = 0; i < inputs.length; i++) {
                                             var input = inputs[i];
-                                            var type = input.getAttribute('type') || '';
-                                            type = type.toLowerCase();
+                                            var type = (input.getAttribute('type') || '').toLowerCase();
                                             var id = (input.getAttribute('id') || '').toLowerCase();
                                             var name = (input.getAttribute('name') || '').toLowerCase();
-                                            
-                                            // Fill username/codice field
-                                            if (!filledUser && (type === 'text' || id.indexOf('user') !== -1 || id.indexOf('codice') !== -1 || name.indexOf('user') !== -1 || name.indexOf('codice') !== -1 || id.indexOf('username') !== -1)) {
+                                            if (!filledUser && (type === 'text' || id.indexOf('utente') !== -1 || id.indexOf('user') !== -1 || name.indexOf('utente') !== -1)) {
                                                 input.value = '$user';
                                                 input.dispatchEvent(new Event('input', { bubbles: true }));
                                                 input.dispatchEvent(new Event('change', { bubbles: true }));
                                                 filledUser = true;
                                             }
-                                            // Fill password field
-                                            if (!filledPass && (type === 'password' || id.indexOf('pass') !== -1 || id.indexOf('pwd') !== -1 || name.indexOf('pass') !== -1 || name.indexOf('pwd') !== -1)) {
+                                            if (!filledPass && (type === 'password' || id.indexOf('pass') !== -1 || name.indexOf('pass') !== -1)) {
                                                 input.value = '$pass';
                                                 input.dispatchEvent(new Event('input', { bubbles: true }));
                                                 input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1744,11 +1888,12 @@ fun PortalWebViewTab(
                                 """.trimIndent()
                                 wv.evaluateJavascript(jsCode, null)
                             } else {
-                                val code = if (credentials?.numeroAssicurata?.isNotBlank() == true) {
+                                val rawCode = if (credentials?.numeroAssicurata?.isNotBlank() == true) {
                                     credentials.numeroAssicurata
                                 } else {
                                     credentials?.numeroPratica ?: ""
                                 }
+                                val code = rawCode.replace("-", "").replace(" ", "").trim()
                                 
                                 val jsCode = """
                                     (function() {
@@ -1835,81 +1980,83 @@ fun PortalWebViewTab(
                                 // Force-sync cookies to persistent storage
                                 android.webkit.CookieManager.getInstance().flush()
 
-                                // Auto-accept/hide cookie consent and inject padding so user can scroll high above bottom bar
+                                // Auto-accept cookie consent on Portale Immigrazione (ASP.NET postback) and Polizia di Stato
                                 val helperJs = """
                                     (function() {
-                                        // 1. Add bottom padding to body so the bottom of the page isn't blocked by any UI
                                         var style = document.createElement('style');
                                         style.innerHTML = 'body { padding-bottom: 220px !important; }';
-                                        document.head.appendChild(style);
+                                        if (document.head) document.head.appendChild(style);
                                         
-                                        // 2. Continuous cleaner loop (runs every 500ms for 6 seconds) to destroy cookie modals/overlays as they load
-                                        var checkCount = 0;
-                                        var cookieTimer = setInterval(function() {
-                                            checkCount++;
-                                            if (checkCount > 12) clearInterval(cookieTimer);
-
-                                            // Try to automatically click any cookie accept button
-                                            var cookieKeywords = ['accetta', 'accetto', 'consenti', 'conferma', 'ok', 'chiudi', 'agree', 'accept', 'allow', 'dismiss'];
-                                            var tags = ['button', 'a', 'div', 'span'];
-                                            for (var t = 0; t < tags.length; t++) {
-                                                var elements = document.getElementsByTagName(tags[t]);
-                                                for (var i = 0; i < elements.length; i++) {
-                                                    var el = elements[i];
-                                                    var text = (el.innerText || el.textContent || '').toLowerCase().trim();
-                                                    for (var j = 0; j < cookieKeywords.length; j++) {
-                                                        var kw = cookieKeywords[j];
-                                                        if (text === kw || (text.indexOf(kw) !== -1 && text.length < 20)) {
-                                                            if (typeof el.click === 'function') {
-                                                                el.click();
-                                                            }
-                                                        }
-                                                    }
-                                                }
+                                        // On Portale Immigrazione startpage.aspx, accept cookie via __doPostBack so Conferma button is enabled
+                                        var portaleCookieBtn = document.getElementById('lnkAcceptCookie');
+                                        var confermaBtn = document.getElementById('UC_LogIn1_btnConferma');
+                                        if (portaleCookieBtn && confermaBtn && confermaBtn.disabled) {
+                                            confermaBtn.disabled = false;
+                                            confermaBtn.removeAttribute('disabled');
+                                            if (typeof __doPostBack === 'function') {
+                                                __doPostBack('lnkAcceptCookie', '');
+                                                return;
+                                            } else {
+                                                portaleCookieBtn.click();
+                                                return;
                                             }
-                                            
-                                            // Directly hide known cookie banners/overlays if they refuse to close
-                                            var commonSelectors = ['#cookie-banner', '#cookie-consent', '.iubenda-cs-banner', '#cookiebanner', '.cookieconsent', '[id*="cookie"]', '[class*="cookie"]', '[id*="consent"]', '[class*="consent"]'];
-                                            commonSelectors.forEach(function(sel) {
-                                                try {
-                                                    var els = document.querySelectorAll(sel);
-                                                    els.forEach(function(el) {
-                                                        el.style.display = 'none';
-                                                        el.style.setProperty('display', 'none', 'important');
-                                                    });
-                                                } catch(e) {}
-                                            });
-                                            
-                                            // Enable scrolling if locked
-                                            document.body.style.overflow = 'auto';
-                                            document.documentElement.style.overflow = 'auto';
-                                        }, 500);
+                                        }
+                                        if (confermaBtn && confermaBtn.disabled) {
+                                            confermaBtn.disabled = false;
+                                            confermaBtn.removeAttribute('disabled');
+                                        }
+                                        
+                                        document.body.style.overflow = 'auto';
+                                        document.documentElement.style.overflow = 'auto';
                                     })()
                                 """.trimIndent()
                                 view?.evaluateJavascript(helperJs, null)
 
-                                // Scrape the content to automatically detect status changes from manual browsing
-                                view?.evaluateJavascript("(function() { return document.body.innerText; })()") { text ->
+                                // Scrape content (including #frmPannelli iframe on Portale Immigrazione)
+                                val scrapeJs = """
+                                    (function() {
+                                        var text = document.body ? document.body.innerText : '';
+                                        var iframe = document.getElementById('frmPannelli');
+                                        if (iframe && iframe.contentDocument && iframe.contentDocument.body) {
+                                            text += '\n' + iframe.contentDocument.body.innerText;
+                                        }
+                                        return text;
+                                    })()
+                                """.trimIndent()
+                                view?.evaluateJavascript(scrapeJs) { text ->
                                     val cleanText = text?.trim() ?: ""
                                     if (cleanText.isNotBlank()) {
                                         if (currentSite == 0) {
-                                            // Portale Immigrazione
-                                            val portaleStatus = when {
-                                                cleanText.contains("Anomalie non riscontrate", ignoreCase = true) || cleanText.contains("nessuna anomalia", ignoreCase = true) -> "Step 3 - Anomalie non riscontrate"
-                                                cleanText.contains("In istruttoria", ignoreCase = true) || cleanText.contains("istruttoria", ignoreCase = true) -> "Step 2 - In istruttoria"
-                                                cleanText.contains("Ricevuto", ignoreCase = true) || cleanText.contains("domanda ricevuta", ignoreCase = true) -> "Step 1 - Ricevuto"
-                                                cleanText.contains("Area Riservata", ignoreCase = true) || cleanText.contains("Benvenuto", ignoreCase = true) || cleanText.contains("stranieri", ignoreCase = true) -> "Collegato (Area Riservata)"
-                                                else -> null
-                                            }
+                                            val isUserArea = cleanText.contains("Dettaglio Istanza", ignoreCase = true) ||
+                                                            cleanText.contains("Stato Attuale", ignoreCase = true) ||
+                                                            cleanText.contains("Codice Istanza", ignoreCase = true)
+                                            val portaleStatus = if (isUserArea) {
+                                                when {
+                                                    cleanText.contains("In Preistruttoria", ignoreCase = true) -> {
+                                                        if (cleanText.contains("Nessuna Anomalia Documentale", ignoreCase = true)) {
+                                                            "In Preistruttoria - Nessuna Anomalia Documentale"
+                                                        } else {
+                                                            "In Preistruttoria"
+                                                        }
+                                                    }
+                                                    cleanText.contains("In istruttoria", ignoreCase = true) -> "In istruttoria"
+                                                    cleanText.contains("pronto per la consegna", ignoreCase = true) -> "Pronto per la consegna"
+                                                    else -> null
+                                                }
+                                            } else null
+
                                             if (portaleStatus != null) {
                                                 onStatusDetected(null, portaleStatus)
                                             }
                                         } else {
-                                            // Polizia di Stato
                                             val poliziaStatus = when {
-                                                cleanText.contains("pronto per la consegna", ignoreCase = true) || cleanText.contains("consegna", ignoreCase = true) -> "Pronto per la consegna"
-                                                cleanText.contains("non è pronto", ignoreCase = true) || cleanText.contains("in trattazione", ignoreCase = true) -> "In trattazione"
-                                                cleanText.contains("non presente in archivio", ignoreCase = true) || cleanText.contains("non trovato", ignoreCase = true) -> "Non presente in archivio"
+                                                cleanText.contains("non è presente in archivio", ignoreCase = true) || 
+                                                cleanText.contains("non presente in archivio", ignoreCase = true) ||
+                                                cleanText.contains("non presente", ignoreCase = true) ||
+                                                cleanText.contains("non trovato", ignoreCase = true) -> "Non presente in archivio"
+                                                cleanText.contains("pronto per la consegna", ignoreCase = true) -> "Pronto per la consegna"
+                                                cleanText.contains("in trattazione", ignoreCase = true) ||
+                                                cleanText.contains("in corso di trattazione", ignoreCase = true) -> "In trattazione"
                                                 else -> null
                                             }
                                             if (poliziaStatus != null) {
@@ -2211,12 +2358,21 @@ fun BentoPermessoTimelineCard(credentials: UserCredentials?, selectedLanguageCod
     val polStatus = credentials?.lastPoliziaStatus?.lowercase(Locale.getDefault()) ?: ""
     val portStatus = credentials?.lastPortaleStatus?.lowercase(Locale.getDefault()) ?: ""
     
+    val isNotFoundOrError = polStatus.contains("non presente") || 
+            polStatus.contains("non trovato") || 
+            polStatus.contains("non valido") || 
+            polStatus.contains("errore") || 
+            polStatus == "no checks yet" || 
+            polStatus.isBlank()
+
     val currentStep = when {
+        isNotFoundOrError && (portStatus == "no checks yet" || portStatus.isBlank()) -> 0
         polStatus.contains("consegna") || polStatus.contains("pronto") -> 5
-        polStatus.contains("produzione") || portStatus.contains("stampa") || portStatus.contains("step 3") -> 4
-        polStatus.contains("trattazione") || portStatus.contains("step 2") || portStatus.contains("istruttoria") -> 3
-        portStatus.contains("step 1") || credentials?.numeroAssicurata?.isNotBlank() == true -> 2
-        else -> 1
+        polStatus.contains("produzione") || portStatus.contains("stampa") -> 4
+        polStatus.contains("in trattazione") && !polStatus.contains("non") -> 3
+        portStatus.contains("preistruttoria") || portStatus.contains("istruttoria") || portStatus.contains("step 2") -> 2
+        portStatus.contains("ricevuto") || portStatus.contains("step 1") -> 1
+        else -> 0
     }
 
     val stepLabels = listOf(

@@ -34,12 +34,15 @@ class StatusCheckWorker(
                 val oldStatus = credentials.lastPoliziaStatus
                 val newStatus = result.statusText
 
-                // If status changed, notify the user!
-                if (oldStatus != "No checks yet" && oldStatus != newStatus) {
+                val isStatusChanged = oldStatus.isNotBlank() && oldStatus != "No checks yet" && oldStatus != newStatus
+                val isReadyNow = newStatus.contains("pronto", ignoreCase = true) || result.statusCode == AppRepository.StatusCode.READY
+
+                // If status changed or permit is ready, notify immediately!
+                if (isStatusChanged || isReadyNow) {
                     NotificationHelper.showStatusNotification(
                         applicationContext,
-                        "Stato Polizia di Stato Aggiornato",
-                        "La tua ricevuta ($poliziaCode) ha cambiato stato: $newStatus"
+                        "Permesso di Soggiorno: Nuovo Stato",
+                        "La tua ricevuta ($poliziaCode): $newStatus"
                     )
                 }
             }
@@ -49,16 +52,16 @@ class StatusCheckWorker(
         if (credentials.userId.isNotBlank() && credentials.password.isNotBlank()) {
             val result = repository.checkPortaleStatus(credentials.userId, credentials.password)
             if (result.isSuccess) {
-                // Fetch the updated credentials to make sure we compare correctly if they changed
                 val updatedCreds = repository.getCredentialsDirect()
                 val oldStatus = credentials.lastPortaleStatus
                 val newStatus = updatedCreds?.lastPortaleStatus ?: result.statusText
 
-                // If status changed, notify the user!
-                if (oldStatus != "No checks yet" && oldStatus != newStatus) {
+                val isStatusChanged = oldStatus.isNotBlank() && oldStatus != "No checks yet" && oldStatus != newStatus
+
+                if (isStatusChanged) {
                     NotificationHelper.showStatusNotification(
                         applicationContext,
-                        "Aggiornamento Portale Immigrazione",
+                        "Portale Immigrazione: Aggiornamento",
                         "Novità sul portale per l'account ${credentials.userId}: $newStatus"
                     )
                 }

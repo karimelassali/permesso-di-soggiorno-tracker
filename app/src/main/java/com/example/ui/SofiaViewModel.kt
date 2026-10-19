@@ -310,12 +310,17 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
         val historyList = checkHistory.value
         val bookmarks = bookmarkedGuideIds.value
 
-        // Fetch User and Status data
-        val userName = creds?.fullName ?: "Karim El Assali"
-        val currentProvince = creds?.selectedProvinceCode ?: selectedProvince
+        // Fetch User and Status data dynamically
+        val userName = creds?.fullName?.ifBlank { "EL ASSALI KARIM" } ?: "EL ASSALI KARIM"
+        val liveProvince = prefs.getString("selected_province", "Piacenza") ?: "Piacenza"
+        val currentProvince = creds?.selectedProvinceCode ?: liveProvince
         val selectedPermit = creds?.selectedPermitType ?: "Work Permit Renewal"
         val lastPolizia = creds?.lastPoliziaStatus ?: "No checks yet"
         val lastPortale = creds?.lastPortaleStatus ?: "No checks yet"
+        val codiceAssicurata = creds?.numeroAssicurata?.ifBlank { creds.password } ?: ""
+        val codiceIstanza = creds?.codiceIstanza?.ifBlank { creds.numeroPratica } ?: ""
+        val codiceOlogramma = creds?.codiceOlogramma?.ifBlank { creds.userId } ?: ""
+        val anomalie = creds?.dettaglioAnomalie?.ifBlank { "Nessuna Anomalia Documentale" } ?: "Nessuna Anomalia Documentale"
 
         val historyText = if (historyList.isNotEmpty()) {
             historyList.take(3).joinToString("; ") { "${it.portalType}: ${it.statusText} (${it.details})" }
@@ -323,14 +328,20 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
             "No portal checks run yet"
         }
 
-        val checkedDocsText = if (checkedDocs.isNotEmpty()) {
-            "Completed checklist: ${checkedDocs.joinToString(", ")}"
+        val liveCheckedDocs = prefs.getStringSet("checked_docs", emptySet()) ?: emptySet()
+        val checkedDocsText = if (liveCheckedDocs.isNotEmpty()) {
+            "Completed checklist: ${liveCheckedDocs.joinToString(", ")}"
         } else {
             "No checklist documents marked as completed yet"
         }
 
-        val appointmentText = if (appointmentDate.isNotBlank()) {
-            "Appointment Date: $appointmentDate at $appointmentTime, Location: $appointmentLocation"
+        val liveAppDate = creds?.convocazioneDate?.ifBlank { prefs.getString("appointment_date", "") ?: "" } ?: ""
+        val liveAppTime = prefs.getString("appointment_time", "") ?: ""
+        val liveAppLoc = creds?.convocazioneLocation?.ifBlank { prefs.getString("appointment_location", "") ?: "" } ?: ""
+        val liveAppMotivo = creds?.convocazioneMotivo ?: ""
+
+        val appointmentText = if (liveAppDate.isNotBlank()) {
+            "Convocazione: $liveAppDate ${if (liveAppTime.isNotBlank() && !liveAppDate.contains(liveAppTime)) "at $liveAppTime" else ""}, Location: $liveAppLoc ${if (liveAppMotivo.isNotBlank()) "(Motivo: $liveAppMotivo)" else ""}"
         } else {
             "No questura fingerprint appointment scheduled yet"
         }
@@ -359,10 +370,13 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
             • User Name: $userName
             • Province/City: $currentProvince
             • Selected Permit Type: $selectedPermit
+            • Codice Assicurata (Password): $codiceAssicurata
+            • Codice Istanza: $codiceIstanza
+            • Codice Ologramma (User ID): $codiceOlogramma
+            • Portale Immigrazione Status: $lastPortale (Anomalie: $anomalie)
             • Polizia di Stato Status: $lastPolizia
-            • Portale Immigrazione Status: $lastPortale
             • Recent Checks History: $historyText
-            • Next Appointment: $appointmentText
+            • Questura Convocazione / Appointment: $appointmentText
             • Documents Checked: $checkedDocsText
             • Bookmarked Guides: $bookmarksText
             

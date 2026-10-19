@@ -6,13 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.example.background.WorkScheduler
 import com.example.data.AppRepository
 import com.example.data.UserCredentials
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class PermessoViewModel(application: Application) : AndroidViewModel(application) {
@@ -82,7 +82,7 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
     private val _onboardingCompleted = MutableStateFlow(prefs.getBoolean("onboarding_completed", false))
     val onboardingCompleted: StateFlow<Boolean> = _onboardingCompleted.asStateFlow()
 
-    private val _selectedProvince = MutableStateFlow(prefs.getString("selected_province", "Milano") ?: "Milano")
+    private val _selectedProvince = MutableStateFlow(prefs.getString("selected_province", "Piacenza") ?: "Piacenza")
     val selectedProvince: StateFlow<String> = _selectedProvince.asStateFlow()
 
     private val _appointmentDate = MutableStateFlow(prefs.getString("appointment_date", "") ?: "")
@@ -91,7 +91,7 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
     private val _appointmentTime = MutableStateFlow(prefs.getString("appointment_time", "") ?: "")
     val appointmentTime: StateFlow<String> = _appointmentTime.asStateFlow()
 
-    private val _appointmentLocation = MutableStateFlow(prefs.getString("appointment_location", "Questura di Milano") ?: "Questura di Milano")
+    private val _appointmentLocation = MutableStateFlow(prefs.getString("appointment_location", "Questura di Piacenza - V.le Malta, 10/C") ?: "Questura di Piacenza - V.le Malta, 10/C")
     val appointmentLocation: StateFlow<String> = _appointmentLocation.asStateFlow()
 
     private val _checkedDocs = MutableStateFlow<Set<String>>(
@@ -101,13 +101,37 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
 
     init {
         viewModelScope.launch {
-            // Check if there are existing credentials in DB first directly
-            val existing = repository.getCredentialsDirect()
-            if (existing == null) {
-                // Pre-populate only if completely empty in DB
-                repository.saveCredentials(UserCredentials())
+            var existing = repository.getCredentialsDirect()
+            if (existing == null || (existing.userId.isBlank() && existing.password.isBlank() && existing.numeroAssicurata.isBlank())) {
+                // Pre-populate with the user's real Ricevuta Poste Italiane credentials
+                val initialCreds = UserCredentials(
+                    fullName = "EL ASSALI KARIM",
+                    userId = "550000133317",
+                    password = "055987476941",
+                    numeroAssicurata = "055987476941",
+                    numeroPratica = "587979509914",
+                    codiceIstanza = "587979509914",
+                    codiceOlogramma = "550000133317",
+                    selectedQuesturaId = "piacenza",
+                    selectedProvinceCode = "PC",
+                    selectedPermitType = "lavoro_subordinato"
+                )
+                repository.saveCredentials(initialCreds)
+                existing = initialCreds
+                selectProvince("Piacenza")
             }
-            
+
+            if (existing != null) {
+                formFullName.value = existing.fullName
+                formUserId.value = existing.userId
+                formPassword.value = existing.password
+                formNumeroAssicurata.value = existing.numeroAssicurata
+                formNumeroPratica.value = existing.numeroPratica
+                if (existing.lastCheckedTime == 0L) {
+                    checkStatusNow()
+                }
+            }
+
             // Collect flow updates safely
             credentials.collect { creds ->
                 if (creds != null) {
@@ -119,7 +143,7 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
-        
+
         // Start background worker
         WorkScheduler.scheduleDailyCheck(application)
     }
@@ -148,7 +172,7 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
                 selectedProvinceCode = provinceCode
             )
             repository.saveCredentials(updated)
-            
+
             if (provinceName != null) {
                 _selectedProvince.value = provinceName
                 prefs.edit().putString("selected_province", provinceName).apply()
@@ -190,23 +214,59 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
 
     fun saveCredentials() {
         viewModelScope.launch {
-            val currentCreds = credentials.value ?: UserCredentials()
+            val cleanUserId = formUserId.value.replace("-", "").replace(" ", "").trim()
+            val cleanPassword = formPassword.value.replace("-", "").replace(" ", "").trim()
+            var cleanAssicurata = formNumeroAssicurata.value.replace("-", "").replace(" ", "").trim()
+            val cleanPratica = formNumeroPratica.value.replace("-", "").replace(" ", "").trim()
+
+            // On Poste Italiane receipts, the password is the 12-digit Codice Assicurata
+            if (cleanAssicurata.isBlank() && cleanPassword.length == 12 && cleanPassword.all { it.isDigit() }) {
+                cleanAssicurata = cleanPassword
+            }
+
+            formUserId.value = cleanUserId
+            formPassword.value = cleanPassword
+            formNumeroAssicurata.value = cleanAssicurata
+            formNumeroPratica.value = cleanPratica
+
+            val currentCreds = repository.getCredentialsDirect() ?: UserCredentials()
+            val credsChanged = currentCreds.userId != cleanUserId ||
+                currentCreds.password != cleanPassword ||
+                currentCreds.numeroAssicurata != cleanAssicurata ||
+                currentCreds.numeroPratica != cleanPratica
+
             val updated = currentCreds.copy(
-                fullName = formFullName.value,
-                userId = formUserId.value,
-                password = formPassword.value,
-                numeroAssicurata = formNumeroAssicurata.value,
-                numeroPratica = formNumeroPratica.value
+                fullName = formFullName.value.trim(),
+                userId = cleanUserId,
+                password = cleanPassword,
+                numeroAssicurata = cleanAssicurata,
+                numeroPratica = cleanPratica,
+                // Reset cached statuses if the user entered a different set of credentials
+                lastPoliziaStatus = if (credsChanged) "No checks yet" else currentCreds.lastPoliziaStatus,
+                lastPortaleStatus = if (credsChanged) "No checks yet" else currentCreds.lastPortaleStatus,
+                codiceIstanza = if (credsChanged) "" else currentCreds.codiceIstanza,
+                codiceOlogramma = if (credsChanged) "" else currentCreds.codiceOlogramma,
+                dettaglioAnomalie = if (credsChanged) "" else currentCreds.dettaglioAnomalie,
+                convocazioneDate = if (credsChanged) "" else currentCreds.convocazioneDate,
+                convocazioneLocation = if (credsChanged) "" else currentCreds.convocazioneLocation,
+                convocazioneMotivo = if (credsChanged) "" else currentCreds.convocazioneMotivo
             )
             repository.saveCredentials(updated)
-            // Trigger background scheduler
             WorkScheduler.scheduleDailyCheck(getApplication())
+
+            // Automatically run a live check against the portals with the newly saved credentials
+            checkStatusNow()
         }
     }
 
     fun checkStatusNow() {
-        val hasPolizia = formNumeroAssicurata.value.isNotBlank() || formNumeroPratica.value.isNotBlank()
-        val hasPortale = formUserId.value.isNotBlank() && formPassword.value.isNotBlank()
+        val cleanUserId = formUserId.value.replace("-", "").replace(" ", "").trim()
+        val cleanPassword = formPassword.value.replace("-", "").replace(" ", "").trim()
+        val cleanAssicurata = formNumeroAssicurata.value.replace("-", "").replace(" ", "").trim()
+        val cleanPratica = formNumeroPratica.value.replace("-", "").replace(" ", "").trim()
+
+        val hasPortale = cleanUserId.isNotBlank() && cleanPassword.isNotBlank()
+        val hasPolizia = cleanAssicurata.isNotBlank() || cleanPratica.isNotBlank() || (cleanPassword.length == 12 && cleanPassword.all { it.isDigit() })
 
         if (!hasPolizia && !hasPortale) {
             _checkState.value = CheckUiState.Error("Si prega di salvare prima un codice di ricevuta valido o le credenziali del portale.")
@@ -218,74 +278,124 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             var successCount = 0
             var errorCount = 0
-            var statusMessage = ""
-            var detailsMessage = ""
+            val statusParts = mutableListOf<String>()
+            val detailParts = mutableListOf<String>()
+            val errorParts = mutableListOf<String>()
 
-            // 1. Check Polizia di Stato
-            if (hasPolizia) {
-                val code = if (formNumeroAssicurata.value.isNotBlank()) formNumeroAssicurata.value else formNumeroPratica.value
-                val oldCreds = repository.getCredentialsDirect()
-                val result = repository.checkPoliziaStatus(code)
-                if (result.isSuccess) {
-                    successCount++
-                    statusMessage = result.statusText
-                    detailsMessage = result.details
-                    
-                    // Trigger notification on change
-                    val oldStatus = oldCreds?.lastPoliziaStatus
-                    if (oldStatus != "No checks yet" && oldStatus != result.statusText) {
-                        com.example.util.NotificationHelper.showStatusNotification(
-                            getApplication(),
-                            "Stato Polizia di Stato Aggiornato",
-                            "La tua ricevuta ($code) ha cambiato stato: ${result.statusText}"
-                        )
-                    }
-                } else {
-                    errorCount++
-                    statusMessage = result.statusText
-                }
-            }
-
-            // 2. Check Portale Immigrazione
+            // 1. Check Portale Immigrazione (authenticated Dettaglio Istanza)
             if (hasPortale) {
                 val oldCreds = repository.getCredentialsDirect()
-                val result = repository.checkPortaleStatus(formUserId.value, formPassword.value)
-                if (result.isSuccess) {
+                val result = repository.checkPortaleStatus(cleanUserId, cleanPassword)
+                if (result.isSuccess && result.statusCode != AppRepository.StatusCode.NOT_FOUND) {
                     successCount++
-                    if (statusMessage.isEmpty()) {
-                        statusMessage = result.statusText
-                        detailsMessage = result.details
-                    } else {
-                        statusMessage += " • " + result.statusText
-                        detailsMessage += "\n\n" + result.details
+                    statusParts.add("Portale: ${result.statusText}")
+                    detailParts.add(result.details)
+
+                    // Automatically sync Convocazione appointment details if present in Portale Immigrazione
+                    if (result.convocazioneDate.isNotBlank()) {
+                        val timeRegex = Regex("""(\d{1,2}:\d{2}(?::\d{2})?)""")
+                        val extractedTime = timeRegex.find(result.convocazioneDate)?.groupValues?.get(1) ?: ""
+                        val extractedDate = result.convocazioneDate.replace(extractedTime, "").trim()
+                        val fullLoc = buildString {
+                            append(result.convocazioneLocation)
+                            if (result.convocazioneMotivo.isNotBlank()) {
+                                append(" (${result.convocazioneMotivo})")
+                            }
+                        }
+                        updateAppointment(
+                            date = extractedDate.ifBlank { result.convocazioneDate },
+                            time = extractedTime,
+                            location = fullLoc.ifBlank { _appointmentLocation.value }
+                        )
+                        if (result.convocazioneLocation.contains("PIACENZA", ignoreCase = true)) {
+                            selectQuesturaAndProvince("piacenza", "PC", "Piacenza")
+                        }
                     }
 
-                    // Trigger notification on change
                     val oldStatus = oldCreds?.lastPortaleStatus
-                    if (oldStatus != "No checks yet" && oldStatus != result.statusText) {
+                    if (oldStatus != null && oldStatus != "No checks yet" && oldStatus != result.statusText) {
                         com.example.util.NotificationHelper.showStatusNotification(
                             getApplication(),
                             "Aggiornamento Portale Immigrazione",
-                            "Novità sul portale per l'account ${formUserId.value}: ${result.statusText}"
+                            "Stato pratica (${cleanUserId}): ${result.statusText}"
                         )
                     }
                 } else {
                     errorCount++
-                    if (statusMessage.isEmpty()) {
-                        statusMessage = result.statusText
+                    errorParts.add("Portale Immigrazione: ${result.statusText} (${result.details})")
+                }
+            }
+
+            // 2. Check Polizia di Stato
+            if (hasPolizia) {
+                val latestCreds = repository.getCredentialsDirect()
+                val primaryCode = when {
+                    cleanAssicurata.isNotBlank() -> cleanAssicurata
+                    cleanPratica.isNotBlank() -> cleanPratica
+                    !latestCreds?.numeroAssicurata.isNullOrBlank() -> latestCreds?.numeroAssicurata ?: cleanPassword
+                    else -> cleanPassword
+                }
+                val oldPoliziaStatus = latestCreds?.lastPoliziaStatus
+                var polResult = repository.checkPoliziaStatus(primaryCode)
+
+                // If primary code was not found and we also have a distinct codiceIstanza / numeroPratica, try that as well
+                val secondaryCode = latestCreds?.codiceIstanza?.takeIf { it.isNotBlank() && it != primaryCode }
+                    ?: cleanPratica.takeIf { it.isNotBlank() && it != primaryCode }
+                if (!polResult.isSuccess && secondaryCode != null) {
+                    val secondTry = repository.checkPoliziaStatus(secondaryCode)
+                    if (secondTry.isSuccess) {
+                        polResult = secondTry
+                    }
+                }
+
+                if (polResult.isSuccess && polResult.statusCode != AppRepository.StatusCode.NOT_FOUND) {
+                    successCount++
+                    statusParts.add("Questura: ${polResult.statusText}")
+                    detailParts.add("Polizia di Stato: ${polResult.details}")
+
+                    if (oldPoliziaStatus != null && oldPoliziaStatus != "No checks yet" && oldPoliziaStatus != polResult.statusText) {
+                        com.example.util.NotificationHelper.showStatusNotification(
+                            getApplication(),
+                            "Stato Polizia di Stato Aggiornato",
+                            "La tua ricevuta ($primaryCode) ha cambiato stato: ${polResult.statusText}"
+                        )
+                    }
+                } else {
+                    errorCount++
+                    val polInfo = "Archivio Questura (Polizia di Stato): ${polResult.statusText}"
+                    if (successCount > 0) {
+                        // Do not fail the overall check if Portale Immigrazione succeeded; include Polizia status as info
+                        detailParts.add(polInfo)
+                    } else {
+                        errorParts.add("${polResult.statusText}: ${polResult.details}")
                     }
                 }
             }
 
             if (successCount > 0) {
-                _checkState.value = CheckUiState.Success(statusMessage, detailsMessage)
+                _checkState.value = CheckUiState.Success(
+                    statusText = statusParts.joinToString(" • "),
+                    detailsText = detailParts.joinToString("\n\n")
+                )
+            } else if (errorCount > 0) {
+                _checkState.value = CheckUiState.Error(
+                    errorParts.joinToString("\n\n").ifBlank { "Nessun risultato trovato nei portali." }
+                )
             } else {
-                _checkState.value = CheckUiState.Error(statusMessage)
+                _checkState.value = CheckUiState.Error("Nessun controllo effettuato")
             }
         }
     }
 
-    fun updateLoggedStatus(poliziaStatus: String?, portaleStatus: String?) {
+    fun updateLoggedStatus(
+        poliziaStatus: String?,
+        portaleStatus: String?,
+        codiceIstanza: String? = null,
+        dettaglioAnomalie: String? = null,
+        convocazioneDate: String? = null,
+        convocazioneLocation: String? = null,
+        convocazioneMotivo: String? = null
+    ) {
         viewModelScope.launch {
             val currentCreds = repository.getCredentialsDirect() ?: UserCredentials()
             var updated = currentCreds
@@ -304,29 +414,40 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
                 portalType = "POLIZIA"
                 details = "Verificato tramite Portale Web Polizia di Stato"
             }
-            if (portaleStatus != null && currentCreds.lastPortaleStatus != portaleStatus) {
+            if (portaleStatus != null) {
+                val changed = currentCreds.lastPortaleStatus != portaleStatus ||
+                    (!codiceIstanza.isNullOrBlank() && currentCreds.codiceIstanza != codiceIstanza)
                 updated = updated.copy(
                     lastPortaleStatus = portaleStatus,
-                    lastCheckedTime = System.currentTimeMillis()
+                    lastCheckedTime = System.currentTimeMillis(),
+                    codiceIstanza = codiceIstanza?.ifBlank { currentCreds.codiceIstanza } ?: currentCreds.codiceIstanza,
+                    dettaglioAnomalie = dettaglioAnomalie?.ifBlank { currentCreds.dettaglioAnomalie } ?: currentCreds.dettaglioAnomalie,
+                    convocazioneDate = convocazioneDate?.ifBlank { currentCreds.convocazioneDate } ?: currentCreds.convocazioneDate,
+                    convocazioneLocation = convocazioneLocation?.ifBlank { currentCreds.convocazioneLocation } ?: currentCreds.convocazioneLocation,
+                    convocazioneMotivo = convocazioneMotivo?.ifBlank { currentCreds.convocazioneMotivo } ?: currentCreds.convocazioneMotivo
                 )
-                statusChanged = true
-                finalStatusText = portaleStatus
-                portalType = "PORTALE"
-                details = "Verificato tramite Portale Web Portale Immigrazione"
+                if (changed) {
+                    statusChanged = true
+                    finalStatusText = portaleStatus
+                    portalType = "PORTALE"
+                    details = buildString {
+                        append("Verificato tramite Portale Immigrazione")
+                        if (!codiceIstanza.isNullOrBlank()) append(" • Istanza: $codiceIstanza")
+                        if (!convocazioneDate.isNullOrBlank()) append(" • Convocazione: $convocazioneDate")
+                    }
+                }
             }
 
             if (statusChanged) {
                 repository.saveCredentials(updated)
-                // Insert a history record to keep track
                 val history = com.example.data.StatusHistory(
                     portalType = portalType,
                     statusText = finalStatusText,
-                    isSuccess = true,
+                    isSuccess = !finalStatusText.contains("Non presente", ignoreCase = true),
                     details = details
                 )
                 repository.insertHistory(history)
             } else if (poliziaStatus != null || portaleStatus != null) {
-                // Just update the last checked time so we know a check was made
                 repository.saveCredentials(updated.copy(lastCheckedTime = System.currentTimeMillis()))
             }
         }
@@ -362,7 +483,6 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
 
     fun deleteProfileAndReset() {
         viewModelScope.launch {
-            // 1. Reset user credentials DB record to fully blank
             val emptyCreds = UserCredentials(
                 fullName = "",
                 userId = "",
@@ -372,26 +492,27 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
                 lastCheckedTime = 0L,
                 lastPoliziaStatus = "No checks yet",
                 lastPortaleStatus = "No checks yet",
+                codiceIstanza = "",
+                codiceOlogramma = "",
+                dettaglioAnomalie = "",
+                convocazioneDate = "",
+                convocazioneLocation = "",
+                convocazioneMotivo = "",
                 selectedQuesturaId = null,
                 selectedProvinceCode = null,
                 selectedPermitType = null
             )
             repository.saveCredentials(emptyCreds)
-            
-            // 2. Clear history
             repository.clearHistory()
-            
-            // 3. Clear all Sofia conversations / chats
             repository.clearAllSofiaData()
-            
-            // 4. Clear all shared preferences and onboarding state
+
             _onboardingCompleted.value = false
             _selectedProvince.value = "Milano"
             _appointmentDate.value = ""
             _appointmentTime.value = ""
             _appointmentLocation.value = "Questura di Milano"
             _checkedDocs.value = emptySet()
-            
+
             prefs.edit()
                 .putBoolean("onboarding_completed", false)
                 .putString("selected_province", "Milano")
