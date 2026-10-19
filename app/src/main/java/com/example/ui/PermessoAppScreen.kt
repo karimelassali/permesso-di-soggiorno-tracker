@@ -159,19 +159,6 @@ fun PermessoAppScreen(
         } else {
             Scaffold(
         topBar = {
-            val initials = remember(credentials) {
-                val name = credentials?.fullName?.trim() ?: ""
-                if (name.isBlank()) {
-                    "AM"
-                } else {
-                    val parts = name.split("\\s+".toRegex())
-                    if (parts.size >= 2) {
-                        "${parts[0].take(1).uppercase()}${parts[1].take(1).uppercase()}"
-                    } else {
-                        name.take(2).uppercase()
-                    }
-                }
-            }
             Column(modifier = Modifier.fillMaxWidth()) {
                 TopAppBar(
                     title = {
@@ -198,22 +185,18 @@ fun PermessoAppScreen(
                         containerColor = BentoBackground
                     ),
                     actions = {
-                        Box(
+                        UserPersistentAvatar(
+                            fullName = credentials?.fullName,
+                            size = 38.dp,
+                            fontSize = 13.sp,
+                            isSelected = selectedTabIndex == 4,
+                            borderColor = BentoAvatarBorder,
+                            borderWidth = 1.5.dp,
+                            onClick = { selectedTabIndex = 4 },
                             modifier = Modifier
                                 .padding(end = 16.dp)
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(BentoAvatarBg)
-                                .border(1.dp, BentoAvatarBorder, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = initials,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = BentoTextPrimary
-                            )
-                        }
+                                .testTag("topbar_profile_avatar")
+                        )
                     }
                 )
                 // Premium thin Italian flag colored stripe
@@ -294,7 +277,17 @@ fun PermessoAppScreen(
                     NavigationBarItem(
                         selected = selectedTabIndex == 4,
                         onClick = { selectedTabIndex = 4 },
-                        icon = { Icon(Icons.Default.AccountCircle, contentDescription = "Profilo") },
+                        icon = {
+                            UserPersistentAvatar(
+                                fullName = credentials?.fullName,
+                                size = 26.dp,
+                                fontSize = 10.sp,
+                                isSelected = selectedTabIndex == 4,
+                                borderColor = if (selectedTabIndex == 4) ItalianGreen else Color.White,
+                                borderWidth = if (selectedTabIndex == 4) 2.dp else 1.2.dp,
+                                modifier = Modifier.testTag("navbar_profile_avatar")
+                            )
+                        },
                         label = { Text(Localization.string("tab_profile", selectedLanguageCode)) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = BentoCardPrimaryText,
@@ -384,6 +377,14 @@ fun PermessoAppScreen(
                             onGoToCredentials = { selectedTabIndex = 2 },
                             onOpenGuides = { showingGuidesScreen = true },
                             onChooseQuestura = { showingQuestureExplorer = true },
+                            onSyncVerifiedDossier = { name, uid, pass, istanza ->
+                                viewModel.formFullName.value = name
+                                viewModel.formUserId.value = uid
+                                viewModel.formPassword.value = pass
+                                viewModel.formNumeroAssicurata.value = pass
+                                viewModel.formNumeroPratica.value = istanza
+                                viewModel.saveCredentials()
+                            },
                             selectedLanguageCode = selectedLanguageCode
                         )
                     }
@@ -403,6 +404,7 @@ fun PermessoAppScreen(
                     val formNumeroPratica by viewModel.formNumeroPratica.collectAsStateWithLifecycle()
 
                     CredentialsTab(
+                        credentials = credentials,
                         fullName = formFullName,
                         onFullNameChange = { viewModel.formFullName.value = it },
                         userId = formUserId,
@@ -516,14 +518,18 @@ fun DashboardTab(
     onGoToCredentials: () -> Unit,
     onOpenGuides: () -> Unit,
     onChooseQuestura: () -> Unit,
+    onSyncVerifiedDossier: (String, String, String, String) -> Unit = { _, _, _, _ -> },
     selectedLanguageCode: String
 ) {
-    val hasCode = credentials != null && 
-            (credentials.numeroAssicurata.isNotBlank() || 
-             credentials.numeroPratica.isNotBlank() || 
+    val hasCode = credentials != null &&
+            (credentials.numeroAssicurata.isNotBlank() ||
+             credentials.numeroPratica.isNotBlank() ||
              (credentials.userId.isNotBlank() && credentials.password.isNotBlank()))
 
-    var activeSubTab by remember { mutableStateOf(0) }
+    var activeSubTab by remember { mutableIntStateOf(0) }
+    var activeSmartTool by remember { mutableStateOf<SmartToolType?>(null) }
+    var showAllHistory by remember { mutableStateOf(false) }
+    val isEn = selectedLanguageCode == "en"
 
     LazyColumn(
         modifier = Modifier
@@ -531,9 +537,9 @@ fun DashboardTab(
             .background(BentoBackground)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
+        contentPadding = PaddingValues(top = 12.dp, bottom = 88.dp)
     ) {
-        // Welcome and Header Card (Always Visible)
+        // 1. Calm Greeting with Persistent Profile Avatar & Quick Notification Test Header
         item {
             val name = credentials?.fullName?.trim() ?: ""
             val greetName = if (name.isNotBlank()) name else Localization.string("friend", selectedLanguageCode)
@@ -541,31 +547,43 @@ fun DashboardTab(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Ciao, $greetName! 👋",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = BentoTextHeading
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    UserPersistentAvatar(
+                        fullName = credentials?.fullName,
+                        size = 44.dp,
+                        fontSize = 14.sp,
+                        borderColor = ItalianGreen.copy(alpha = 0.45f),
+                        borderWidth = 1.5.dp
                     )
-                    val lastCheckedStr = if (credentials?.lastCheckedTime != 0L) {
-                        val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                        Localization.string("last_checked", selectedLanguageCode, sdf.format(Date(credentials?.lastCheckedTime ?: 0L)))
-                    } else {
-                        Localization.string("no_checks", selectedLanguageCode)
+                    Column {
+                        Text(
+                            text = "Ciao, $greetName! 👋",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = BentoTextHeading
+                        )
+                        val lastCheckedStr = if (credentials?.lastCheckedTime != 0L) {
+                            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                            Localization.string("last_checked", selectedLanguageCode, sdf.format(Date(credentials?.lastCheckedTime ?: 0L)))
+                        } else {
+                            Localization.string("no_checks", selectedLanguageCode)
+                        }
+                        Text(
+                            text = lastCheckedStr,
+                            fontSize = 12.sp,
+                            color = BentoTextSecondary
+                        )
                     }
-                    Text(
-                        text = lastCheckedStr,
-                        fontSize = 13.sp,
-                        color = BentoTextSecondary
-                    )
                 }
 
-                // Test notifications button
                 OutlinedButton(
                     onClick = {
                         com.example.util.NotificationHelper.showStatusNotification(
@@ -577,155 +595,91 @@ fun DashboardTab(
                     border = BorderStroke(1.dp, BentoCardBorder),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = ItalianGreen),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                     modifier = Modifier.testTag("test_notif_btn")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = "Test Notifica",
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(Localization.string("test_button", selectedLanguageCode), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(Localization.string("test_button", selectedLanguageCode), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        // NEW: Immigration Guides Card
+        // 2. Clean 3-Section Workspace Pill Switcher (No Visual Overload)
         item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOpenGuides() }
-                    .testTag("immigration_guides_card"),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = Localization.string("guides_card_title", selectedLanguageCode),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = Localization.string("guides_card_desc", selectedLanguageCode),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
+                    val subTabs = listOf(
+                        0 to (if (isEn) "1. My Status" else "1. La Tua Pratica"),
+                        1 to (if (isEn) "2. Smart Toolkit" else "2. Kit Strumenti"),
+                        2 to (if (isEn) "3. Wait & Info" else "3. Statistiche")
                     )
-                }
-            }
-        }
-
-        // Sub-Tab Switcher Row (Always Visible)
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val subTabs = listOf(
-                    0 to Localization.string("subtab_status", selectedLanguageCode),
-                    1 to Localization.string("subtab_appointments", selectedLanguageCode),
-                    2 to Localization.string("subtab_stats", selectedLanguageCode)
-                )
-                subTabs.forEach { (index, title) ->
-                    val isSelected = activeSubTab == index
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (isSelected) BentoBadgeGreen else MaterialTheme.colorScheme.surface)
-                            .border(
-                                width = 1.dp,
-                                color = if (isSelected) Color.Transparent else BentoCardBorder,
-                                shape = RoundedCornerShape(14.dp)
+                    subTabs.forEach { (index, title) ->
+                        val isSelected = activeSubTab == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) BentoBadgeGreen else Color.Transparent)
+                                .clickable {
+                                    activeSubTab = index
+                                    if (index != 1) activeSmartTool = null
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = title,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) Color.White else BentoTextSecondary,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
                             )
-                            .clickable { activeSubTab = index }
-                            .padding(vertical = 10.dp, horizontal = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = title,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSelected) Color.White else BentoTextSecondary,
-                            maxLines = 1,
-                            textAlign = TextAlign.Center
-                        )
+                        }
                     }
                 }
             }
         }
 
-        // SUB-TAB 0: Stato & Cronologia
+        // =========================================================================
+        // WORKSPACE 0: LA TUA PRATICA (WITH CLEAR SECTION DIVIDERS)
+        // =========================================================================
         if (activeSubTab == 0) {
-            // BENTO CARD 1: Primary Status Card
+            item {
+                SectionDividerHeader(
+                    title = if (isEn) "Primary Status & Live Check" else "Stato Principale & Verifica Live",
+                    subtitle = if (isEn) "Real-time permit status and instant verification" else "Stato attuale della tua pratica e pulsante di verifica immediata",
+                    badgeText = "LIVE",
+                    icon = Icons.Default.Verified,
+                    accentColor = ItalianGreen
+                )
+            }
+
+            // Hero Status Card
             item {
                 BentoPrimaryStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
             }
 
-            // BENTO CARDS 2 & 3: Portale Status & Polizia Status side-by-side
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        BentoPortalStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        BentoPoliziaStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
-                    }
-                }
-            }
-
-            // REAL PORTALE IMMIGRAZIONE DETTAGLIO ISTANZA & CONVOCAZIONE CARD
-            if (credentials != null && (credentials.codiceIstanza.isNotBlank() || credentials.convocazioneDate.isNotBlank() || credentials.dettaglioAnomalie.isNotBlank())) {
-                item {
-                    BentoIstanzaDetailsCard(credentials = credentials)
-                }
-            }
-
-            // PERSONALIZED QUESTURA CARD
-            item {
-                PersonalizedQuesturaCard(
-                    credentials = credentials,
-                    onChooseQuestura = onChooseQuestura,
-                    selectedLanguageCode = selectedLanguageCode
-                )
-            }
-
-            // PREMIUM FEATURE: Progressive Visual Timeline Stepper
-            if (credentials != null && credentials?.lastCheckedTime != 0L) {
-                item {
-                    BentoPermessoTimelineCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
-                }
-            }
-
-            // Configuration request helper card (if !hasCode)
+            // Primary Action Button ("Controlla Ora" / "Configura") right under Hero Card for effortless reach
             if (!hasCode) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = BentoAlertRed.copy(alpha = 0.08f)),
                         border = BorderStroke(1.dp, BentoCardBorder)
                     ) {
@@ -766,17 +720,16 @@ fun DashboardTab(
                     }
                 }
             } else {
-                // Controlla Ora full-width bento card action
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = BentoBadgeGreen),
                         onClick = onCheckNow
                     ) {
                         Row(
                             modifier = Modifier
-                                .padding(16.dp)
+                                .padding(15.dp)
                                 .fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
@@ -795,33 +748,177 @@ fun DashboardTab(
                 }
             }
 
-            // Status Feedback Dialog/Section
+            // Live Check Feedback Card (when checking or completed)
             if (checkState !is CheckUiState.Idle) {
                 item {
                     CheckStateCard(checkState = checkState, onDismiss = onResetCheckState, selectedLanguageCode = selectedLanguageCode)
                 }
             }
 
-            // Status check history logs section
+            // Divider before 1-Tap Quick Strip
+            item {
+                SectionDividerHeader(
+                    title = if (isEn) "Quick Smart Tools (1-Tap)" else "Accesso Rapido Strumenti (1-Tap)",
+                    subtitle = if (isEn) "Jump directly to Receipt Pass, Travel Rules, PEC or Rights" else "Apri subito Pass Sportello, Regole Viaggio, Sollecito PEC o Diritti",
+                    badgeText = "4 STRUMENTI",
+                    icon = Icons.Default.AutoAwesome,
+                    accentColor = Color(0xFF0284C7)
+                )
+            }
+
+            // 1-Tap Quick Strip to jump directly to Smart Tools #1, #2, #3, #5 without visual clutter
+            item {
+                SmartToolsQuickStrip(
+                    onSelectTool = { tool ->
+                        activeSmartTool = tool
+                        activeSubTab = 1
+                    },
+                    selectedLanguageCode = selectedLanguageCode
+                )
+            }
+
+            // Divider before Official Portals & Dossier Details
+            item {
+                SectionDividerHeader(
+                    title = if (isEn) "Official Portals & Convocation Details" else "Dettaglio Portali Ufficiali & Convocazione",
+                    subtitle = if (isEn) "Comparison between Portale Immigrazione and Polizia di Stato" else "Confronto tra Portale Immigrazione (Poste) e Questura (Polizia di Stato)",
+                    badgeText = "2 FONTI",
+                    icon = Icons.Default.AccountBalance,
+                    accentColor = ItalianGreen
+                )
+            }
+
+            // Dual Official Portals Comparison Row (Portale Immigrazione & Polizia di Stato)
             item {
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        BentoPortalStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        BentoPoliziaStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
+                    }
+                }
+            }
+
+            // Real Portale Immigrazione Dettaglio Istanza & Convocazione Card
+            if (credentials != null && (credentials.codiceIstanza.isNotBlank() || credentials.convocazioneDate.isNotBlank() || credentials.dettaglioAnomalie.isNotBlank())) {
+                item {
+                    BentoIstanzaDetailsCard(credentials = credentials)
+                }
+            }
+
+            // 5-Step Progress Timeline Card
+            if (credentials != null && credentials.lastCheckedTime != 0L) {
+                item {
+                    BentoPermessoTimelineCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
+                }
+            }
+
+            // Divider before Questura & Immigration Guides
+            item {
+                SectionDividerHeader(
+                    title = if (isEn) "Your Questura & Official Guides" else "La Tua Questura & Guide Ufficiali",
+                    subtitle = if (isEn) "Competent Immigration Office contacts and step-by-step guides" else "Riferimenti dell'Ufficio Immigrazione competente e guide pratiche",
+                    badgeText = "PIACENZA",
+                    icon = Icons.Default.LocationOn,
+                    accentColor = Color(0xFF7C3AED)
+                )
+            }
+
+            // Personalized Questura Card (now clean and collapsible)
+            item {
+                PersonalizedQuesturaCard(
+                    credentials = credentials,
+                    onChooseQuestura = onChooseQuestura,
+                    selectedLanguageCode = selectedLanguageCode
+                )
+            }
+
+            // Compact Immigration Guides Banner Card
+            item {
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .clickable { onOpenGuides() }
+                        .testTag("immigration_guides_card"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
                 ) {
-                    Text(
-                        text = Localization.string("history_title", selectedLanguageCode),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = BentoTextHeading
-                    )
-                    if (history.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MenuBook,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = Localization.string("guides_card_title", selectedLanguageCode),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = Localization.string("guides_card_desc", selectedLanguageCode),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
+
+            // Divider before Status Check History
+            item {
+                SectionDividerHeader(
+                    title = Localization.string("history_title", selectedLanguageCode),
+                    subtitle = if (isEn) "Chronological log of your official status checks" else "Registro cronologico delle verifiche effettuate sui portali",
+                    badgeText = "${history.size}",
+                    icon = Icons.Default.History,
+                    accentColor = Color(0xFFD97706)
+                )
+            }
+
+            // Calm, Collapsible Status Check History Section Controls
+            if (history.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (history.size > 2) {
+                            TextButton(onClick = { showAllHistory = !showAllHistory }) {
+                                Text(
+                                    text = if (showAllHistory) "Mostra meno" else "Vedi tutti (${history.size})",
+                                    fontSize = 12.sp,
+                                    color = BentoTextSecondary
+                                )
+                            }
+                        }
                         TextButton(onClick = onClearHistory) {
-                            Icon(Icons.Default.Delete, contentDescription = "Cancella", modifier = Modifier.size(16.dp), tint = BentoBadgeGreen)
+                            Icon(Icons.Default.Delete, contentDescription = "Cancella", modifier = Modifier.size(15.dp), tint = BentoBadgeGreen)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(Localization.string("history_clear", selectedLanguageCode), fontSize = 13.sp, color = BentoBadgeGreen)
+                            Text(Localization.string("history_clear", selectedLanguageCode), fontSize = 12.sp, color = BentoBadgeGreen)
                         }
                     }
                 }
@@ -832,12 +929,12 @@ fun DashboardTab(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(20.dp),
                         border = BorderStroke(1.dp, BentoCardBorder)
                     ) {
                         Column(
                             modifier = Modifier
-                                .padding(24.dp)
+                                .padding(20.dp)
                                 .fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
@@ -845,56 +942,94 @@ fun DashboardTab(
                                 imageVector = Icons.Default.History,
                                 contentDescription = "Nessuna cronologia",
                                 tint = BentoTextSecondary.copy(alpha = 0.5f),
-                                modifier = Modifier.size(44.dp)
+                                modifier = Modifier.size(36.dp)
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = Localization.string("no_history_recorded", selectedLanguageCode),
                                 fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 color = BentoTextSecondary
-                            )
-                            Text(
-                                text = Localization.string("history_help_desc", selectedLanguageCode),
-                                fontSize = 12.sp,
-                                color = BentoTextSecondary.copy(alpha = 0.7f),
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
                     }
                 }
             } else {
-                items(history) { record ->
+                val visibleHistory = if (showAllHistory) history else history.take(2)
+                items(visibleHistory) { record ->
                     HistoryRecordItem(record = record, selectedLanguageCode = selectedLanguageCode)
                 }
             }
         }
 
-        // SUB-TAB 1: Appuntamenti & Strumenti
+        // =========================================================================
+        // WORKSPACE 1: KIT STRUMENTI SMART (FEATURES #1, #2, #3, #5 + CHECKLIST)
+        // =========================================================================
         if (activeSubTab == 1) {
-            // PREMIUM FEATURE: Appointment countdown tracker & Document Vault checklist
             item {
-                BentoAppointmentsAndVaultCard(
-                    appointmentDate = appointmentDate,
-                    appointmentTime = appointmentTime,
-                    appointmentLocation = appointmentLocation,
-                    onUpdateAppointment = onUpdateAppointment,
-                    checkedDocs = checkedDocs,
-                    onToggleDocument = onToggleDocument,
-                    selectedLanguageCode = selectedLanguageCode
+                SmartToolsCalmHub(
+                    credentials = credentials,
+                    selectedLanguageCode = selectedLanguageCode,
+                    activeTool = activeSmartTool,
+                    onSelectTool = { activeSmartTool = it },
+                    onUpdateCredentialsFromScan = onSyncVerifiedDossier
                 )
             }
 
-            // PREMIUM FEATURE: Interactive Status Interpreter & AI Advisor Chat Box
-            item {
-                BentoStatusAdvisorCard(selectedLanguageCode = selectedLanguageCode)
+            // When in the 2x2 Grid overview (not inside a single focused tool), also show the Appointment Checklist & FAQ below with clear section dividers
+            if (activeSmartTool == null) {
+                item {
+                    SectionDividerHeader(
+                        title = if (isEn) "Appointment & Document Checklist" else "Appuntamento & Checklist Documenti",
+                        subtitle = if (isEn) "Prepare everything required for your fingerprint appointment" else "Prepara tutti i documenti richiesti per il fotosegnalamento in Questura",
+                        badgeText = "CHECKLIST",
+                        icon = Icons.Default.FactCheck,
+                        accentColor = Color(0xFF0284C7)
+                    )
+                }
+
+                item {
+                    BentoAppointmentsAndVaultCard(
+                        appointmentDate = appointmentDate,
+                        appointmentTime = appointmentTime,
+                        appointmentLocation = appointmentLocation,
+                        onUpdateAppointment = onUpdateAppointment,
+                        checkedDocs = checkedDocs,
+                        onToggleDocument = onToggleDocument,
+                        selectedLanguageCode = selectedLanguageCode
+                    )
+                }
+
+                item {
+                    SectionDividerHeader(
+                        title = if (isEn) "Status Meaning & Official FAQ" else "Significato Stati & Domande Frequenti",
+                        subtitle = if (isEn) "Understand each phase of your permit application" else "Comprendi cosa significa ogni stato sui portali ufficiali",
+                        badgeText = "GUIDA",
+                        icon = Icons.Default.HelpOutline,
+                        accentColor = Color(0xFF7C3AED)
+                    )
+                }
+
+                item {
+                    BentoStatusAdvisorCard(selectedLanguageCode = selectedLanguageCode)
+                }
             }
         }
 
-        // SUB-TAB 2: Statistiche, Portali & Credenziali
+        // =========================================================================
+        // WORKSPACE 2: STATISTICHE, PORTALI & CREDENZIALI (WITH CLEAR DIVIDERS)
+        // =========================================================================
         if (activeSubTab == 2) {
-            // PREMIUM FEATURE: Community Waiting Estimations & Comparative Stats
+            item {
+                SectionDividerHeader(
+                    title = if (isEn) "Local Processing Wait Times" else "Tempi Medi di Attesa per Provincia",
+                    subtitle = if (isEn) "Estimated fingerprint and card printing timelines" else "Stime aggiornate per fotosegnalamento e stampa card elettronica",
+                    badgeText = selectedProvince.uppercase(Locale.getDefault()),
+                    icon = Icons.Default.Groups,
+                    accentColor = ItalianGreen
+                )
+            }
+
             item {
                 BentoCommunityStatsCard(
                     selectedProvince = selectedProvince,
@@ -903,12 +1038,30 @@ fun DashboardTab(
                 )
             }
 
-            // PREMIUM FEATURE: Portal monitoring & secure anti-scam advice
+            item {
+                SectionDividerHeader(
+                    title = if (isEn) "Official Portals Uptime Monitor" else "Monitoraggio Server Portali Ufficiali",
+                    subtitle = if (isEn) "Live status of Polizia di Stato and Portale Immigrazione" else "Stato di raggiungibilità di Polizia di Stato e Portale Immigrazione",
+                    badgeText = "ONLINE",
+                    icon = Icons.Default.Dns,
+                    accentColor = Color(0xFF0284C7)
+                )
+            }
+
             item {
                 BentoPortalMonitorCard(selectedLanguageCode = selectedLanguageCode)
             }
 
-            // BENTO CARD 4: Credentials Card
+            item {
+                SectionDividerHeader(
+                    title = if (isEn) "Saved Receipt Credentials" else "Riepilogo Credenziali Ricevuta",
+                    subtitle = if (isEn) "Your active tracking codes saved on device" else "I codici ufficiali della tua ricevuta attualmente configurati",
+                    badgeText = "ATTIVI",
+                    icon = Icons.Default.Key,
+                    accentColor = Color(0xFFD97706)
+                )
+            }
+
             item {
                 BentoCredentialsCard(credentials = credentials, onGoToCredentials = onGoToCredentials, selectedLanguageCode = selectedLanguageCode)
             }
@@ -2143,6 +2296,7 @@ fun PortalWebViewTab(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CredentialsTab(
+    credentials: UserCredentials? = null,
     fullName: String,
     onFullNameChange: (String) -> Unit,
     userId: String,
@@ -2157,14 +2311,83 @@ fun CredentialsTab(
     selectedLanguageCode: String
 ) {
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var showDigitalPassInTab by remember { mutableStateOf(false) }
+    val isEn = selectedLanguageCode == "en"
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
         contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)
     ) {
+        // Clean 2-Mode Switcher: Modifica Codici vs Pass Sportello & Fascicolo PDF
+        item {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val modes = listOf(
+                        false to "✏️ Modifica Codici",
+                        true to "🪪 Pass Sportello & PDF"
+                    )
+                    modes.forEach { (isPassMode, title) ->
+                        val selected = showDigitalPassInTab == isPassMode
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (selected) ItalianGreen else Color.Transparent)
+                                .clickable { showDigitalPassInTab = isPassMode }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = title,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected) Color.White else BentoTextSecondary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showDigitalPassInTab) {
+            item {
+                DigitalRicevutaPassAndScannerView(
+                    credentials = credentials,
+                    selectedLanguageCode = selectedLanguageCode,
+                    onUpdateCredentialsFromScan = { name, uid, pass, istanza ->
+                        onFullNameChange(name)
+                        onUserIdChange(uid)
+                        onPasswordChange(pass)
+                        onNumeroAssicurataChange(pass)
+                        onNumeroPraticaChange(istanza)
+                        onSave()
+                    }
+                )
+            }
+        }
+
+        item {
+            SectionDividerHeader(
+                title = if (isEn) "Guide • Where to Find Your Codes" else "Guida • Dove Trovare i Codici sulla Ricevuta",
+                subtitle = if (isEn) "Instructions for reading your Poste Italiane Mod. 22A receipt" else "Come leggere Ologramma e Assicurata sul Mod. 22A delle Poste Italiane",
+                badgeText = "INFO",
+                icon = Icons.Default.Info,
+                accentColor = Color(0xFF0284C7)
+            )
+        }
+
         // Info card explaining Italian permit receipts
         item {
             Card(
@@ -2200,6 +2423,16 @@ fun CredentialsTab(
                     }
                 }
             }
+        }
+
+        item {
+            SectionDividerHeader(
+                title = if (isEn) "Section 1 • Portale Immigrazione (Poste)" else "Sezione 1 • Portale Immigrazione (Kit Postale)",
+                subtitle = if (isEn) "Applicant name, Hologram User ID & Password (without dash)" else "Nome e Cognome, User ID (Ologramma) e Password (senza trattino)",
+                badgeText = "PORTALE",
+                icon = Icons.Default.AccountCircle,
+                accentColor = ItalianGreen
+            )
         }
 
         // Card Section 1: Dati Personali & Portale
@@ -2276,6 +2509,16 @@ fun CredentialsTab(
                     )
                 }
             }
+        }
+
+        item {
+            SectionDividerHeader(
+                title = if (isEn) "Section 2 • Polizia di Stato (Questura)" else "Sezione 2 • Polizia di Stato (Questura)",
+                subtitle = if (isEn) "Numero Assicurata or Numero Pratica for Questura database" else "Numero Assicurata o Numero Pratica per la banca dati Questura",
+                badgeText = "QUESTURA",
+                icon = Icons.Default.Verified,
+                accentColor = Color(0xFF7C3AED)
+            )
         }
 
         // Card Section 2: Polizia di Stato
@@ -4273,6 +4516,7 @@ fun ProfileTab(
     val password by viewModel.formPassword.collectAsStateWithLifecycle()
     val numeroAssicurata by viewModel.formNumeroAssicurata.collectAsStateWithLifecycle()
     val numeroPratica by viewModel.formNumeroPratica.collectAsStateWithLifecycle()
+    val isEn = selectedLanguageCode == "en"
     
     var isPasswordVisible by remember { mutableStateOf(false) }
 
@@ -4280,11 +4524,22 @@ fun ProfileTab(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
         contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)
     ) {
-        // User Profile Header
         item {
+            SectionDividerHeader(
+                title = if (isEn) "Persistent User Identity" else "Identità Utente & Avatar Persistente",
+                subtitle = if (isEn) "Profile picture automatically generated from your First & Last Name" else "Immagine profilo generata e salvata dal tuo Nome e Cognome",
+                badgeText = extractFirstAndLastNameInitials(fullName),
+                icon = Icons.Default.Badge,
+                accentColor = ItalianGreen
+            )
+        }
+
+        // User Profile Header with Persistent Avatar
+        item {
+            val (parsedFirst, parsedLast) = remember(fullName) { parseFirstAndLastName(fullName) }
             Card(
                 modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
                 colors = CardDefaults.cardColors(containerColor = ItalianGreenLight.copy(alpha = 0.4f)),
@@ -4294,26 +4549,16 @@ fun ProfileTab(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(ItalianGreen)
-                            .border(2.dp, Color.White, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val initials = if (fullName.isNotBlank()) {
-                            fullName.split("\\s+".toRegex()).take(2).map { it.take(1).uppercase() }.joinToString("")
-                        } else "AM"
-                        Text(
-                            text = initials,
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    UserPersistentAvatar(
+                        fullName = fullName,
+                        size = 60.dp,
+                        fontSize = 20.sp,
+                        borderColor = Color.White,
+                        borderWidth = 2.dp,
+                        modifier = Modifier.testTag("profile_persistent_avatar")
+                    )
                     Spacer(modifier = Modifier.width(16.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = fullName.ifBlank { Localization.string("friend", selectedLanguageCode) },
                             fontWeight = FontWeight.Bold,
@@ -4322,13 +4567,34 @@ fun ProfileTab(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = Localization.string("profile_subtitle", selectedLanguageCode),
+                            text = if (parsedLast.isNotBlank()) {
+                                "Nome: $parsedFirst • Cognome: $parsedLast"
+                            } else {
+                                Localization.string("profile_subtitle", selectedLanguageCode)
+                            },
                             fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = ItalianGreen
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = Localization.string("profile_subtitle", selectedLanguageCode),
+                            fontSize = 11.sp,
                             color = BentoTextSecondary
                         )
                     }
                 }
             }
+        }
+
+        item {
+            SectionDividerHeader(
+                title = Localization.string("select_language", selectedLanguageCode),
+                subtitle = if (isEn) "Choose your preferred display language" else "Seleziona la lingua dell'interfaccia e dell'assistente",
+                badgeText = selectedLanguageCode.uppercase(Locale.ROOT),
+                icon = Icons.Default.Language,
+                accentColor = Color(0xFF0284C7)
+            )
         }
 
         // Section 1: Seleziona Lingua (Select Language)
@@ -4390,6 +4656,16 @@ fun ProfileTab(
                     }
                 }
             }
+        }
+
+        item {
+            SectionDividerHeader(
+                title = Localization.string("profile_title", selectedLanguageCode),
+                subtitle = if (isEn) "Edit your name and official receipt credentials" else "Modifica nome, cognome e codici ufficiali della ricevuta",
+                badgeText = "DATI",
+                icon = Icons.Default.Person,
+                accentColor = ItalianGreen
+            )
         }
 
         // Section 2: Edit Profile Data (Dati Personali)
@@ -4502,6 +4778,16 @@ fun ProfileTab(
             }
         }
 
+        item {
+            SectionDividerHeader(
+                title = Localization.string("about_section", selectedLanguageCode),
+                subtitle = if (isEn) "Background sync and application information" else "Sincronizzazione in background e informazioni sull'applicazione",
+                badgeText = "SYNC",
+                icon = Icons.Default.Info,
+                accentColor = Color(0xFF7C3AED)
+            )
+        }
+
         // Section 3: App Settings (Informazioni)
         item {
             Card(
@@ -4557,6 +4843,16 @@ fun ProfileTab(
                     }
                 }
             }
+        }
+
+        item {
+            SectionDividerHeader(
+                title = "GDPR & Privacy (Art. 17)",
+                subtitle = if (isEn) "Permanent erasure of local personal data" else "Cancellazione permanente dei dati personali dal dispositivo",
+                badgeText = "PRIVACY",
+                icon = Icons.Default.Delete,
+                accentColor = Color(0xFFD32F2F)
+            )
         }
 
         // Section 4: Privacy & GDPR (Danger Zone)

@@ -368,92 +368,125 @@ fun PersonalizedQuesturaCard(
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    HorizontalDivider(color = BentoCardBorder)
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Detailed Local Information
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        // Opening Hours
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.AccessTime, contentDescription = null, tint = ItalianGreen, modifier = Modifier.size(16.dp))
-                            Column {
-                                Text(Localization.string("opening_hours", selectedLanguageCode), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BentoTextHeading)
-                                Text(selectedQuestura.openingHours.get(selectedLanguageCode), fontSize = 11.sp, color = BentoTextSecondary)
-                            }
-                        }
-                        
-                        // PEC
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.Email, contentDescription = null, tint = ItalianGreen, modifier = Modifier.size(16.dp))
-                            Column {
-                                Text(Localization.string("pec", selectedLanguageCode), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BentoTextHeading)
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(
-                                        text = selectedQuestura.pec, 
-                                        fontSize = 11.sp, 
-                                        color = BentoTextSecondary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    )
-                                    if (!isCapturing) {
-                                        Icon(
-                                            imageVector = Icons.Default.ContentCopy, 
-                                            contentDescription = "Copy",
-                                            tint = ItalianGreen,
-                                            modifier = Modifier
-                                                .size(12.dp)
-                                                .clickable {
-                                                    clipboardManager.setText(AnnotatedString(selectedQuestura.pec))
-                                                    Toast.makeText(context, "PEC copied to clipboard", Toast.LENGTH_SHORT).show()
-                                                }
-                                        )
-                                    }
-                                }
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        var showFullQuesturaDetails by remember { mutableStateOf(false) }
+
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { showFullQuesturaDetails = !showFullQuesturaDetails },
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (showFullQuesturaDetails) "Nascondi orari, PEC e avvisi" else "Mostra orari, PEC e avvisi della Questura",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = ItalianGreen
+                                )
+                                Icon(
+                                    imageVector = if (showFullQuesturaDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = null,
+                                    tint = ItalianGreen,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
 
-                        // Average wait
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.Timeline, contentDescription = null, tint = ItalianGreen, modifier = Modifier.size(16.dp))
-                            Column {
-                                Text(Localization.string("average_waiting_time", selectedLanguageCode), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BentoTextHeading)
-                                Text(selectedQuestura.averageWaitingTime.get(selectedLanguageCode), fontSize = 11.sp, color = BentoTextSecondary)
-                            }
-                        }
-                        
-                        // Local Warnings (If any)
-                        val warningText = selectedQuestura.localWarnings.get(selectedLanguageCode)
-                        if (warningText.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = BentoAlertRed.copy(alpha = 0.08f)),
-                                border = BorderStroke(1.dp, BentoAlertRed.copy(alpha = 0.2f)),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.Top
-                                ) {
-                                    Icon(Icons.Default.Warning, contentDescription = null, tint = BentoAlertRed, modifier = Modifier.size(14.dp))
+                        if (showFullQuesturaDetails) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(color = BentoCardBorder)
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Detailed Local Information
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                // Opening Hours
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(Icons.Default.AccessTime, contentDescription = null, tint = ItalianGreen, modifier = Modifier.size(16.dp))
                                     Column {
-                                        Text(
-                                            text = Localization.string("local_warnings", selectedLanguageCode),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp,
-                                            color = BentoAlertRed
-                                        )
-                                        Text(
-                                            text = warningText,
-                                            fontSize = 10.sp,
-                                            color = BentoTextPrimary,
-                                            lineHeight = 14.sp
-                                        )
+                                        Text(Localization.string("opening_hours", selectedLanguageCode), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BentoTextHeading)
+                                        Text(selectedQuestura.openingHours.get(selectedLanguageCode), fontSize = 11.sp, color = BentoTextSecondary)
+                                    }
+                                }
+
+                                // PEC
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(Icons.Default.Email, contentDescription = null, tint = ItalianGreen, modifier = Modifier.size(16.dp))
+                                    Column {
+                                        Text(Localization.string("pec", selectedLanguageCode), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BentoTextHeading)
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text(
+                                                text = selectedQuestura.pec,
+                                                fontSize = 11.sp,
+                                                color = BentoTextSecondary,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f, fill = false)
+                                            )
+                                            if (!isCapturing) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentCopy,
+                                                    contentDescription = "Copy",
+                                                    tint = ItalianGreen,
+                                                    modifier = Modifier
+                                                        .size(12.dp)
+                                                        .clickable {
+                                                            clipboardManager.setText(AnnotatedString(selectedQuestura.pec))
+                                                            Toast.makeText(context, "PEC copied to clipboard", Toast.LENGTH_SHORT).show()
+                                                        }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Average wait
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(Icons.Default.Timeline, contentDescription = null, tint = ItalianGreen, modifier = Modifier.size(16.dp))
+                                    Column {
+                                        Text(Localization.string("average_waiting_time", selectedLanguageCode), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BentoTextHeading)
+                                        Text(selectedQuestura.averageWaitingTime.get(selectedLanguageCode), fontSize = 11.sp, color = BentoTextSecondary)
+                                    }
+                                }
+
+                                // Local Warnings (If any)
+                                val warningText = selectedQuestura.localWarnings.get(selectedLanguageCode)
+                                if (warningText.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = BentoAlertRed.copy(alpha = 0.08f)),
+                                        border = BorderStroke(1.dp, BentoAlertRed.copy(alpha = 0.2f)),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(10.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.Top
+                                        ) {
+                                            Icon(Icons.Default.Warning, contentDescription = null, tint = BentoAlertRed, modifier = Modifier.size(14.dp))
+                                            Column {
+                                                Text(
+                                                    text = Localization.string("local_warnings", selectedLanguageCode),
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 11.sp,
+                                                    color = BentoAlertRed
+                                                )
+                                                Text(
+                                                    text = warningText,
+                                                    fontSize = 10.sp,
+                                                    color = BentoTextPrimary,
+                                                    lineHeight = 14.sp
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -462,7 +495,6 @@ fun PersonalizedQuesturaCard(
                 }
             }
         }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
