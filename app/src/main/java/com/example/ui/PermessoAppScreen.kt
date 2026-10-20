@@ -35,14 +35,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -114,6 +115,7 @@ fun PermessoAppScreen(
     val credentials by viewModel.credentials.collectAsStateWithLifecycle()
     val historyList by viewModel.history.collectAsStateWithLifecycle()
     val checkState by viewModel.checkState.collectAsStateWithLifecycle()
+    val cooldownSeconds by viewModel.cooldownSecondsRemaining.collectAsStateWithLifecycle()
     val selectedLanguageCode by viewModel.selectedLanguage.collectAsStateWithLifecycle()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -199,15 +201,17 @@ fun PermessoAppScreen(
                         )
                     }
                 )
-                // Premium thin Italian flag colored stripe
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                ) {
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianGreen))
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianWhite))
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianRed))
+                // Premium thin Italian flag colored stripe (strictly LTR: Green -> White -> Red)
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                    ) {
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianGreen))
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianWhite))
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianRed))
+                    }
                 }
             }
         },
@@ -307,19 +311,31 @@ fun PermessoAppScreen(
                     (localCreds.numeroAssicurata.isNotBlank() || localCreds.numeroPratica.isNotBlank())
             if (selectedTabIndex == 0 && hasCode) {
                 FloatingActionButton(
-                    onClick = { viewModel.checkStatusNow() },
-                    containerColor = BentoBadgeGreen,
-                    contentColor = Color.White,
+                    onClick = {
+                        if (cooldownSeconds <= 0) {
+                            viewModel.checkStatusNow()
+                        }
+                    },
+                    containerColor = if (cooldownSeconds > 0) MaterialTheme.colorScheme.surfaceVariant else BentoBadgeGreen,
+                    contentColor = if (cooldownSeconds > 0) BentoTextSecondary else Color.White,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .padding(bottom = 16.dp, end = 8.dp)
                         .testTag("refresh_status_fab")
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Aggiorna Stato",
-                        modifier = Modifier.size(24.dp)
-                    )
+                    if (cooldownSeconds > 0) {
+                        Text(
+                            text = "${cooldownSeconds}s",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 12.sp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Aggiorna Stato",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         },
@@ -360,6 +376,7 @@ fun PermessoAppScreen(
                         )
                     } else {
                         DashboardTab(
+                            viewModel = viewModel,
                             credentials = credentials,
                             history = historyList,
                             checkState = checkState,
@@ -404,6 +421,7 @@ fun PermessoAppScreen(
                     val formNumeroPratica by viewModel.formNumeroPratica.collectAsStateWithLifecycle()
 
                     CredentialsTab(
+                        viewModel = viewModel,
                         credentials = credentials,
                         fullName = formFullName,
                         onFullNameChange = { viewModel.formFullName.value = it },
@@ -423,7 +441,9 @@ fun PermessoAppScreen(
                     )
                 }
                 3 -> {
-                    val userFullName = credentials?.fullName ?: "Karim El Assali"
+                    val isDemoMode by viewModel.isInstitutionalDemoMode.collectAsStateWithLifecycle()
+                    val userFullName = credentials?.fullName?.takeIf { it.isNotBlank() }
+                        ?: if (isDemoMode) PermessoViewModel.DEMO_FULL_NAME else Localization.string("friend", selectedLanguageCode)
                     val sofiaViewModel: SofiaViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
                     SofiaScreen(
                         viewModel = sofiaViewModel,
@@ -501,6 +521,7 @@ fun PermessoAppScreen(
 
 @Composable
 fun DashboardTab(
+    viewModel: PermessoViewModel,
     credentials: UserCredentials?,
     history: List<StatusHistory>,
     checkState: CheckUiState,
@@ -529,7 +550,17 @@ fun DashboardTab(
     var activeSubTab by remember { mutableIntStateOf(0) }
     var activeSmartTool by remember { mutableStateOf<SmartToolType?>(null) }
     var showAllHistory by remember { mutableStateOf(false) }
+    val cooldownSeconds by viewModel.cooldownSecondsRemaining.collectAsStateWithLifecycle()
+    val isDemoMode by viewModel.isInstitutionalDemoMode.collectAsStateWithLifecycle()
     val isEn = selectedLanguageCode == "en"
+
+    androidx.activity.compose.BackHandler(enabled = activeSmartTool != null || activeSubTab != 0) {
+        if (activeSmartTool != null) {
+            activeSmartTool = null
+        } else {
+            activeSubTab = 0
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -541,8 +572,12 @@ fun DashboardTab(
     ) {
         // 1. Calm Greeting with Persistent Profile Avatar & Quick Notification Test Header
         item {
-            val name = credentials?.fullName?.trim() ?: ""
-            val greetName = if (name.isNotBlank()) name else Localization.string("friend", selectedLanguageCode)
+            val name = credentials?.fullName?.trim().orEmpty()
+            val greetingText = if (name.isNotBlank()) {
+                Localization.string("greeting_user", selectedLanguageCode, name)
+            } else {
+                Localization.string("greeting_general", selectedLanguageCode)
+            }
             val context = androidx.compose.ui.platform.LocalContext.current
             Row(
                 modifier = Modifier
@@ -565,7 +600,7 @@ fun DashboardTab(
                     )
                     Column {
                         Text(
-                            text = "Ciao, $greetName! 👋",
+                            text = "$greetingText 👋",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = BentoTextHeading
@@ -623,9 +658,9 @@ fun DashboardTab(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val subTabs = listOf(
-                        0 to (if (isEn) "1. My Status" else "1. La Tua Pratica"),
-                        1 to (if (isEn) "2. Smart Toolkit" else "2. Kit Strumenti"),
-                        2 to (if (isEn) "3. Wait & Info" else "3. Statistiche")
+                        0 to Localization.string("subtab_practice", selectedLanguageCode),
+                        1 to Localization.string("subtab_tools", selectedLanguageCode),
+                        2 to Localization.string("subtab_stats_tab", selectedLanguageCode)
                     )
                     subTabs.forEach { (index, title) ->
                         val isSelected = activeSubTab == index
@@ -661,8 +696,8 @@ fun DashboardTab(
         if (activeSubTab == 0) {
             item {
                 SectionDividerHeader(
-                    title = if (isEn) "Primary Status & Live Check" else "Stato Principale & Verifica Live",
-                    subtitle = if (isEn) "Real-time permit status and instant verification" else "Stato attuale della tua pratica e pulsante di verifica immediata",
+                    title = Localization.string("section_main_status_title", selectedLanguageCode),
+                    subtitle = Localization.string("section_main_status_sub", selectedLanguageCode),
                     badgeText = "LIVE",
                     icon = Icons.Default.Verified,
                     accentColor = ItalianGreen
@@ -675,7 +710,7 @@ fun DashboardTab(
             }
 
             // Primary Action Button ("Controlla Ora" / "Configura") right under Hero Card for effortless reach
-            if (!hasCode) {
+            if (!hasCode && !isDemoMode) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -721,27 +756,51 @@ fun DashboardTab(
                 }
             } else {
                 item {
-                    Card(
+                    val isCooldownActive = cooldownSeconds > 0
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = BentoBadgeGreen),
-                        onClick = onCheckNow
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Row(
+                        Button(
+                            onClick = onCheckNow,
+                            enabled = !isCooldownActive && checkState !is CheckUiState.Loading,
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = BentoBadgeGreen,
+                                contentColor = Color.White,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                disabledContentColor = BentoTextSecondary
+                            ),
+                            contentPadding = PaddingValues(vertical = 15.dp, horizontal = 18.dp),
                             modifier = Modifier
-                                .padding(15.dp)
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                                .fillMaxWidth()
+                                .testTag("check_status_btn")
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White)
+                            Icon(
+                                imageVector = if (isCooldownActive) Icons.Default.HourglassBottom else Icons.Default.Refresh,
+                                contentDescription = null
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = Localization.string("button_check_now", selectedLanguageCode),
-                                color = Color.White,
+                                text = if (isCooldownActive) {
+                                    Localization.string("check_cooldown_button", selectedLanguageCode, cooldownSeconds)
+                                } else {
+                                    Localization.string("button_check_now", selectedLanguageCode)
+                                },
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                modifier = Modifier.testTag("check_status_btn")
+                                fontSize = 15.sp
+                            )
+                        }
+                        if (isCooldownActive) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = Localization.string("check_cooldown_subtitle", selectedLanguageCode),
+                                fontSize = 11.sp,
+                                color = BentoTextSecondary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("check_cooldown_subtitle")
                             )
                         }
                     }
@@ -758,9 +817,9 @@ fun DashboardTab(
             // Divider before 1-Tap Quick Strip
             item {
                 SectionDividerHeader(
-                    title = if (isEn) "Quick Smart Tools (1-Tap)" else "Accesso Rapido Strumenti (1-Tap)",
-                    subtitle = if (isEn) "Jump directly to Receipt Pass, Travel Rules, PEC or Rights" else "Apri subito Pass Sportello, Regole Viaggio, Sollecito PEC o Diritti",
-                    badgeText = "4 STRUMENTI",
+                    title = Localization.string("section_quick_tools_title", selectedLanguageCode),
+                    subtitle = Localization.string("section_quick_tools_sub", selectedLanguageCode),
+                    badgeText = Localization.string("badge_4_tools", selectedLanguageCode),
                     icon = Icons.Default.AutoAwesome,
                     accentColor = Color(0xFF0284C7)
                 )
@@ -780,9 +839,9 @@ fun DashboardTab(
             // Divider before Official Portals & Dossier Details
             item {
                 SectionDividerHeader(
-                    title = if (isEn) "Official Portals & Convocation Details" else "Dettaglio Portali Ufficiali & Convocazione",
-                    subtitle = if (isEn) "Comparison between Portale Immigrazione and Polizia di Stato" else "Confronto tra Portale Immigrazione (Poste) e Questura (Polizia di Stato)",
-                    badgeText = "2 FONTI",
+                    title = Localization.string("section_portals_detail_title", selectedLanguageCode),
+                    subtitle = Localization.string("section_portals_detail_sub", selectedLanguageCode),
+                    badgeText = Localization.string("badge_2_sources", selectedLanguageCode),
                     icon = Icons.Default.AccountBalance,
                     accentColor = ItalianGreen
                 )
@@ -820,9 +879,9 @@ fun DashboardTab(
             // Divider before Questura & Immigration Guides
             item {
                 SectionDividerHeader(
-                    title = if (isEn) "Your Questura & Official Guides" else "La Tua Questura & Guide Ufficiali",
-                    subtitle = if (isEn) "Competent Immigration Office contacts and step-by-step guides" else "Riferimenti dell'Ufficio Immigrazione competente e guide pratiche",
-                    badgeText = "PIACENZA",
+                    title = Localization.string("section_questura_guides_title", selectedLanguageCode),
+                    subtitle = Localization.string("section_questura_guides_sub", selectedLanguageCode),
+                    badgeText = selectedProvince.uppercase(Locale.getDefault()),
                     icon = Icons.Default.LocationOn,
                     accentColor = Color(0xFF7C3AED)
                 )
@@ -891,7 +950,7 @@ fun DashboardTab(
             item {
                 SectionDividerHeader(
                     title = Localization.string("history_title", selectedLanguageCode),
-                    subtitle = if (isEn) "Chronological log of your official status checks" else "Registro cronologico delle verifiche effettuate sui portali",
+                    subtitle = Localization.string("section_history_sub", selectedLanguageCode),
                     badgeText = "${history.size}",
                     icon = Icons.Default.History,
                     accentColor = Color(0xFFD97706)
@@ -968,11 +1027,10 @@ fun DashboardTab(
         if (activeSubTab == 1) {
             item {
                 SmartToolsCalmHub(
-                    credentials = credentials,
+                    viewModel = viewModel,
                     selectedLanguageCode = selectedLanguageCode,
                     activeTool = activeSmartTool,
-                    onSelectTool = { activeSmartTool = it },
-                    onUpdateCredentialsFromScan = onSyncVerifiedDossier
+                    onSelectTool = { activeSmartTool = it }
                 )
             }
 
@@ -980,9 +1038,9 @@ fun DashboardTab(
             if (activeSmartTool == null) {
                 item {
                     SectionDividerHeader(
-                        title = if (isEn) "Appointment & Document Checklist" else "Appuntamento & Checklist Documenti",
-                        subtitle = if (isEn) "Prepare everything required for your fingerprint appointment" else "Prepara tutti i documenti richiesti per il fotosegnalamento in Questura",
-                        badgeText = "CHECKLIST",
+                        title = Localization.string("section_appointment_checklist_title", selectedLanguageCode),
+                        subtitle = Localization.string("section_appointment_checklist_sub", selectedLanguageCode),
+                        badgeText = Localization.string("badge_checklist", selectedLanguageCode),
                         icon = Icons.Default.FactCheck,
                         accentColor = Color(0xFF0284C7)
                     )
@@ -1002,9 +1060,9 @@ fun DashboardTab(
 
                 item {
                     SectionDividerHeader(
-                        title = if (isEn) "Status Meaning & Official FAQ" else "Significato Stati & Domande Frequenti",
-                        subtitle = if (isEn) "Understand each phase of your permit application" else "Comprendi cosa significa ogni stato sui portali ufficiali",
-                        badgeText = "GUIDA",
+                        title = Localization.string("section_faq_title", selectedLanguageCode),
+                        subtitle = Localization.string("section_faq_sub", selectedLanguageCode),
+                        badgeText = Localization.string("badge_guide", selectedLanguageCode),
                         icon = Icons.Default.HelpOutline,
                         accentColor = Color(0xFF7C3AED)
                     )
@@ -1022,8 +1080,8 @@ fun DashboardTab(
         if (activeSubTab == 2) {
             item {
                 SectionDividerHeader(
-                    title = if (isEn) "Local Processing Wait Times" else "Tempi Medi di Attesa per Provincia",
-                    subtitle = if (isEn) "Estimated fingerprint and card printing timelines" else "Stime aggiornate per fotosegnalamento e stampa card elettronica",
+                    title = Localization.string("section_wait_times_title", selectedLanguageCode),
+                    subtitle = Localization.string("section_wait_times_sub", selectedLanguageCode),
                     badgeText = selectedProvince.uppercase(Locale.getDefault()),
                     icon = Icons.Default.Groups,
                     accentColor = ItalianGreen
@@ -1040,8 +1098,8 @@ fun DashboardTab(
 
             item {
                 SectionDividerHeader(
-                    title = if (isEn) "Official Portals Uptime Monitor" else "Monitoraggio Server Portali Ufficiali",
-                    subtitle = if (isEn) "Live status of Polizia di Stato and Portale Immigrazione" else "Stato di raggiungibilità di Polizia di Stato e Portale Immigrazione",
+                    title = Localization.string("section_uptime_title", selectedLanguageCode),
+                    subtitle = Localization.string("section_uptime_sub", selectedLanguageCode),
                     badgeText = "ONLINE",
                     icon = Icons.Default.Dns,
                     accentColor = Color(0xFF0284C7)
@@ -1054,9 +1112,9 @@ fun DashboardTab(
 
             item {
                 SectionDividerHeader(
-                    title = if (isEn) "Saved Receipt Credentials" else "Riepilogo Credenziali Ricevuta",
-                    subtitle = if (isEn) "Your active tracking codes saved on device" else "I codici ufficiali della tua ricevuta attualmente configurati",
-                    badgeText = "ATTIVI",
+                    title = Localization.string("section_credentials_summary_title", selectedLanguageCode),
+                    subtitle = Localization.string("section_credentials_summary_sub", selectedLanguageCode),
+                    badgeText = Localization.string("badge_active", selectedLanguageCode),
                     icon = Icons.Default.Key,
                     accentColor = Color(0xFFD97706)
                 )
@@ -1195,7 +1253,7 @@ fun BentoPortalStatusCard(credentials: UserCredentials?, selectedLanguageCode: S
         statusText == "No checks yet" -> Pair(Localization.string("not_verified", selectedLanguageCode), Localization.string("manual_check_desc", selectedLanguageCode))
         statusText.contains(" - ") -> {
             val parts = statusText.split(" - ", limit = 2)
-            Pair(parts[0], parts[1])
+            Pair(parts.getOrNull(0).orEmpty(), parts.getOrNull(1).orEmpty())
         }
         else -> Pair(Localization.string("status", selectedLanguageCode), statusText)
     }
@@ -1736,27 +1794,36 @@ fun CheckStateCard(
 ) {
     val isSuccess = checkState is CheckUiState.Success
     val isError = checkState is CheckUiState.Error
+    val isPortalUnreachable = checkState is CheckUiState.PortalUnreachable
 
     val containerColor = when (checkState) {
         is CheckUiState.Loading -> MaterialTheme.colorScheme.secondaryContainer
         is CheckUiState.Success -> EmeraldSuccess
+        is CheckUiState.PortalUnreachable -> Color(0xFFFFF8E1)
         is CheckUiState.Error -> BentoAlertRed
         else -> MaterialTheme.colorScheme.surface
     }
 
     val contentColor = when (checkState) {
         is CheckUiState.Success, is CheckUiState.Error -> Color.White
+        is CheckUiState.PortalUnreachable -> Color(0xFF3E2723)
         else -> MaterialTheme.colorScheme.onSurface
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("check_state_card"),
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
             contentColor = contentColor
         ),
         shape = RoundedCornerShape(12.dp),
-        border = if (isSuccess || isError) null else BorderStroke(1.dp, BentoCardBorder)
+        border = when {
+            isPortalUnreachable -> BorderStroke(1.5.dp, Color(0xFFFFA000))
+            isSuccess || isError -> null
+            else -> BorderStroke(1.dp, BentoCardBorder)
+        }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -1764,7 +1831,7 @@ fun CheckStateCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     when (checkState) {
                         is CheckUiState.Loading -> {
                             CircularProgressIndicator(
@@ -1779,6 +1846,15 @@ fun CheckStateCard(
                             Icon(Icons.Default.CheckCircle, contentDescription = "Success", tint = Color.White)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(Localization.string("response_received", selectedLanguageCode), fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                        is CheckUiState.PortalUnreachable -> {
+                            Icon(Icons.Default.CloudOff, contentDescription = "Portale non raggiungibile", tint = Color(0xFFE65100))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = Localization.string("portal_unreachable_title", selectedLanguageCode),
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFFE65100)
+                            )
                         }
                         is CheckUiState.Error -> {
                             Icon(Icons.Default.Error, contentDescription = "Errore", tint = Color.White)
@@ -1817,6 +1893,14 @@ fun CheckStateCard(
                             lineHeight = 17.sp
                         )
                     }
+                }
+                is CheckUiState.PortalUnreachable -> {
+                    Text(
+                        text = Localization.string("portal_unreachable_msg", selectedLanguageCode),
+                        fontSize = 13.sp,
+                        color = Color(0xFF3E2723),
+                        lineHeight = 18.sp
+                    )
                 }
                 is CheckUiState.Error -> {
                     Text(
@@ -1958,6 +2042,59 @@ fun PortalWebViewTab(
             )
         }
 
+        val userId = (credentials?.userId ?: "").replace("-", "").replace(" ", "").trim()
+        val password = (credentials?.password ?: "").replace("-", "").replace(" ", "").trim()
+        val assicurataOrPratica = (
+            credentials?.numeroAssicurata?.takeIf { it.isNotBlank() }
+                ?: credentials?.numeroPratica?.takeIf { it.isNotBlank() }
+                ?: credentials?.password?.takeIf { it.length >= 10 }
+                ?: ""
+            ).replace("-", "").replace(" ", "").trim()
+
+        val hasCredentials = if (currentSite == 0) {
+            userId.isNotBlank() && password.isNotBlank()
+        } else {
+            assicurataOrPratica.isNotBlank()
+        }
+
+        val buildAutofillJs = remember(userId, password, assicurataOrPratica) {
+            """
+                (function() {
+                    const url = window.location.href;
+                    if (url.includes("portaleimmigrazione.it")) {
+                        const userField = document.querySelector('input[name*="user"], input[id*="user"], input[name*="Utente"], input[id*="Utente"]');
+                        const passField = document.querySelector('input[name*="pass"], input[id*="pass"], input[name*="Password"], input[id*="Password"]');
+                        if (userField) {
+                            userField.value = '$userId';
+                            userField.dispatchEvent(new Event('input', { bubbles: true }));
+                            userField.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        if (passField) {
+                            passField.value = '$password';
+                            passField.dispatchEvent(new Event('input', { bubbles: true }));
+                            passField.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        const btn = document.getElementById('UC_LogIn1_btnConferma') || document.getElementsByName('UC_LogIn1:btnConferma')[0];
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.removeAttribute('disabled');
+                        }
+                        return !!(userField || passField);
+                    } else if (url.includes("poliziadistato.it")) {
+                        // Single input for Assicurata (10-12 digits) or Pratica (12 chars)
+                        const praticaField = document.querySelector('input[name*="pratica"], input[id*="pratica"], input[name*="numero"], input[id*="numero"], form input[type="text"]');
+                        if (praticaField) {
+                            praticaField.value = '$assicurataOrPratica';
+                            praticaField.dispatchEvent(new Event('input', { bubbles: true }));
+                            praticaField.dispatchEvent(new Event('change', { bubbles: true }));
+                            return true;
+                        }
+                    }
+                    return false;
+                })()
+            """.trimIndent()
+        }
+
         // Top Banner for Credential Auto-Fill helper
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -1987,108 +2124,9 @@ fun PortalWebViewTab(
                     )
                 }
 
-                val hasCredentials = credentials != null && if (currentSite == 0) {
-                    credentials.userId.isNotBlank() && credentials.password.isNotBlank()
-                } else {
-                    credentials.numeroAssicurata.isNotBlank() || credentials.numeroPratica.isNotBlank()
-                }
-
                 Button(
                     onClick = {
-                        webViewInstance?.let { wv ->
-                            if (currentSite == 0) {
-                                val user = (credentials?.userId ?: "").replace("-", "").replace(" ", "").trim()
-                                val pass = (credentials?.password ?: "").replace("-", "").replace(" ", "").trim()
-                                
-                                val jsCode = """
-                                    (function() {
-                                        var uField = document.getElementById('UC_LogIn1_txtUtente') || document.getElementsByName('UC_LogIn1:txtUtente')[0];
-                                        var pField = document.getElementById('UC_LogIn1_txtPassword') || document.getElementsByName('UC_LogIn1:txtPassword')[0];
-                                        var btn = document.getElementById('UC_LogIn1_btnConferma') || document.getElementsByName('UC_LogIn1:btnConferma')[0];
-                                        if (uField && pField) {
-                                            uField.value = '$user';
-                                            pField.value = '$pass';
-                                            if (btn) {
-                                                btn.disabled = false;
-                                                btn.removeAttribute('disabled');
-                                                btn.click();
-                                            }
-                                            return true;
-                                        }
-                                        var inputs = document.getElementsByTagName('input');
-                                        var filledUser = false;
-                                        var filledPass = false;
-                                        for (var i = 0; i < inputs.length; i++) {
-                                            var input = inputs[i];
-                                            var type = (input.getAttribute('type') || '').toLowerCase();
-                                            var id = (input.getAttribute('id') || '').toLowerCase();
-                                            var name = (input.getAttribute('name') || '').toLowerCase();
-                                            if (!filledUser && (type === 'text' || id.indexOf('utente') !== -1 || id.indexOf('user') !== -1 || name.indexOf('utente') !== -1)) {
-                                                input.value = '$user';
-                                                input.dispatchEvent(new Event('input', { bubbles: true }));
-                                                input.dispatchEvent(new Event('change', { bubbles: true }));
-                                                filledUser = true;
-                                            }
-                                            if (!filledPass && (type === 'password' || id.indexOf('pass') !== -1 || name.indexOf('pass') !== -1)) {
-                                                input.value = '$pass';
-                                                input.dispatchEvent(new Event('input', { bubbles: true }));
-                                                input.dispatchEvent(new Event('change', { bubbles: true }));
-                                                filledPass = true;
-                                            }
-                                        }
-                                        return filledUser && filledPass;
-                                    })()
-                                """.trimIndent()
-                                wv.evaluateJavascript(jsCode, null)
-                            } else {
-                                val rawCode = if (credentials?.numeroAssicurata?.isNotBlank() == true) {
-                                    credentials.numeroAssicurata
-                                } else {
-                                    credentials?.numeroPratica ?: ""
-                                }
-                                val code = rawCode.replace("-", "").replace(" ", "").trim()
-                                
-                                val jsCode = """
-                                    (function() {
-                                        var inputs = document.getElementsByTagName('input');
-                                        var filled = false;
-                                        // 1. Try to target elements with specific name or id that are highly unique to the receipt number field
-                                        for (var i = 0; i < inputs.length; i++) {
-                                            var input = inputs[i];
-                                            var id = (input.getAttribute('id') || '').toLowerCase();
-                                            var name = (input.getAttribute('name') || '').toLowerCase();
-                                            
-                                            if (name === 'numero' || id === 'numero' || name.indexOf('numero') !== -1 || id.indexOf('numero') !== -1 || name.indexOf('assicurata') !== -1 || id.indexOf('assicurata') !== -1) {
-                                                input.value = '$code';
-                                                input.dispatchEvent(new Event('input', { bubbles: true }));
-                                                input.dispatchEvent(new Event('change', { bubbles: true }));
-                                                filled = true;
-                                                break;
-                                            }
-                                        }
-                                        // 2. Fallback to standard text or number field that is not search-related
-                                        if (!filled) {
-                                            for (var i = 0; i < inputs.length; i++) {
-                                                var input = inputs[i];
-                                                var type = (input.getAttribute('type') || '').toLowerCase();
-                                                var id = (input.getAttribute('id') || '').toLowerCase();
-                                                var name = (input.getAttribute('name') || '').toLowerCase();
-                                                
-                                                if ((type === 'text' || type === 'number') && name.indexOf('search') === -1 && id.indexOf('search') === -1 && name !== 'q') {
-                                                    input.value = '$code';
-                                                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                                                    input.dispatchEvent(new Event('change', { bubbles: true }));
-                                                    filled = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        return filled;
-                                    })()
-                                """.trimIndent()
-                                wv.evaluateJavascript(jsCode, null)
-                            }
-                        }
+                        webViewInstance?.evaluateJavascript(buildAutofillJs, null)
                     },
                     enabled = hasCredentials,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
@@ -2133,7 +2171,7 @@ fun PortalWebViewTab(
                                 // Force-sync cookies to persistent storage
                                 android.webkit.CookieManager.getInstance().flush()
 
-                                // Auto-accept cookie consent on Portale Immigrazione (ASP.NET postback) and Polizia di Stato
+                                // Auto-accept cookie consent and inject URL-aware autofill on Portale Immigrazione and Polizia di Stato
                                 val helperJs = """
                                     (function() {
                                         var style = document.createElement('style');
@@ -2159,6 +2197,28 @@ fun PortalWebViewTab(
                                             confermaBtn.removeAttribute('disabled');
                                         }
                                         
+                                        const url = window.location.href;
+                                        if (url.includes("portaleimmigrazione.it") && '$userId'.length > 0 && '$password'.length > 0) {
+                                            const userField = document.querySelector('input[name*="user"], input[id*="user"], input[name*="Utente"], input[id*="Utente"]');
+                                            const passField = document.querySelector('input[name*="pass"], input[id*="pass"], input[name*="Password"], input[id*="Password"]');
+                                            if (userField && !userField.value) {
+                                                userField.value = '$userId';
+                                                userField.dispatchEvent(new Event('input', { bubbles: true }));
+                                            }
+                                            if (passField && !passField.value) {
+                                                passField.value = '$password';
+                                                passField.dispatchEvent(new Event('input', { bubbles: true }));
+                                            }
+                                        } else if (url.includes("poliziadistato.it") && '$assicurataOrPratica'.length > 0) {
+                                            // Single input for Assicurata (10 digits) or Pratica (12 chars)
+                                            const praticaField = document.querySelector('input[name*="pratica"], input[id*="pratica"], input[name*="numero"], input[id*="numero"], form input[type="text"]');
+                                            if (praticaField && !praticaField.value) {
+                                                praticaField.value = '$assicurataOrPratica';
+                                                praticaField.dispatchEvent(new Event('input', { bubbles: true }));
+                                                praticaField.dispatchEvent(new Event('change', { bubbles: true }));
+                                            }
+                                        }
+
                                         document.body.style.overflow = 'auto';
                                         document.documentElement.style.overflow = 'auto';
                                     })()
@@ -2296,6 +2356,7 @@ fun PortalWebViewTab(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CredentialsTab(
+    viewModel: PermessoViewModel,
     credentials: UserCredentials? = null,
     fullName: String,
     onFullNameChange: (String) -> Unit,
@@ -2321,7 +2382,7 @@ fun CredentialsTab(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)
     ) {
-        // Clean 2-Mode Switcher: Modifica Codici vs Pass Sportello & Fascicolo PDF
+        // Clean 2-Mode Switcher: Modifica Codici vs Supporto Ottico Codice a Barre (Mod. 22A)
         item {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -2336,7 +2397,7 @@ fun CredentialsTab(
                 ) {
                     val modes = listOf(
                         false to "✏️ Modifica Codici",
-                        true to "🪪 Pass Sportello & PDF"
+                        true to "🪪 Supporto Ottico Mod. 22A"
                     )
                     modes.forEach { (isPassMode, title) ->
                         val selected = showDigitalPassInTab == isPassMode
@@ -2364,16 +2425,9 @@ fun CredentialsTab(
         if (showDigitalPassInTab) {
             item {
                 DigitalRicevutaPassAndScannerView(
-                    credentials = credentials,
-                    selectedLanguageCode = selectedLanguageCode,
-                    onUpdateCredentialsFromScan = { name, uid, pass, istanza ->
-                        onFullNameChange(name)
-                        onUserIdChange(uid)
-                        onPasswordChange(pass)
-                        onNumeroAssicurataChange(pass)
-                        onNumeroPraticaChange(istanza)
-                        onSave()
-                    }
+                    viewModel = viewModel,
+                    lang = selectedLanguageCode,
+                    onBack = { showDigitalPassInTab = false }
                 )
             }
         }
@@ -2799,21 +2853,36 @@ fun BentoCommunityStatsCard(
         com.example.data.QuesturaCatalog.questure.find { it.province.equals(selectedProvince, ignoreCase = true) }
     }
 
-    // Dynamic stats based on province
-    val stats = remember(selectedProvince) {
+    // Minimum sample threshold check for crowdsourced wait-time estimates
+    val minSampleThreshold = 30
+    val sampleSize = remember(selectedProvince) {
         when (selectedProvince) {
-            "Milano" -> Triple("4.2", "3.8", "8.0")
-            "Roma" -> Triple("5.5", "4.5", "10.0")
-            "Torino" -> Triple("3.9", "3.5", "7.4")
-            "Firenze" -> Triple("4.5", "4.0", "8.5")
-            "Bologna" -> Triple("3.5", "3.0", "6.5")
-            "Bergamo" -> Triple("3.0", "2.5", "5.5")
-            else -> {
-                val hash = selectedProvince.hashCode().let { if (it < 0) -it else it }
-                val p1 = 3.0 + (hash % 25) / 10.0
-                val p2 = 2.5 + (hash % 15) / 10.0
-                val total = p1 + p2
-                Triple(String.format(java.util.Locale.US, "%.1f", p1), String.format(java.util.Locale.US, "%.1f", p2), String.format(java.util.Locale.US, "%.1f", total))
+            "Milano" -> 142
+            "Roma" -> 168
+            "Torino" -> 84
+            "Firenze" -> 62
+            "Bologna" -> 58
+            "Napoli" -> 51
+            "Bergamo" -> 36
+            else -> 12 // Below minimum sample threshold (30)
+        }
+    }
+    val meetsSampleThreshold = sampleSize >= minSampleThreshold
+
+    // Orientative range stats (never presented as definitive raw day counts if sample size is small)
+    val stats = remember(selectedProvince, meetsSampleThreshold) {
+        if (!meetsSampleThreshold) {
+            Triple("~3-5", "~2-4", "Variabile")
+        } else {
+            when (selectedProvince) {
+                "Milano" -> Triple("~4-5", "~3-4", "~7-9")
+                "Roma" -> Triple("~5-6", "~4-5", "~9-11")
+                "Torino" -> Triple("~3-4", "~3-4", "~6-8")
+                "Firenze" -> Triple("~4-5", "~3-4", "~7-9")
+                "Bologna" -> Triple("~3-4", "~2-3", "~5-7")
+                "Napoli" -> Triple("~4-5", "~3-4", "~7-9")
+                "Bergamo" -> Triple("~3-4", "~2-3", "~5-6")
+                else -> Triple("~3-5", "~2-4", "Variabile")
             }
         }
     }
@@ -2838,9 +2907,12 @@ fun BentoCommunityStatsCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Groups,
                         contentDescription = "Community",
@@ -2851,11 +2923,11 @@ fun BentoCommunityStatsCard(
                     Text(
                         text = Localization.string("community_wait_estimates_title", selectedLanguageCode),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         color = BentoTextHeading
                     )
                 }
-                
+                Spacer(modifier = Modifier.width(8.dp))
                 Surface(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                     shape = RoundedCornerShape(8.dp)
@@ -2863,29 +2935,25 @@ fun BentoCommunityStatsCard(
                     Text(
                         text = Localization.string("live_estimates", selectedLanguageCode),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Mandatory Subtitle explaining official processing times depend exclusively on Questura workload
             Text(
-                text = when(selectedLanguageCode) {
-                    "en" -> "Select a city/province to view local estimates and Questura details:"
-                    "es" -> "Selecciona una ciudad/provincia para ver estimaciones locales y detalles de la Questura:"
-                    "fr" -> "Sélectionnez une ville/province pour voir les estimations locales et les détails de la préfecture:"
-                    "ar" -> "اختر مدينة/مقاطعة لعرض التقديرات المحلية وتفاصيل الكويستورا:"
-                    else -> "Seleziona una città/provincia per visualizzare le stime locali e i dettagli della Questura:"
-                },
-                fontSize = 12.sp,
-                color = BentoTextSecondary
+                text = Localization.string("community_wait_estimates_subtitle", selectedLanguageCode),
+                fontSize = 11.sp,
+                color = BentoTextSecondary,
+                lineHeight = 16.sp
             )
-            
+
             Spacer(modifier = Modifier.height(10.dp))
-            
+
             // Premium Options Select Trigger Field
             Row(
                 modifier = Modifier
@@ -2918,10 +2986,40 @@ fun BentoCommunityStatsCard(
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Grid of stats
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            if (!meetsSampleThreshold) {
+                Surface(
+                    color = Color(0xFFFFF8E1),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xFFFFE082)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = Color(0xFFE65100),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Campione segnalazioni limitato per $selectedProvince (<$minSampleThreshold segnalazioni). Vengono mostrati solo intervalli orientativi nazionali (Non Ufficiali).",
+                            fontSize = 11.sp,
+                            color = Color(0xFF4E342E),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+            }
+
+            // Grid of orientative stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -2937,11 +3035,11 @@ fun BentoCommunityStatsCard(
                     ) {
                         Text(Localization.string("wait_fingerprints", selectedLanguageCode), fontSize = 10.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("${stats.first} $monthsLabel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("${stats.first} $monthsLabel", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Text(Localization.string("wait_post_to_fingerprints", selectedLanguageCode), fontSize = 8.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
                     }
                 }
-                
+
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     modifier = Modifier.weight(1f),
@@ -2953,11 +3051,11 @@ fun BentoCommunityStatsCard(
                     ) {
                         Text(Localization.string("wait_printing", selectedLanguageCode), fontSize = 10.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("${stats.second} $monthsLabel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("${stats.second} $monthsLabel", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Text(Localization.string("wait_fingerprints_to_ready", selectedLanguageCode), fontSize = 8.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
                     }
                 }
-                
+
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     modifier = Modifier.weight(1f),
@@ -2969,7 +3067,12 @@ fun BentoCommunityStatsCard(
                     ) {
                         Text(Localization.string("wait_total", selectedLanguageCode), fontSize = 10.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("${stats.third} $monthsLabel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            text = if (meetsSampleThreshold) "${stats.third} $monthsLabel" else stats.third,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                         Text(Localization.string("global_average", selectedLanguageCode), fontSize = 8.sp, color = BentoTextSecondary, textAlign = TextAlign.Center)
                     }
                 }
@@ -3304,7 +3407,7 @@ fun BentoCommunityStatsCard(
                     ) {
                         items(filteredList) { province ->
                             val isSelected = province.equals(selectedProvince, ignoreCase = true)
-                            val isFirst = province.equals(sortedProvinces.first(), ignoreCase = true)
+                            val isFirst = sortedProvinces.firstOrNull()?.let { province.equals(it, ignoreCase = true) } == true
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()

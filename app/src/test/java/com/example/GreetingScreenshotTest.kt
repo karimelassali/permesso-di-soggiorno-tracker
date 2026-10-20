@@ -51,7 +51,7 @@ class GreetingScreenshotTest {
             ) {
               Column {
                 Text(
-                  text = "Benvenuto, Karim",
+                  text = "Benvenuto, Mario Rossi",
                   fontSize = 24.sp,
                   fontWeight = FontWeight.Bold,
                   color = MaterialTheme.colorScheme.onBackground

@@ -55,7 +55,7 @@ object Localization {
             "webview_loading" to "Caricamento Portale...",
             "webview_offline" to "Sei offline. Verifica la tua connessione.",
             "guide_title" to "Guida ai Codici della Ricevuta",
-            "guide_body" to "• Il Numero Assicurata (12 cifre, es: 0559...) è stampato in alto sulla ricevuta e serve per Poste Italiane e Polizia di Stato.\n\n• L'Area Riservata usa lo User ID (12 cifre dell'assicurata, spesso senza l'ultima cifra) e la Password (il codice di sicurezza sulla ricevuta poste).",
+            "guide_body" to "• Il Numero Assicurata (12 cifre, es: 0500...) è stampato in alto sulla ricevuta e serve per Poste Italiane e Polizia di Stato.\n\n• L'Area Riservata usa lo User ID (12 cifre dell'ologramma) e la Password (il codice assicurata sulla ricevuta poste senza trattino).",
             "input_fullname" to "Nome Completo Intestatario",
             "input_assicurata" to "Numero Assicurata (12 cifre)",
             "input_userid" to "User ID Portale (12 Cifre)",
@@ -135,14 +135,14 @@ object Localization {
             "portal_autofill_help_polizia" to "Premi Auto-fill per inserire automaticamente il Numero Assicurata.",
             "portal_data_title" to "Dati Portale Immigrazione",
             "portal_data_desc" to "Configura il tuo nome e le credenziali per monitorare l'Area Riservata del Portale Immigrazione.",
-            "input_fullname_placeholder" to "Es: Karim El Assali",
-            "input_userid_placeholder" to "Es: 550000133317",
-            "input_password_placeholder" to "Codice di sicurezza (es: 055987...)",
+            "input_fullname_placeholder" to "Es: MARIO ROSSI",
+            "input_userid_placeholder" to "Es: 000000000000",
+            "input_password_placeholder" to "Codice di sicurezza (es: 050000000000)",
             "show_password_desc" to "Mostra password",
             "polizia_tracking_title" to "Tracciamento Polizia di Stato",
             "polizia_tracking_desc" to "Configura il numero di assicurata o della pratica per interrogare il sito ufficiale della Polizia di Stato.",
-            "input_assicurata_placeholder" to "Es: 055987476941",
-            "input_pratica_placeholder" to "Es: MI01234567",
+            "input_assicurata_placeholder" to "Es: 050000000000",
+            "input_pratica_placeholder" to "Es: 00XX00000000",
             "step1_title" to "Poste",
             "step1_desc" to "Ricevuto",
             "step2_title" to "Questura",
@@ -161,17 +161,17 @@ object Localization {
             "timeline_exp_none" to "Nessuna pratica attiva rilevata.",
             "timeline_advance_title" to "Linea Temporale di Avanzamento",
             "timeline_current_exp_title" to "Spiegazione dello Stato Corrente:",
-            "community_wait_estimates_title" to "Stime di Attesa Community",
-            "live_estimates" to "Stime Live 📊",
-            "select_province_stats_desc" to "Seleziona la tua provincia per visualizzare le medie di attesa segnalate dagli altri utenti:",
+            "community_wait_estimates_title" to "Stime Orientative della Community (Non Ufficiali)",
+            "live_estimates" to "Orientativo 📊",
+            "select_province_stats_desc" to "I tempi ufficiali di trattazione dipendono esclusivamente dal carico di lavoro della Questura competente:",
             "wait_fingerprints" to "Attesa Impronte",
             "wait_post_to_fingerprints" to "Poste → Impronte",
             "wait_printing" to "Attesa Stampa",
             "wait_fingerprints_to_ready" to "Impronte → Pronto",
             "wait_total" to "Attesa Totale",
-            "global_average" to "Media Globale",
-            "people_like_you" to "Persone Come Te (Questura di %s):",
-            "people_like_you_desc" to "Ci sono 327 utenti con la tua stessa tipologia di permesso (Rinnovo - Lavoro) in questa provincia. Il 42% ha già ritirato il permesso con un'attesa media di 174 giorni.",
+            "global_average" to "Fascia Stimata",
+            "people_like_you" to "Dati Aggregati Community (Questura di %s):",
+            "people_like_you_desc" to "Valori puramente indicativi calcolati solo al superamento della soglia minima statistica di segnalazioni anonime. I tempi effettivi dipendono dal carico di lavoro dell'Ufficio Immigrazione competente.",
             "ai_advisor_title" to "Consulente Burocratico AI 🤖",
             "ai_advisor_desc" to "Tocca una domanda comune per ricevere indicazioni immediate e consigli pratici:",
             "advisor_q1" to "Cosa significa lo stato 'In Istruttoria'?",
@@ -356,7 +356,7 @@ object Localization {
             "webview_loading" to "Loading Portal...",
             "webview_offline" to "You are offline. Please check your connection.",
             "guide_title" to "Receipt Codes Guide",
-            "guide_body" to "• The Registered Code (12 digits, e.g.: 0559...) is printed at the top of the receipt and is used for Italian Post and State Police.\n\n• The Reserved Area uses the User ID (12 digits of the receipt, usually without the last digit) and the Password (the security code on the post receipt).",
+            "guide_body" to "• The Registered Code (12 digits, e.g.: 0500...) is printed at the top of the receipt and is used for Italian Post and State Police.\n\n• The Reserved Area uses the User ID (12-digit hologram code) and the Password (the security code on the post receipt without dashes).",
             "input_fullname" to "Holder Full Name",
             "input_assicurata" to "Registered Code (12 digits)",
             "input_userid" to "Portal User ID (12 Digits)",
@@ -436,14 +436,14 @@ object Localization {
             "portal_autofill_help_polizia" to "Press Auto-fill to automatically input the Registered Code.",
             "portal_data_title" to "Immigration Portal Data",
             "portal_data_desc" to "Configure your name and credentials to monitor the Restricted Area of the Immigration Portal.",
-            "input_fullname_placeholder" to "E.g. Karim El Assali",
-            "input_userid_placeholder" to "E.g. 550000133317",
-            "input_password_placeholder" to "Security code (e.g. 055987...)",
+            "input_fullname_placeholder" to "E.g. MARIO ROSSI",
+            "input_userid_placeholder" to "E.g. 000000000000",
+            "input_password_placeholder" to "Security code (e.g. 050000000000)",
             "show_password_desc" to "Show password",
             "polizia_tracking_title" to "State Police Tracking",
             "polizia_tracking_desc" to "Configure the registered receipt code or file number to query the official State Police website.",
-            "input_assicurata_placeholder" to "E.g. 055987476941",
-            "input_pratica_placeholder" to "E.g. MI01234567",
+            "input_assicurata_placeholder" to "E.g. 050000000000",
+            "input_pratica_placeholder" to "E.g. 00XX00000000",
             "step1_title" to "Post Office",
             "step1_desc" to "Received",
             "step2_title" to "Questura",
@@ -462,17 +462,17 @@ object Localization {
             "timeline_exp_none" to "No active application detected.",
             "timeline_advance_title" to "Progress Timeline",
             "timeline_current_exp_title" to "Current Status Explanation:",
-            "community_wait_estimates_title" to "Community Wait Estimates",
-            "live_estimates" to "Live Estimates 📊",
-            "select_province_stats_desc" to "Select your province to view average wait times reported by other users:",
+            "community_wait_estimates_title" to "Indicative Community Estimates (Unofficial)",
+            "live_estimates" to "Indicative 📊",
+            "select_province_stats_desc" to "Official processing times depend exclusively on the competent Questura's workload:",
             "wait_fingerprints" to "Fingerprint Wait",
             "wait_post_to_fingerprints" to "Post → Fingerprints",
             "wait_printing" to "Printing Wait",
             "wait_fingerprints_to_ready" to "Fingerprints → Ready",
             "wait_total" to "Total Wait",
-            "global_average" to "Global Average",
-            "people_like_you" to "People Like You (Questura of %s):",
-            "people_like_you_desc" to "There are 327 users with your same type of permit (Renewal - Work) in this province. 42% have already collected their permit with an average wait of 174 days.",
+            "global_average" to "Estimated Range",
+            "people_like_you" to "Aggregated Community Data (Questura of %s):",
+            "people_like_you_desc" to "Purely indicative values displayed only when the minimum statistical sample threshold is reached. Actual processing times depend exclusively on the competent Immigration Office's workload.",
             "ai_advisor_title" to "AI Bureaucracy Advisor 🤖",
             "ai_advisor_desc" to "Tap a common question to receive immediate guidance and practical tips:",
             "advisor_q1" to "What does the 'Under Review' status mean?",
@@ -657,7 +657,7 @@ object Localization {
             "webview_loading" to "جاري تحميل البوابة...",
             "webview_offline" to "أنت غير متصل بالإنترنت. يرجى التحقق من اتصالك.",
             "guide_title" to "دليل رموز الإيصال",
-            "guide_body" to "• رمز التأمين (12 رقم، مثل 0559...) مطبوع في أعلى الإيصال ويستخدم للبريد الإيطالي وشرطة الدولة.\n\n• المنطقة المحفوظة تستخدم معرف المستخدم (12 رقم من الإيصال، غالباً بدون الرقم الأخير) وكلمة المرور (رمز الأمان على إيصال البريد).",
+            "guide_body" to "• رمز التأمين على وصل البريد الأصلي (12 رقم، مثل 0500...) مطبوع في أعلى الإيصال ويستخدم للبريد الإيطالي وشرطة الدولة.\n\n• المنطقة المحفوظة تستخدم معرف المستخدم (12 رقم من الهولوغرام) وكلمة المرور (رمز الأمان على وصل البريد الأصلي).",
             "input_fullname" to "الاسم الكامل لحامل الإيصال",
             "input_assicurata" to "رقم الإيصال (12 رقم)",
             "input_userid" to "معرف مستخدم البوابة (12 رقم)",
@@ -737,14 +737,14 @@ object Localization {
             "portal_autofill_help_polizia" to "اضغط على الملء التلقائي لإدخال رقم الإيصال تلقائيًا.",
             "portal_data_title" to "بيانات بوابة الهجرة",
             "portal_data_desc" to "قم بضبط اسمك وبيانات الدخول لمراقبة المنطقة الخاصة بك في بوابة الهجرة الرسمية.",
-            "input_fullname_placeholder" to "مثال: كريم العسلي",
-            "input_userid_placeholder" to "مثال: 550000133317",
-            "input_password_placeholder" to "رمز الأمان (مثال: 055987...)",
+            "input_fullname_placeholder" to "مثال: MARIO ROSSI",
+            "input_userid_placeholder" to "مثال: 000000000000",
+            "input_password_placeholder" to "رمز الأمان (مثال: 050000000000)",
             "show_password_desc" to "عرض كلمة المرور",
             "polizia_tracking_title" to "تتبع شرطة الدولة",
             "polizia_tracking_desc" to "اضبط رقم التأمين أو رقم الملف للاستعلام مباشرة من الموقع الرسمي لشرطة الدولة.",
-            "input_assicurata_placeholder" to "مثال: 055987476941",
-            "input_pratica_placeholder" to "مثال: MI01234567",
+            "input_assicurata_placeholder" to "مثال: 050000000000",
+            "input_pratica_placeholder" to "مثال: 00XX00000000",
             "step1_title" to "البريد",
             "step1_desc" to "تم الاستلام",
             "step2_title" to "الشرطة",
@@ -763,17 +763,17 @@ object Localization {
             "timeline_exp_none" to "لم يتم اكتشاف أي طلبات نشطة حالياً.",
             "timeline_advance_title" to "مخطط تقدم الطلب",
             "timeline_current_exp_title" to "تفسير الحالة الحالية لملفك:",
-            "community_wait_estimates_title" to "تقديرات انتظار المجتمع",
-            "live_estimates" to "تقديرات مباشرة 📊",
-            "select_province_stats_desc" to "اختر مقاطعتك لعرض متوسط أوقات الانتظار التي أبلغ عنها المستخدمون الآخرون:",
+            "community_wait_estimates_title" to "تقديرات المجتمع الاسترشادية (غير رسمية)",
+            "live_estimates" to "تقديرات استرشادية 📊",
+            "select_province_stats_desc" to "تعتمد أوقات المعالجة الرسمية حصرياً على ضغط العمل في مكتب الهجرة المختص (الكويستورا):",
             "wait_fingerprints" to "انتظار البصمات",
             "wait_post_to_fingerprints" to "البريد ← البصمات",
             "wait_printing" to "انتظار الطباعة",
             "wait_fingerprints_to_ready" to "البصمات ← الاستلام",
             "wait_total" to "الانتظار الإجمالي",
-            "global_average" to "المعدل العام",
-            "people_like_you" to "أشخاص مثلك (كويستورا %s):",
-            "people_like_you_desc" to "هناك 327 مستخدمًا لديهم نفس نوع تصريحك (تجديد - عمل) في هذه المقاطعة. 42٪ منهم استلموا إقاماتهم بالفعل بمتوسط انتظار بلغ 174 يومًا.",
+            "global_average" to "النطاق التقديري",
+            "people_like_you" to "بيانات المجتمع المجمعة (مكتب الهجرة %s):",
+            "people_like_you_desc" to "هذه الأرقام استرشادية فقط وتُعرض عند بلوغ الحد الأدنى الإحصائي للبلاغات. تعتمد المواعيد الرسمية حصرياً على مكتب الهجرة (Questura) المختص.",
             "ai_advisor_title" to "مستشار الإجراءات الذكي 🤖",
             "ai_advisor_desc" to "انقر على سؤال شائع للحصول على إرشادات فورية ونصائح عملية:",
             "advisor_q1" to "ماذا تعني حالة 'قيد الدراسة والمراجعة'؟",
@@ -958,7 +958,7 @@ object Localization {
             "webview_loading" to "Cargando Portal...",
             "webview_offline" to "Estás desconectado. Verifica tu conexión.",
             "guide_title" to "Guía de Códigos de Recibo",
-            "guide_body" to "• El Número de Asegurada (12 dígitos, ej: 0559...) está impreso en la parte superior del recibo y sirve para Correos Italianos y Policía de Estado.\n\n• El Área Reservada utiliza el ID de Usuario (12 dígitos del recibo, a menudo sin el último dígito) y la Contraseña (el código de seguridad del recibo de correos).",
+            "guide_body" to "• El Número de Asegurada (12 dígitos, ej: 0500...) está impreso en la parte superior del recibo y sirve para Correos Italianos y Policía de Estado.\n\n• El Área Reservada utiliza el ID de Usuario (12 dígitos del holograma) y la Contraseña (el código de seguridad del recibo de correos).",
             "input_fullname" to "Nombre Completo del Titular",
             "input_assicurata" to "Número de Asegurada (12 dígitos)",
             "input_userid" to "ID de Usuario Portal (12 Dígitos)",
@@ -1038,14 +1038,14 @@ object Localization {
             "portal_autofill_help_polizia" to "Presiona Auto-fill para rellenar automáticamente el Número de Asegurada.",
             "portal_data_title" to "Datos del Portal de Inmigración",
             "portal_data_desc" to "Configura tu nombre y credenciales para monitorear el Área Reservada del Portal de Inmigración.",
-            "input_fullname_placeholder" to "Ej: Karim El Assali",
-            "input_userid_placeholder" to "Ej: 550000133317",
-            "input_password_placeholder" to "Código de seguridad (ej: 055987...)",
+            "input_fullname_placeholder" to "Ej: MARIO ROSSI",
+            "input_userid_placeholder" to "Ej: 000000000000",
+            "input_password_placeholder" to "Código de seguridad (ej: 050000000000)",
             "show_password_desc" to "Mostrar contraseña",
             "polizia_tracking_title" to "Rastreo Policía del Estado",
             "polizia_tracking_desc" to "Configura el número de asegurada o expediente para consultar el sitio web oficial de la Policía del Estado.",
-            "input_assicurata_placeholder" to "Ej: 055987476941",
-            "input_pratica_placeholder" to "Ej: MI01234567",
+            "input_assicurata_placeholder" to "Ej: 050000000000",
+            "input_pratica_placeholder" to "Ej: 00XX00000000",
             "step1_title" to "Correos",
             "step1_desc" to "Recibido",
             "step2_title" to "Jefatura",
@@ -1064,17 +1064,17 @@ object Localization {
             "timeline_exp_none" to "No se detectó ningún trámite activo.",
             "timeline_advance_title" to "Línea Temporal de Progreso",
             "timeline_current_exp_title" to "Explicación del Estado Actual:",
-            "community_wait_estimates_title" to "Estimaciones de Espera de la Comunidad",
-            "live_estimates" to "Estimaciones Live 📊",
-            "select_province_stats_desc" to "Selecciona tu provincia para ver los promedios de espera reportados por otros usuarios:",
+            "community_wait_estimates_title" to "Estimaciones Orientativas de la Comunidad (No Oficiales)",
+            "live_estimates" to "Orientativo 📊",
+            "select_province_stats_desc" to "Los tiempos oficiales de tramitación dependen exclusivamente de la carga de trabajo de la Questura competente:",
             "wait_fingerprints" to "Espera Huellas",
             "wait_post_to_fingerprints" to "Correos → Huellas",
             "wait_printing" to "Espera Impresión",
             "wait_fingerprints_to_ready" to "Huellas → Listo",
             "wait_total" to "Espera Total",
-            "global_average" to "Promedio Global",
-            "people_like_you" to "Personas Como Tú (Jefatura de %s):",
-            "people_like_you_desc" to "Hay 327 usuarios con tu mismo tipo de permiso (Renovación - Trabajo) en esta provincia. El 42% ya retiró su permiso con una espera promedio de 174 días.",
+            "global_average" to "Rango Estimado",
+            "people_like_you" to "Datos Agregados de la Comunidad (Questura de %s):",
+            "people_like_you_desc" to "Valores puramente orientativos mostrados solo al alcanzar el umbral estadístico mínimo. Los tiempos reales dependen exclusivamente de la carga de trabajo de la Oficina de Inmigración competente.",
             "ai_advisor_title" to "Asesor de Burocracia AI 🤖",
             "ai_advisor_desc" to "Toca una pregunta común para recibir respuestas inmediatas y consejos prácticos:",
             "advisor_q1" to "¿Qué significa el estado 'En Proceso/Trámite'?",
@@ -1259,7 +1259,7 @@ object Localization {
             "webview_loading" to "Chargement du Portail...",
             "webview_offline" to "Vous êtes hors ligne. Veuillez vérifier votre connexion.",
             "guide_title" to "Guide des Codes du Reçu",
-            "guide_body" to "• Le Numéro d'Assurée (12 chiffres, ex : 0559...) est imprimé en haut du reçu et sert pour la Poste Italienne et la Police d'État.\n\n• L'Espace Réservé utilise l'Identifiant (12 chiffres du reçu, souvent sans le dernier chiffre) et le Mot de Passe (le code de sécurité sur le reçu postal).",
+            "guide_body" to "• Le Numéro d'Assurée (12 chiffres, ex : 0500...) est imprimé en haut du reçu et sert pour la Poste Italienne et la Police d'État.\n\n• L'Espace Réservé utilise l'Identifiant (12 chiffres de l'hologramme) et le Mot de Passe (le code de sécurité sur le reçu postal).",
             "input_fullname" to "Nom Complet du Titulaire",
             "input_assicurata" to "Numéro d'Assurée (12 chiffres)",
             "input_userid" to "Identifiant Portail (12 chiffres)",
@@ -1339,14 +1339,14 @@ object Localization {
             "portal_autofill_help_polizia" to "Appuyez sur Auto-fill pour saisir automatiquement le Numéro d'Assurée.",
             "portal_data_title" to "Données du Portail de l'Immigration",
             "portal_data_desc" to "Configurez votre nom et vos identifiants pour surveiller l'Espace Réservé du Portail de l'Immigration.",
-            "input_fullname_placeholder" to "Ex: Karim El Assali",
-            "input_userid_placeholder" to "Ex: 550000133317",
-            "input_password_placeholder" to "Code de sécurité (ex : 055987...)",
+            "input_fullname_placeholder" to "Ex: MARIO ROSSI",
+            "input_userid_placeholder" to "Ex: 000000000000",
+            "input_password_placeholder" to "Code de sécurité (ex : 050000000000)",
             "show_password_desc" to "Afficher le mot de passe",
             "polizia_tracking_title" to "Suivi Police d'État",
             "polizia_tracking_desc" to "Configurez le numéro d'assurée ou de dossier pour interroger le site officiel de la Police d'État.",
-            "input_assicurata_placeholder" to "Ex: 055987476941",
-            "input_pratica_placeholder" to "Ex: MI01234567",
+            "input_assicurata_placeholder" to "Ex: 050000000000",
+            "input_pratica_placeholder" to "Ex: 00XX00000000",
             "step1_title" to "Poste",
             "step1_desc" to "Reçu",
             "step2_title" to "Préfecture",
@@ -1365,17 +1365,17 @@ object Localization {
             "timeline_exp_none" to "Aucune demande active détectée.",
             "timeline_advance_title" to "Chronologie du Progrès",
             "timeline_current_exp_title" to "Explication du Statut Actuel:",
-            "community_wait_estimates_title" to "Estimations d'Attente de la Communauté",
-            "live_estimates" to "Estimations en Direct 📊",
-            "select_province_stats_desc" to "Sélectionnez votre province pour voir les moyennes d'attente signalées par les autres utilisateurs :",
+            "community_wait_estimates_title" to "Estimations Indicatives de la Communauté (Non Officielles)",
+            "live_estimates" to "Indicatif 📊",
+            "select_province_stats_desc" to "Les délais officiels de traitement dépendent exclusivement de la charge de travail de la Questura compétente :",
             "wait_fingerprints" to "Attente Empreintes",
             "wait_post_to_fingerprints" to "Poste → Empreintes",
             "wait_printing" to "Attente Impression",
             "wait_fingerprints_to_ready" to "Empreintes → Prêt",
             "wait_total" to "Attente Totale",
-            "global_average" to "Moyenne Globale",
-            "people_like_you" to "Personnes Comme Vous (Préfecture de %s) :",
-            "people_like_you_desc" to "Il y a 327 utilisateurs avec votre même type de permis (Renouvellement - Travail) dans cette province. 42% ont déjà retiré leur titre avec une attente moyenne de 174 jours.",
+            "global_average" to "Fourchette Estimée",
+            "people_like_you" to "Données Agrégées de la Communauté (Questura de %s) :",
+            "people_like_you_desc" to "Valeurs purement indicatives affichées uniquement lorsque le seuil statistique minimum est atteint. Les délais réels dépendent exclusivement de la charge de travail du Bureau de l'Immigration compétent.",
             "ai_advisor_title" to "Conseiller Administratif IA 🤖",
             "ai_advisor_desc" to "Appuyez sur une question fréquente pour recevoir des conseils immédiats et pratiques :",
             "advisor_q1" to "Que signifie le statut 'En Cours d'Instruction' ?",
@@ -1562,6 +1562,491 @@ object Localization {
                 "fr" -> "Toutes les données locales ont été supprimées avec succès."
                 else -> "Tutti i dati locali sono stati eliminati con successo dal tuo dispositivo."
             }
+            "barcode_optical_support_title", "optical_barcode_support_title" -> when (lang) {
+                "en" -> "Optical Barcode Support (Mod. 22A)"
+                "ar" -> "الدعم البصري للباركود (نموذج Mod. 22A - وصل البريد الأصلي)"
+                "es" -> "Soporte Óptico de Código de Barras (Mod. 22A)"
+                "fr" -> "Support Optique Code-Barres (Mod. 22A)"
+                else -> "Supporto Ottico Codice a Barre (Mod. 22A)"
+            }
+            "paper_receipt_warning_title" -> when (lang) {
+                "en" -> "⚠️ ORIGINAL PAPER RECEIPT MANDATORY"
+                "ar" -> "⚠️ إشعار قانوني: إلزامية إحضار وصل البريد الأصلي الورقي"
+                "es" -> "⚠️ OBLIGACIÓN DE RECIBO EN PAPEL ORIGINAL"
+                "fr" -> "⚠️ OBLIGATION DU RÉCÉPISSÉ PAPIER ORIGINAL"
+                else -> "⚠️ OBBLIGO DI RICEVUTA CARTACEA ORIGINALE"
+            }
+            "paper_receipt_warning_body" -> when (lang) {
+                "en" -> "This digital barcode only assists optical scanning if the paper slip is worn. It DOES NOT replace the original Mod. 22A with hologram, which you must ALWAYS present physically at the counter."
+                "ar" -> "هذا الباركود الرقمي مخصص فقط لتسهيل القراءة الضوئية في حال تلف القسيمة الورقية. ولا يغني أبداً عن وصل البريد الأصلي (Mod. 22A) المزود بالهولوغرام، والذي يجب عليك دائماً تقديمه ورقياً في مكتب الهجرة."
+                "es" -> "Este código de barras digital solo sirve para facilitar la lectura óptica si el resguardo en papel está desgastado. NO sustituye al Mod. 22A original con holograma, que SIEMPRE debes presentar físicamente en ventanilla."
+                "fr" -> "Ce code-barres numérique sert uniquement à faciliter la lecture optique si le récépissé papier est usé. Il NE remplace PAS le Mod. 22A original avec hologramme, que vous devez TOUJOURS présenter physiquement au guichet."
+                else -> "Questo codice a barre digitale serve solo ad agevolare la lettura ottica se il cedolino cartaceo è usurato. NON sostituisce il Mod. 22A originale con ologramma, che devi SEMPRE presentare fisicamente allo sportello."
+            }
+            "pec_tool_title", "pec_generator_title" -> when (lang) {
+                "en" -> "Official Communications & Terms Check (Law 241/1990)"
+                "ar" -> "المراسلات الرسمية والتحقق من المواعيد القانونية (قانون 241/1990)"
+                "es" -> "Comunicaciones Oficiales y Verificación de Plazos (L. 241/1990)"
+                "fr" -> "Communications Officielles & Vérification des Délais (L. 241/1990)"
+                else -> "Comunicazioni Ufficiali & Verifica Termini (L. 241/1990)"
+            }
+            "pec_generator_subtitle" -> when (lang) {
+                "en" -> "Collaborative administrative inquiry models for the Questura Immigration Office"
+                "ar" -> "نماذج مراسلات إدارية تعاونية موجهة إلى مكتب الهجرة (Questura)"
+                "es" -> "Modelos colaborativos de comunicación administrativa para la Oficina de Inmigración"
+                "fr" -> "Modèles collaboratifs de communication administrative pour le Bureau de l'Immigration"
+                else -> "Modelli di comunicazione amministrativa collaborativa per l'Ufficio Immigrazione"
+            }
+            "pec_deadline_note" -> when (lang) {
+                "en" -> "Note: While Art. 5 c. 9 D.Lgs. 286/98 indicates 60 days, real administrative timelines vary by province, Questura workload, and procedural complexity."
+                "ar" -> "إشعار قانوني: رغم أن المادة 5 فقرة 9 من المرسوم التشريعي 286/98 تشير إلى 60 يوماً، إلا أن المواعيد الإدارية الفعلية تختلف حسب المقاطعة وضغط العمل في مكتب الهجرة."
+                "es" -> "Nota: Aunque el Art. 5 c. 9 D.Lgs. 286/98 indica 60 días, los plazos administrativos reales varían según la provincia y la carga de trabajo de la Questura."
+                "fr" -> "Note : Bien que l'Art. 5 c. 9 D.Lgs. 286/98 indique 60 jours, les délais administratifs réels varient selon la province et la charge de travail de la Questura."
+                else -> "Nota: Sebbene l'Art. 5 c. 9 D.Lgs. 286/98 indichi 60 giorni, i tempi amministrativi reali variano in base alla provincia, al carico di lavoro della Questura e alla complessità dell'istruttoria."
+            }
+            "pec_template_1", "pec_tpl_1_title" -> when (lang) {
+                "en" -> "Standard Application Status Inquiry (90+ days)"
+                "ar" -> "طلب استفسار عادي عن حالة الملف لدى مكتب الهجرة (بعد +90 يوماً)"
+                "es" -> "Solicitud Ordinaria de Información de Estado (90+ días)"
+                "fr" -> "Demande Ordinaire d'Informations sur l'État du Dossier (90+ jours)"
+                else -> "Richiesta Informazioni Stato Pratica (Ordinaria)"
+            }
+            "pec_tpl_1_sub" -> when (lang) {
+                "en" -> "Polite administrative inquiry after 90+ days requesting an update on procedural status."
+                "ar" -> "استفسار إداري مهذب بعد مرور أكثر من 90 يوماً لطلب تحديث حول حالة الإجراءات."
+                "es" -> "Consulta administrativa cortés tras 90+ días solicitando actualización del trámite."
+                "fr" -> "Demande administrative courtoise après 90+ jours pour connaître l'état d'avancement."
+                else -> "Cortese richiesta amministrativa (dopo 90+ giorni) per conoscere lo stato di avanzamento della pratica."
+            }
+            "pec_template_2", "pec_tpl_2_title" -> when (lang) {
+                "en" -> "Documented Urgency Notification (Work / Study / Health)"
+                "ar" -> "إشعار قانوني بوجود حالة طارئة موثقة (عمل / دراسة / صحة)"
+                "es" -> "Notificación de Urgencia Comprobada (Trabajo / Estudio / Salud)"
+                "fr" -> "Signalement d'Urgence Justifiée (Travail / Études / Santé)"
+                else -> "Segnalazione Comprovata Urgenza (Lavoro / Studio / Salute)"
+            }
+            "pec_tpl_2_sub" -> when (lang) {
+                "en" -> "Formal notification of a documented urgent deadline (contract expiry, enrollment, health) — attach PDF proof."
+                "ar" -> "إشعار رسمي لمكتب الهجرة بوجود موعد نهائي طارئ وموثق (انتهاء عقد عمل، تسجيل جامعي، ضرورة صحية) مع إرفاق إثبات PDF."
+                "es" -> "Comunicación formal notificando un plazo urgente documentado (contrato, estudios, salud) adjuntando prueba PDF."
+                "fr" -> "Communication formelle signalant une échéance urgente justifiée (contrat, études, santé) avec justificatif PDF."
+                else -> "Comunicazione formale per segnalare una scadenza urgente documentata (contratto, università, salute) allegando prova in PDF."
+            }
+            "pec_template_3", "pec_tpl_3_title" -> when (lang) {
+                "en" -> "Civic Access / Anomaly Verification Request (Art. 22 L. 241/1990)"
+                "ar" -> "طلب اطلاع إداري والتحقق من النواقص (المادة 22 قانون 241/1990)"
+                "es" -> "Instancia de Acceso Cívico / Verificación de Anomalías (Art. 22 L. 241/1990)"
+                "fr" -> "Demande d'Accès Administratif / Vérification d'Anomalies (Art. 22 L. 241/1990)"
+                else -> "Istanza di Accesso Civico / Verifica Anomalie (Art. 22 L. 241/1990)"
+            }
+            "pec_tpl_3_sub" -> when (lang) {
+                "en" -> "Polite formal request to verify if any document integration (Art. 10-bis) is holding up the file."
+                "ar" -> "طلب رسمي مهذب للتحقق مما إذا كان هناك أي نقص في المستندات (المادة 10-مكرر) يؤخر معالجة الملف."
+                "es" -> "Solicitud formal cortés para verificar si alguna integración documental (Art. 10-bis) detiene el expediente."
+                "fr" -> "Demande formelle courtoise pour vérifier si un complément de dossier (Art. 10-bis) bloque l'instruction."
+                else -> "Cortese richiesta formale per verificare se eventuali integrazioni documentali (Art. 10-bis) bloccano la pratica."
+            }
+            "pec_antispam_checkbox" -> when (lang) {
+                "en" -> "I confirm that I have a concrete reason (e.g. contract expiry, work/family urgency) or prolonged delay, and I understand that repeated PEC messages slow down the offices' work."
+                "ar" -> "أؤكد وجود سبب جدي وملموس (مثل انتهاء عقد العمل أو ضرورة عائلية/صحية) أو تأخر طويل، وأدرك أن الإرسال المتكرر لرسائل البريد المعتمد (PEC) يبطئ عمل مكتب الهجرة."
+                "es" -> "Confirmo que tengo un motivo concreto (ej. vencimiento de contrato, urgencia laboral/familiar) o un retraso prolongado, y comprendo que el envío repetido de PEC ralentiza el trabajo de las oficinas."
+                "fr" -> "Je confirme avoir un motif concret (ex. expiration de contrat, urgence professionnelle/familiale) ou un retard prolongé, et je comprends que l'envoi répété de PEC ralentit le travail des bureaux."
+                else -> "Confermo di avere un motivo concreto (es. scadenza contratto, urgenza lavorativa/familiare) o un ritardo prolungato, e comprendo che l'invio ripetuto di PEC rallenta il lavoro degli uffici."
+            }
+            "travel_verdict_allowed", "travel_verdict_compliant" -> when (lang) {
+                "en" -> "COMPLIANT WITH INTERIOR MINISTRY CIRCULAR (Verify with Airline)"
+                "ar" -> "متوافق مع تعميم وزارة الداخلية (يرجى التحقق من شركة الطيران)"
+                "es" -> "CONFORME A LA CIRCULAR DEL MIN. DEL INTERIOR (Verificar con Aerolínea)"
+                "fr" -> "CONFORME À LA CIRCULAIRE DU MIN. DE L'INTÉRIEUR (Vérifier Compagnie)"
+                else -> "CONFORME ALLA CIRCOLARE MIN. INTERNO (Verifica Compagnia)"
+            }
+            "travel_verdict_schengen_denied" -> when (lang) {
+                "en" -> "SCHENGEN TRANSIT NOT PERMITTED WITH RECEIPT ALONE"
+                "ar" -> "العبور عبر دول شنغن غير مسموح به باستخدام وصل البريد الأصلي فقط"
+                "es" -> "TRÁNSITO SCHENGEN NO PERMITIDO SOLO CON RECIBO"
+                "fr" -> "TRANSIT SCHENGEN NON AUTORISÉ AVEC LE SEUL RÉCÉPISSÉ"
+                else -> "TRANSITO SCHENGEN NON CONSENTITO CON SOLA RICEVUTA"
+            }
+            "travel_verdict_first_issue" -> when (lang) {
+                "en" -> "FIRST ISSUANCE: EXIT/RE-ENTRY NOT PERMITTED WITHOUT VISA"
+                "ar" -> "الإصدار الأول: الخروج والعودة غير مسموح بهما بدون تأشيرة سارية"
+                "es" -> "PRIMER EXPEDIENTE: SALIDA/REINGRESO NO PERMITIDOS SIN VISADO"
+                "fr" -> "PREMIÈRE DÉLIVRANCE : SORTIE/RETOUR NON AUTORISÉS SANS VISA"
+                else -> "PRIMO RILASCIO: USCITA/RIENTRO NON CONSENTITI SENZA VISTO"
+            }
+            "travel_regulatory_disclaimer", "travel_regulations_disclaimer" -> when (lang) {
+                "en" -> "Please Note: This tool provides guidance based on the Ministry of the Interior Circular of August 5, 2006 and D.P.R. 394/1999. Actual boarding always depends on Border Police checks and airline policies. Always contact your airline before purchasing a ticket."
+                "ar" -> "إشعار قانوني هام: تقدم هذه الأداة توجيهاً استرشادياً استناداً إلى تعميم وزارة الداخلية بتاريخ 5 أغسطس 2006 والمرسوم الرئاسي D.P.R. 394/1999. يعتمد السماح الفعلي بصعود الطائرة دائماً على تدقيق شرطة الحدود وسياسات شركة الطيران. تواصل دائماً مع شركة الطيران قبل شراء التذكرة."
+                "es" -> "Nota Bene: Esta herramienta proporciona orientación basada en la Circular del Ministerio del Interior del 5 de agosto de 2006 y el D.P.R. 394/1999. El embarque efectivo depende siempre de los controles de la Policía de Fronteras y de las políticas de la aerolínea. Contacte siempre a la aerolínea antes de comprar el billete."
+                "fr" -> "Note Importante : Cet outil fournit une orientation basée sur la Circulaire du Ministère de l'Intérieur du 5 août 2006 et le D.P.R. 394/1999. L'embarquement effectif dépend toujours des contrôles de la Police aux Frontières et des politiques de la compagnie aérienne. Contactez toujours la compagnie aérienne avant d'acheter votre billet."
+                else -> "Nota Bene: Questo strumento fornisce un orientamento basato sulla Circolare del Ministero dell'Interno del 5 agosto 2006 e D.P.R. 394/1999. L'imbarco effettivo dipende sempre dai controlli della Polizia di Frontiera e dalle policy della compagnia aerea. Contatta sempre la compagnia aerea prima di acquistare il biglietto."
+            }
+            "sofia_persistent_disclaimer" -> when (lang) {
+                "en" -> "Sofia provides indicative information based on public sources and does not constitute professional legal counsel. For assistance with your application, please contact an accredited Patronato."
+                "ar" -> "إشعار قانوني: تقدم صوفيا معلومات توجيهية بناءً على مصادر عامة ولا تُعد استشارة قانونية مهنية. للحصول على مساعدة رسمية بخصوص ملفك لدى مكتب الهجرة، يرجى مراجعة مكتب باتروناتو (Patronato) معتمد."
+                "es" -> "Sofía proporciona información orientativa basada en fuentes públicas y no constituye asesoramiento legal profesional. Para asistencia con tu trámite, acude a un Patronato."
+                "fr" -> "Sofia fournit des informations indicatives basées sur des sources publiques et ne constitue pas un conseil juridique professionnel. Pour toute assistance sur votre dossier, adressez-vous à un Patronato."
+                else -> "Sofia fornisce informazioni orientative basate su fonti pubbliche e non costituisce consulenza legale professionale. Per assistenza sulla tua pratica, rivolgiti a un Patronato."
+            }
+            "portal_unreachable_title" -> when (lang) {
+                "en" -> "Ministerial Portal Under Maintenance / Unreachable"
+                "ar" -> "البوابة الوزارية قيد الصيانة أو غير متاحة حالياً"
+                "es" -> "Portal Ministerial en Mantenimiento / No Disponible"
+                "fr" -> "Portail Ministériel en Maintenance / Injoignable"
+                else -> "Portale Ministeriale in Manutenzione"
+            }
+            "portal_unreachable_msg" -> when (lang) {
+                "en" -> "The ministerial portal is temporarily under maintenance or unreachable. No changes detected on your application."
+                "ar" -> "البوابة الوزارية لمكتب الهجرة قيد الصيانة مؤقتاً أو غير قابلة للوصول حالياً. لم يتم رصد أي تغيير على حالة ملفك."
+                "es" -> "El portal ministerial está temporalmente en mantenimiento o no disponible. No se detectaron cambios en tu expediente."
+                "fr" -> "Le portail ministériel est momentanément en maintenance ou injoignable. Aucune modification détectée sur votre dossier."
+                else -> "Il portale ministeriale è momentaneamente in manutenzione o non raggiungibile. Nessuna modifica rilevata sulla tua pratica."
+            }
+            "empty_profile_prompt" -> when (lang) {
+                "en" -> "Complete your profile or scan your receipt"
+                "ar" -> "يرجى إكمال ملفك الشخصي أو مسح وصل البريد الأصلي"
+                "es" -> "Completa tu perfil o escanea el recibo"
+                "fr" -> "Complétez votre profil ou scannez le récépissé"
+                else -> "Completa il tuo profilo o scansiona la ricevuta"
+            }
+            "greeting_general" -> when (lang) {
+                "en" -> "Welcome!"
+                "ar" -> "أهلاً بك!"
+                "es" -> "¡Bienvenido!"
+                "fr" -> "Bienvenue !"
+                else -> "Ciao!"
+            }
+            "greeting_user" -> when (lang) {
+                "en" -> "Welcome, %s!"
+                "ar" -> "أهلاً بك، %s!"
+                "es" -> "¡Bienvenido, %s!"
+                "fr" -> "Bienvenue, %s !"
+                else -> "Ciao, %s!"
+            }
+            "subtab_practice" -> when (lang) {
+                "en" -> "1. Your Application"
+                "ar" -> "\u200E1. معاملتك"
+                "es" -> "1. Tu trámite"
+                "fr" -> "1. Votre dossier"
+                else -> "1. La Tua Pratica"
+            }
+            "subtab_tools" -> when (lang) {
+                "en" -> "2. Tool Hub"
+                "ar" -> "\u200E2. حقيبة الأدوات"
+                "es" -> "2. Kit de herramientas"
+                "fr" -> "2. Boîte à outils"
+                else -> "2. Kit Strumenti"
+            }
+            "subtab_stats_tab" -> when (lang) {
+                "en" -> "3. Statistics"
+                "ar" -> "\u200E3. الإحصائيات"
+                "es" -> "3. Estadísticas"
+                "fr" -> "3. Statistiques"
+                else -> "3. Statistiche"
+            }
+            "section_main_status_title" -> when (lang) {
+                "en" -> "Main Status & Live Check"
+                "ar" -> "الحالة الرئيسية والتحقق الفوري"
+                "es" -> "Estado principal y verificación en vivo"
+                "fr" -> "Statut principal et vérification en direct"
+                else -> "Stato Principale & Verifica Live"
+            }
+            "section_main_status_sub" -> when (lang) {
+                "en" -> "Current status of your application and immediate check button"
+                "ar" -> "الوضع الحالي لملفك مع إمكانية التحقق الفوري"
+                "es" -> "Estado actual de tu trámite y botón de verificación inmediata"
+                "fr" -> "Statut actuel de votre dossier et bouton de vérification immédiate"
+                else -> "Stato attuale della tua pratica e pulsante di verifica immediata"
+            }
+            "badge_4_tools" -> when (lang) {
+                "en" -> "4 TOOLS"
+                "ar" -> "4 أدوات"
+                "es" -> "4 HERRAMIENTAS"
+                "fr" -> "4 OUTILS"
+                else -> "4 STRUMENTI"
+            }
+            "section_quick_tools_title" -> when (lang) {
+                "en" -> "Quick Tool Access (1-Tap)"
+                "ar" -> "الوصول السريع للأدوات"
+                "es" -> "Acceso rápido a herramientas"
+                "fr" -> "Accès rapide aux outils"
+                else -> "Accesso Rapido Strumenti (1-Tap)"
+            }
+            "section_quick_tools_sub" -> when (lang) {
+                "en" -> "Open Barcode Pass, Travel Rules, PEC Inquiries, or Legal Rights"
+                "ar" -> "الوصول إلى باركود الشباك، شروط السفر، طلبات الاستعجال، والحقوق القانونية"
+                "es" -> "Abre el pase de código de barras, reglas de viaje, solicitud PEC o derechos"
+                "fr" -> "Ouvrez le pass code-barres, règles de voyage, relance PEC ou droits"
+                else -> "Apri subito Supporto Ottico, Regole Viaggio, Sollecito PEC o Diritti"
+            }
+            "tool_tile_1_title" -> when (lang) {
+                "en" -> "#1 Mod. 22A Barcode"
+                "ar" -> "#1 باركود Mod. 22A"
+                "es" -> "#1 Código Mod. 22A"
+                "fr" -> "#1 Code-barres Mod. 22A"
+                else -> "#1 Supporto Mod. 22A"
+            }
+            "tool_tile_1_sub" -> when (lang) {
+                "en" -> "Optical reader and receipt scanner"
+                "ar" -> "قارئ الرمز الشريطي والمسح الضوئي للإيصال"
+                "es" -> "Lector óptico y escáner de recibo"
+                "fr" -> "Lecteur optique et scanner de reçu"
+                else -> "Lettura ottica e scansione cedolino"
+            }
+            "tool_tile_2_title" -> when (lang) {
+                "en" -> "#2 Travel Rules with Receipt"
+                "ar" -> "#2 قواعد السفر بالوصل"
+                "es" -> "#2 Reglas de Viaje con Recibo"
+                "fr" -> "#2 Règles de Voyage avec Récépissé"
+                else -> "#2 Regole Viaggio con Ricevuta"
+            }
+            "tool_tile_2_sub" -> when (lang) {
+                "en" -> "Transit rules and direct flights"
+                "ar" -> "شروط العبور والرحلات المباشرة"
+                "es" -> "Condiciones de tránsito y vuelos directos"
+                "fr" -> "Conditions de transit et vols directs"
+                else -> "Verifica scali e voli diretti"
+            }
+            "tool_tile_3_title" -> when (lang) {
+                "en" -> "#3 Official PEC Inquiries"
+                "ar" -> "#3 مراسلات PEC الرسمية"
+                "es" -> "#3 Comunicaciones PEC Oficiales"
+                "fr" -> "#3 Communications PEC Officielles"
+                else -> "#3 Comunicazioni PEC Ufficiali"
+            }
+            "tool_tile_3_sub" -> when (lang) {
+                "en" -> "Urgent inquiries & Law 241/90"
+                "ar" -> "نماذج الاستعجال وقانون 241/90"
+                "es" -> "Modelos de urgencia y Ley 241/90"
+                "fr" -> "Modèles urgents et Loi 241/90"
+                else -> "Modelli formali e verifica L. 241/90"
+            }
+            "tool_tile_4_title" -> when (lang) {
+                "en" -> "#4 Minimum Income Calculator"
+                "ar" -> "#4 حاسبة الحد الأدنى للدخل"
+                "es" -> "#4 Calculadora de Ingresos Mínimos"
+                "fr" -> "#4 Calculateur de Revenu Minimum"
+                else -> "#4 Calcolatore Reddito Minimo"
+            }
+            "tool_tile_4_sub" -> when (lang) {
+                "en" -> "Social allowance thresholds for renewal and family"
+                "ar" -> "حساب متطلبات الدخل لتجديد الإقامة ولم الشمل"
+                "es" -> "Límites de subsidio para renovación y familia"
+                "fr" -> "Seuils d'allocation pour renouvellement et famille"
+                else -> "Soglie Assegno Sociale per Rinnovo e Famiglia"
+            }
+            "tool_tile_5_title" -> when (lang) {
+                "en" -> "#5 Document Vault & Deadlines"
+                "ar" -> "#5 جدول مواعيد الوثائق"
+                "es" -> "#5 Bóveda de Documentos y Plazos"
+                "fr" -> "#5 Coffre-fort Documents & Dates"
+                else -> "#5 Scadenziario & Vault Documenti"
+            }
+            "tool_tile_5_sub" -> when (lang) {
+                "en" -> "Passport tracking and civic protections"
+                "ar" -> "متابعة صلاحية الجواز والحقوق"
+                "es" -> "Seguimiento de pasaporte y derechos"
+                "fr" -> "Suivi du passeport et droits civiques"
+                else -> "Monitoraggio passaporto e tutele"
+            }
+            "tool_pill_1" -> when (lang) {
+                "ar" -> "Mod. 22A والمسح الضوئي"
+                "es" -> "MOD. 22A Y OCR"
+                else -> "MOD. 22A & OCR"
+            }
+            "tool_pill_2" -> when (lang) {
+                "en" -> "TRAVEL RULES"
+                "ar" -> "قواعد السفر"
+                "es" -> "REGLAS DE VIAJE"
+                "fr" -> "RÈGLES DE VOYAGE"
+                else -> "NORMATIVA VIAGGI"
+            }
+            "tool_pill_3" -> when (lang) {
+                "en" -> "LAW 241/1990"
+                "ar" -> "قانون 241/90"
+                "es" -> "LEY 241/1990"
+                "fr" -> "LOI 241/1990"
+                else -> "L. 241/1990"
+            }
+            "tool_pill_4" -> when (lang) {
+                "en" -> "INPS THRESHOLDS 2026"
+                "ar" -> "دخل INPS 2026"
+                "es" -> "LÍMITES INPS 2026"
+                "fr" -> "SEUILS INPS 2026"
+                else -> "SOGLIE INPS 2026"
+            }
+            "tool_pill_5" -> when (lang) {
+                "en" -> "QUESTURA CHECKLIST"
+                "ar" -> "قائمة الكويستورا"
+                "es" -> "CHECKLIST QUESTURA"
+                "fr" -> "CHECKLIST QUESTURA"
+                else -> "CHECKLIST QUESTURA"
+            }
+            "badge_2_sources" -> when (lang) {
+                "en" -> "2 SOURCES"
+                "ar" -> "مصدران"
+                "es" -> "2 FUENTES"
+                "fr" -> "2 SOURCES"
+                else -> "2 FONTI"
+            }
+            "section_portals_detail_title" -> when (lang) {
+                "en" -> "Official Portals & Convocation Details"
+                "ar" -> "تفاصيل البوابات الرسمية والمواعيد"
+                "es" -> "Detalle de portales oficiales y citación"
+                "fr" -> "Détails des portails officiels et convocation"
+                else -> "Dettaglio Portali Ufficiali & Convocazione"
+            }
+            "section_portals_detail_sub" -> when (lang) {
+                "en" -> "Comparison between Immigration Portal (Poste) and State Police (Questura)"
+                "ar" -> "مقارنة بين بوابة الهجرة وشرطة الدولة (الكويستورا)"
+                "es" -> "Comparación entre Portal de Inmigración y Policía del Estado"
+                "fr" -> "Comparaison entre Portail Immigration et Police d'État"
+                else -> "Confronto tra Portale Immigrazione (Poste) e Questura (Polizia di Stato)"
+            }
+            "section_questura_guides_title" -> when (lang) {
+                "en" -> "Your Questura & Official Guides"
+                "ar" -> "الكويستورا الخاصة بك والأدلة الرسمية"
+                "es" -> "Tu Questura y guías oficiales"
+                "fr" -> "Votre Questura et guides officiels"
+                else -> "La Tua Questura & Guide Ufficiali"
+            }
+            "section_questura_guides_sub" -> when (lang) {
+                "en" -> "Competent Immigration Office contacts and step-by-step guides"
+                "ar" -> "بيانات مكتب الهجرة المختص وأدلة إرشادية خطوة بخطوة"
+                "es" -> "Contactos de la Oficina de Inmigración competente y guías paso a paso"
+                "fr" -> "Coordonnées du bureau d'immigration compétent et guides pratiques"
+                else -> "Riferimenti dell'Ufficio Immigrazione competente e guide pratiche"
+            }
+            "section_history_title" -> when (lang) {
+                "en" -> "Recent Check History"
+                "ar" -> "سجل عمليات التحقق الأخيرة"
+                "es" -> "Historial de verificaciones recientes"
+                "fr" -> "Historique des vérifications récentes"
+                else -> "Cronologia Controlli Recenti"
+            }
+            "section_history_sub" -> when (lang) {
+                "en" -> "Chronological log of checks performed on official portals"
+                "ar" -> "سجل زمني لعمليات التحقق التي تمت على البوابات الرسمية"
+                "es" -> "Registro cronológico de las comprobaciones realizadas en los portales"
+                "fr" -> "Journal chronologique des vérifications effectuées sur les portails"
+                else -> "Registro cronologico delle verifiche effettuate sui portali"
+            }
+            "section_appointment_checklist_title" -> when (lang) {
+                "en" -> "Appointment & Document Checklist"
+                "ar" -> "الموعد وقائمة الوثائق المطلوبة"
+                "es" -> "Cita y lista de documentos"
+                "fr" -> "Rendez-vous et liste des documents"
+                else -> "Appuntamento & Checklist Documenti"
+            }
+            "section_appointment_checklist_sub" -> when (lang) {
+                "en" -> "Prepare everything required for your fingerprint appointment at Questura"
+                "ar" -> "جهّز جميع المستندات المطلوبة لموعد أخذ البصمات في الكويستورا"
+                "es" -> "Prepara todos los documentos requeridos para las huellas en la Questura"
+                "fr" -> "Préparez tous les documents requis pour les empreintes à la Questura"
+                else -> "Prepara tutti i documenti richiesti per il fotosegnalamento in Questura"
+            }
+            "badge_checklist" -> when (lang) {
+                "ar" -> "قائمة"
+                "es" -> "LISTA"
+                "fr" -> "LISTE"
+                else -> "CHECKLIST"
+            }
+            "section_faq_title" -> when (lang) {
+                "en" -> "Status Meaning & Official FAQ"
+                "ar" -> "معاني الحالات والأسئلة الشائعة"
+                "es" -> "Significado de estados y preguntas frecuentes"
+                "fr" -> "Signification des statuts et FAQ officielle"
+                else -> "Significato Stati & Domande Frequenti"
+            }
+            "section_faq_sub" -> when (lang) {
+                "en" -> "Understand each phase of your permit application on official portals"
+                "ar" -> "تعرف على معنى كل مرحلة من مراحل ملف إقامتك على البوابات الرسمية"
+                "es" -> "Comprende qué significa cada estado en los portales oficiales"
+                "fr" -> "Comprenez chaque étape de votre dossier sur les portails officiels"
+                else -> "Comprendi cosa significa ogni stato sui portali ufficiali"
+            }
+            "badge_guide" -> when (lang) {
+                "ar" -> "دليل"
+                "es" -> "GUÍA"
+                else -> "GUIDA"
+            }
+            "section_wait_times_title" -> when (lang) {
+                "en" -> "Local Processing Wait Times"
+                "ar" -> "متوسط أوقات الانتظار حسب المقاطعة"
+                "es" -> "Tiempos medios de espera por provincia"
+                "fr" -> "Délais moyens de traitement par province"
+                else -> "Tempi Medi di Attesa per Provincia"
+            }
+            "section_wait_times_sub" -> when (lang) {
+                "en" -> "Estimated fingerprint and card printing timelines"
+                "ar" -> "تقديرات لأخذ البصمات وطباعة البطاقة الإلكترونية"
+                "es" -> "Estimaciones para huellas e impresión de la tarjeta"
+                "fr" -> "Estimations pour les empreintes et l'impression de la carte"
+                else -> "Stime per fotosegnalamento e stampa card elettronica"
+            }
+            "section_uptime_title" -> when (lang) {
+                "en" -> "Official Portals Uptime Monitor"
+                "ar" -> "مراقبة خوادم البوابات الرسمية"
+                "es" -> "Monitoreo de servidores de portales oficiales"
+                "fr" -> "Surveillance des serveurs des portails officiels"
+                else -> "Monitoraggio Server Portali Ufficiali"
+            }
+            "section_uptime_sub" -> when (lang) {
+                "en" -> "Live status of State Police and Immigration Portal"
+                "ar" -> "حالة اتصال شرطة الدولة وبوابة الهجرة"
+                "es" -> "Disponibilidad de la Policía del Estado y Portal de Inmigración"
+                "fr" -> "Disponibilité de la Police d'État et du Portail Immigration"
+                else -> "Stato di raggiungibilità di Polizia di Stato e Portale Immigrazione"
+            }
+            "section_credentials_summary_title" -> when (lang) {
+                "en" -> "Saved Receipt Credentials"
+                "ar" -> "ملخص بيانات الإيصال المحفوظة"
+                "es" -> "Resumen de credenciales guardadas"
+                "fr" -> "Résumé des identifiants enregistrés"
+                else -> "Riepilogo Credenziali Ricevuta"
+            }
+            "section_credentials_summary_sub" -> when (lang) {
+                "en" -> "Your official receipt tracking codes saved on device"
+                "ar" -> "الرموز الرسمية لإيصالك المحفوظة حالياً على جهازك"
+                "es" -> "Tus códigos oficiales configurados actualmente en el dispositivo"
+                "fr" -> "Vos codes officiels actuellement configurés sur l'appareil"
+                else -> "I codici ufficiali della tua ricevuta attualmente configurati"
+            }
+            "badge_active" -> when (lang) {
+                "en" -> "ACTIVE"
+                "ar" -> "نشط"
+                "es" -> "ACTIVOS"
+                "fr" -> "ACTIFS"
+                else -> "ATTIVI"
+            }
+            "check_cooldown_button" -> when (lang) {
+                "en" -> "Wait before checking again (%ds)"
+                "ar" -> "انتظر قبل إعادة الفحص (%d ث)"
+                "es" -> "Espera antes de verificar de nuevo (%ds)"
+                "fr" -> "Attendez avant de revérifier (%ds)"
+                else -> "Attendi prima di riverificare (%ds)"
+            }
+            "check_cooldown_subtitle" -> when (lang) {
+                "en" -> "Safety interval to avoid overloading ministerial servers."
+                "ar" -> "فترة أمان لتجنب التحميل الزائد على الخوادم الوزارية."
+                "es" -> "Intervalo de seguridad para no sobrecargar los servidores ministeriales."
+                "fr" -> "Intervalle de sécurité pour ne pas surcharger les serveurs ministériels."
+                else -> "Intervallo di sicurezza per non sovraccaricare i server ministeriali."
+            }
+            "demo_mode_label" -> when (lang) {
+                "en" -> "Institutional Demo Mode"
+                "ar" -> "الوضع التجريبي المؤسسي (بيانات نموذجية)"
+                "es" -> "Modo Demo Institucional"
+                "fr" -> "Mode Démo Institutionnel"
+                else -> "Modalità Demo Istituzionale"
+            }
+            "demo_mode_subtitle" -> when (lang) {
+                "en" -> "Using neutral sample placeholders (MARIO ROSSI • 050000000000)"
+                "ar" -> "استخدام بيانات نموذجية محايدة للعرض المؤسسي (MARIO ROSSI • 050000000000)"
+                "es" -> "Usando datos ficticios institucionales (MARIO ROSSI • 050000000000)"
+                "fr" -> "Utilisation de données fictives institutionnelles (MARIO ROSSI • 050000000000)"
+                else -> "Dati fittizi di esempio attivi (MARIO ROSSI • Assicurata 050000000000)"
+            }
             else -> null
         }
         if (custom != null) return custom
@@ -1571,10 +2056,10 @@ object Localization {
             ?: key
     }
 
+    fun get(key: String, lang: String): String = string(key, lang)
+
     fun string(key: String, lang: String, vararg args: Any): String {
-        val base = translations[lang]?.get(key)
-            ?: translations["it"]?.get(key)
-            ?: key
+        val base = string(key, lang)
         return try {
             if (args.isNotEmpty()) {
                 String.format(base, *args)
@@ -1586,3 +2071,6 @@ object Localization {
         }
     }
 }
+
+typealias Strings = Localization
+

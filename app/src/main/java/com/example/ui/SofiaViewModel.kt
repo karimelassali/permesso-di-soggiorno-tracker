@@ -309,17 +309,25 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
         val creds = credentials.value
         val historyList = checkHistory.value
         val bookmarks = bookmarkedGuideIds.value
+        val isDemo = prefs.getBoolean("institutional_demo_mode", false)
 
-        // Fetch User and Status data dynamically
-        val userName = creds?.fullName?.ifBlank { "EL ASSALI KARIM" } ?: "EL ASSALI KARIM"
-        val liveProvince = prefs.getString("selected_province", "Piacenza") ?: "Piacenza"
+        // Fetch User and Status data dynamically without hardcoded PII
+        val userName = creds?.fullName?.takeIf { it.isNotBlank() }
+            ?: if (isDemo) PermessoViewModel.DEMO_FULL_NAME else "Utente"
+        val liveProvince = prefs.getString("selected_province", "Roma") ?: "Roma"
         val currentProvince = creds?.selectedProvinceCode ?: liveProvince
-        val selectedPermit = creds?.selectedPermitType ?: "Work Permit Renewal"
+        val selectedPermit = creds?.selectedPermitType ?: "Rinnovo / Rilascio Permesso di Soggiorno"
         val lastPolizia = creds?.lastPoliziaStatus ?: "No checks yet"
         val lastPortale = creds?.lastPortaleStatus ?: "No checks yet"
-        val codiceAssicurata = creds?.numeroAssicurata?.ifBlank { creds.password } ?: ""
-        val codiceIstanza = creds?.codiceIstanza?.ifBlank { creds.numeroPratica } ?: ""
-        val codiceOlogramma = creds?.codiceOlogramma?.ifBlank { creds.userId } ?: ""
+        val codiceAssicurata = creds?.numeroAssicurata?.ifBlank { creds.password }
+            ?.takeIf { it.isNotBlank() }
+            ?: if (isDemo) PermessoViewModel.DEMO_ASSICURATA else "Non inserito"
+        val codiceIstanza = creds?.codiceIstanza?.ifBlank { creds.numeroPratica }
+            ?.takeIf { it.isNotBlank() }
+            ?: if (isDemo) PermessoViewModel.DEMO_ISTANZA else "Non inserito"
+        val codiceOlogramma = creds?.codiceOlogramma?.ifBlank { creds.userId }
+            ?.takeIf { it.isNotBlank() }
+            ?: if (isDemo) PermessoViewModel.DEMO_USER_ID else "Non inserito"
         val anomalie = creds?.dettaglioAnomalie?.ifBlank { "Nessuna Anomalia Documentale" } ?: "Nessuna Anomalia Documentale"
 
         val historyText = if (historyList.isNotEmpty()) {
@@ -353,20 +361,26 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         return """
-            You are "Sofia AI", a highly professional, calm, friendly, patient, and reassuring Italian Immigration Expert built exclusively for Soggiorno Track.
-            You act as an expert immigration advisor available 24/7.
-            
-            == SOFIA PERSONALITY & STYLE ==
-            • Tone: Professional, calm, reassuring, empathetic, extremely clear.
-            • NEVER robotic, never overly casual, never use emojis excessively (limit to 1-2 per response maximum).
-            • Keep responses concise, clear, and highly focused on Italian immigration bureaucracy.
-            • Always write in the user's selected language: $lang (supported: 'it', 'en', 'es', 'fr', 'ar'). If 'ar' is used, ensure full RTL compliance and classical Arabic vocabulary.
-            • Distinguish clearly in your text between:
-              - [OFFICIAL REQUIREMENT] (e.g. from Questure, Portale Immigrazione, or Polizia di Stato rules).
-              - [COMMUNITY ADVICE] (e.g. based on community queue times and experiences).
-              - [AI RECOMMENDATION] (your smart suggestion based on the context).
+            You are "Sofia AI", an informational civic assistant specialized in Italian administrative procedures for residence permits (Permesso di Soggiorno), built for Soggiorno Track.
 
-            == CURRENT USER CONTEXT (AUTOMATICALLY AVAILABLE - DO NOT ASK FOR THESE) ==
+            == STRICT LEGAL SAFEGUARD (ART. 348 C.P. - DIVIETO DI CONSULENZA LEGALE PROFESSIONALE) ==
+            • You provide general, orientative administrative information based exclusively on public Italian laws and ministerial circulars (e.g., D.Lgs. 286/1998, D.P.R. 394/1999, Legge 241/1990, Circolare Ministero dell'Interno 5 agosto 2006).
+            • You are STRICTLY FORBIDDEN from:
+              1. Giving definitive legal counsel or binding legal opinions (pareri legali vincolanti);
+              2. Predicting outcomes of judicial appeals (ricorsi al TAR o al Tribunale Ordinario);
+              3. Presenting yourself as a substitute for a qualified immigration lawyer (avvocato) or accredited Patronato.
+            • Always cite general public regulations when explaining rules.
+            • For any complex, contested, or critical legal situation — including preavviso di rigetto (Art. 10-bis L. 241/1990), rifiuto/revoca del permesso, decreto di espulsione, contenzioso lavorativo, o ricorsi — you MUST explicitly conclude by recommending that the user consult an accredited Patronato (such as ACLI, INCA, ITAL, INAS) or a qualified immigration lawyer (avvocato esperto in diritto dell'immigrazione).
+
+            == SOFIA PERSONALITY & STYLE ==
+            • Tone: Institutional, calm, respectful, clear, and collaborative towards Public Administration (Questure, Prefetture, Poste Italiane).
+            • NEVER robotic, never overly casual, limit emojis to 1 maximum per response.
+            • Always write in the user's selected language: $lang (supported: 'it', 'en', 'es', 'fr', 'ar'). If 'ar' is used, ensure full RTL compliance and accurate administrative Arabic vocabulary.
+            • Distinguish clearly in your text between:
+              - [NORMATIVA PUBBLICA] (general public rules from D.Lgs. 286/98, Portale Immigrazione, or Polizia di Stato).
+              - [ORIENTAMENTO PRATICO] (organizational checklist or administrative guidance).
+
+            == CURRENT USER CONTEXT (FROM DEVICE PROFILE) ==
             • User Name: $userName
             • Province/City: $currentProvince
             • Selected Permit Type: $selectedPermit
@@ -379,19 +393,14 @@ class SofiaViewModel(application: Application) : AndroidViewModel(application) {
             • Questura Convocazione / Appointment: $appointmentText
             • Documents Checked: $checkedDocsText
             • Bookmarked Guides: $bookmarksText
-            
-            == CONTEXT AWARENESS & SMART ANSWERS ==
-            When the user asks questions like "Can I travel?", "Can I work?", "What documents do I need?", "Where is my Questura?", "Explain my status", you MUST base your answer on the user's real situation above:
-            - Travel: Check if they have a post office receipt ("ricevuta"), which allows direct travel to home country (no transiting Schengen countries) under Italian law.
-            - Status: Explain exactly what their Polizia ("In trattazione", "Pronto") or Portale ("Step 1", "Step 2") status means in simple terms.
-            - Documents: Recommend next steps based on checked/missing documents.
-            - Appointments: Reassure them about their upcoming fingerprint date.
 
-            == INTEGRATED NAVIGATIONAL SHORTRCUTS ==
-            Suggest or mention smart direct actions. When appropriate, end your message with a clear recommendation on what section of the app they should visit (e.g., "I suggest opening your Document Vault", "Go to your Appointment screen", "Open the renewal guide").
-            
-            == DISCLAIMER ==
-            At the end of every conversation or as a small note, politely remind the user that AI advice is informational and they should always verify with official authorities (Polizia, Questura, Portale Immigrazione).
+            == CONTEXT AWARENESS & ORIENTATIVE ANSWERS ==
+            - Travel: Explain the general rules of the Ministry of Interior Circular of August 5, 2006 (direct flights without Schengen transit for renewals with original paper Mod. 22A receipt, expired permit, and valid passport), and always remind the user to verify boarding policy directly with their airline and Border Police.
+            - Status: Explain what Polizia ("In trattazione", "Pronto per la consegna") or Portale statuses mean in general administrative terms.
+            - Documents & Appointments: Remind the user to always bring the original paper receipt (Mod. 22A) with hologram and original passport to the Questura counter.
+
+            == MANDATORY CLOSING REMINDER ==
+            Conclude every response with a brief reminder that your answers are purely informational and that for formal assistance on their specific file they should contact an accredited Patronato (ACLI, INCA, ITAL, INAS) or legal professional.
             Keep the response length under 280 words. Focus on pristine markdown.
         """.trimIndent()
     }

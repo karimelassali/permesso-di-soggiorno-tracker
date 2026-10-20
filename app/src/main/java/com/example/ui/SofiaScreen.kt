@@ -76,7 +76,7 @@ object SofiaLocalization {
             "source_ai" to "IA",
             "source_official" to "Ufficiale",
             "source_community" to "Comunità",
-            "disclaimer" to "Le risposte dell'IA sono solo informative. Verifica sempre i requisiti legali tramite le autorità italiane ufficiali.",
+            "disclaimer" to "Sofia fornisce informazioni orientative basate su fonti pubbliche e non costituisce consulenza legale professionale. Per assistenza sulla tua pratica, rivolgiti a un Patronato.",
             "placeholder_chat" to "Chiedi a Sofia...",
             "empty_convs" to "Nessuna conversazione precedente. Fai una domanda per iniziare!",
             "recent_conversations" to "Conversazioni recenti",
@@ -116,7 +116,7 @@ object SofiaLocalization {
             "source_ai" to "AI",
             "source_official" to "Official",
             "source_community" to "Community",
-            "disclaimer" to "AI responses are informational only. Always verify legal requirements through official Italian authorities.",
+            "disclaimer" to "Sofia provides orientative information based on public sources and does not constitute professional legal counsel. For assistance with your application, contact an accredited Patronato.",
             "placeholder_chat" to "Ask Sofia...",
             "empty_convs" to "No previous conversations. Ask a question to start!",
             "recent_conversations" to "Recent conversations",
@@ -156,7 +156,7 @@ object SofiaLocalization {
             "source_ai" to "ذكاء اصطناعي",
             "source_official" to "رسمي",
             "source_community" to "مجتمعي",
-            "disclaimer" to "إجابات الذكاء الاصطناعي هي لأغراض إعلامية فقط. تأكد دائمًا من المتطلبات القانونية من خلال السلطات الإيطالية الرسمية.",
+            "disclaimer" to "إشعار قانوني: تقدم صوفيا معلومات توجيهية بناءً على مصادر عامة ولا تشكل استشارة قانونية مهنية. للمساعدة في ملفك لدى مكتب الهجرة، يرجى مراجعة مكتب باتروناتو (Patronato) معتمد.",
             "placeholder_chat" to "اسأل صوفيا...",
             "empty_convs" to "لا توجد محادثات سابقة. اسأل سؤالاً للبدء!",
             "recent_conversations" to "المحادثات الأخيرة",
@@ -196,7 +196,7 @@ object SofiaLocalization {
             "source_ai" to "IA",
             "source_official" to "Oficial",
             "source_community" to "Comunidad",
-            "disclaimer" to "Las respuestas de la IA son informativas. Siempre verifique los requisitos legales a través de las autoridades italianas oficiales.",
+            "disclaimer" to "Sofía proporciona información orientativa basada en fuentes públicas y no constituye asesoramiento legal profesional. Para asistencia con su trámite, acuda a un Patronato.",
             "placeholder_chat" to "Pregúntale a Sofía...",
             "empty_convs" to "Sin conversaciones previas. ¡Haz una pregunta para comenzar!",
             "recent_conversations" to "Conversaciones recientes",
@@ -236,7 +236,7 @@ object SofiaLocalization {
             "source_ai" to "IA",
             "source_official" to "Officiel",
             "source_community" to "Communauté",
-            "disclaimer" to "Les réponses de l'IA sont informatives. Veuillez toujours vérifier auprès des autorités italiennes officielles.",
+            "disclaimer" to "Sofia fournit des informations indicatives basées sur des sources publiques et ne constitue pas un conseil juridique professionnel. Pour toute assistance, adressez-vous à un Patronato.",
             "placeholder_chat" to "Demander à Sofia...",
             "empty_convs" to "Aucune conversation précédente. Posez une question pour commencer!",
             "recent_conversations" to "Conversations récentes",
@@ -1365,6 +1365,37 @@ fun SofiaActiveChatPage(
                         SofiaTypingSkeleton()
                     }
                 }
+            }
+        }
+
+        // PERSISTENT LEGAL SAFEGUARD CAPTION (Art. 348 c.p.) ABOVE CHAT INPUT BAR
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("sofia_persistent_disclaimer_banner"),
+            color = Color(0xFFFFF8E1),
+            border = BorderStroke(1.dp, Color(0xFFFFE082))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Gavel,
+                    contentDescription = null,
+                    tint = Color(0xFFE65100),
+                    modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = com.example.util.Strings.get("sofia_persistent_disclaimer", selectedLanguageCode),
+                    color = Color(0xFF4E342E),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 15.sp
+                )
             }
         }
 

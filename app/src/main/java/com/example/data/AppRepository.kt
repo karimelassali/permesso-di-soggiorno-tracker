@@ -137,21 +137,27 @@ class AppRepository(private val context: Context) {
         try {
             val response = client.newCall(request).execute()
             if (!response.isSuccessful) {
-                val errorMsg = "HTTP Error: ${response.code}"
-                val history = StatusHistory(
-                    portalType = "POLIZIA",
-                    statusText = "Errore di connessione",
+                return@withContext CheckResult(
                     isSuccess = false,
-                    details = errorMsg
+                    statusText = PORTAL_UNREACHABLE_MSG,
+                    details = "HTTP ${response.code}",
+                    statusCode = StatusCode.PORTAL_UNREACHABLE
                 )
-                historyDao.insert(history)
-                return@withContext CheckResult(false, "Errore del portale (HTTP ${response.code})", "")
             }
 
             val html = response.body?.string() ?: ""
             val parsed = parsePoliziaHtml(html)
 
-            // Update user credentials cache
+            if (parsed.statusCode == StatusCode.PORTAL_UNREACHABLE) {
+                return@withContext CheckResult(
+                    isSuccess = false,
+                    statusText = PORTAL_UNREACHABLE_MSG,
+                    details = parsed.details,
+                    statusCode = StatusCode.PORTAL_UNREACHABLE
+                )
+            }
+
+            // Update user credentials cache only on valid portal response
             val currentCreds = credentialsDao.getCredentialsDirect() ?: UserCredentials()
             val updatedCreds = currentCreds.copy(
                 lastCheckedTime = System.currentTimeMillis(),
@@ -171,16 +177,13 @@ class AppRepository(private val context: Context) {
             historyDao.insert(history)
 
             CheckResult(isFound, parsed.statusText, parsed.details, parsed.statusCode)
-        } catch (e: IOException) {
-            val errorMsg = "Network Error: ${e.message}"
-            val history = StatusHistory(
-                portalType = "POLIZIA",
-                statusText = "Errore di rete",
+        } catch (e: Exception) {
+            CheckResult(
                 isSuccess = false,
-                details = errorMsg
+                statusText = PORTAL_UNREACHABLE_MSG,
+                details = e.message ?: "Timeout / Connessione assente",
+                statusCode = StatusCode.PORTAL_UNREACHABLE
             )
-            historyDao.insert(history)
-            CheckResult(false, "Errore di rete. Controlla la tua connessione.", "")
         }
     }
 
@@ -190,7 +193,7 @@ class AppRepository(private val context: Context) {
         val pass = rawPass.replace("-", "").replace(" ", "").trim()
 
         if (userId.isBlank() || pass.isBlank()) {
-            return@withContext CheckResult(false, "Credenziali non inserite", "")
+            return@withContext CheckResult(false, "Credenziali non inserite", "", StatusCode.NOT_FOUND)
         }
 
         val sessionClient = buildSessionClient()
@@ -210,12 +213,26 @@ class AppRepository(private val context: Context) {
 
             sessionClient.newCall(initRequest).execute().use { response ->
                 if (!response.isSuccessful) {
-                    return@withContext CheckResult(false, "Errore del portale (HTTP ${response.code})", "")
+                    return@withContext CheckResult(
+                        isSuccess = false,
+                        statusText = PORTAL_UNREACHABLE_MSG,
+                        details = "HTTP ${response.code}",
+                        statusCode = StatusCode.PORTAL_UNREACHABLE
+                    )
                 }
                 val html = response.body?.string() ?: ""
                 viewState = extractHiddenField(html, "__VIEWSTATE")
                 viewStateGen = extractHiddenField(html, "__VIEWSTATEGENERATOR")
                 eventValidation = extractHiddenField(html, "__EVENTVALIDATION")
+            }
+
+            if (viewState.isBlank()) {
+                return@withContext CheckResult(
+                    isSuccess = false,
+                    statusText = PORTAL_UNREACHABLE_MSG,
+                    details = "DOM del portale non disponibile o in manutenzione",
+                    statusCode = StatusCode.PORTAL_UNREACHABLE
+                )
             }
 
             // Step 2: Accept cookie banner via ASP.NET __doPostBack('lnkAcceptCookie', '') so login button is enabled
@@ -270,6 +287,14 @@ class AppRepository(private val context: Context) {
             var loginHtml = ""
             var finalLoginUrl = ""
             sessionClient.newCall(loginRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext CheckResult(
+                        isSuccess = false,
+                        statusText = PORTAL_UNREACHABLE_MSG,
+                        details = "HTTP ${response.code}",
+                        statusCode = StatusCode.PORTAL_UNREACHABLE
+                    )
+                }
                 loginHtml = response.body?.string() ?: ""
                 finalLoginUrl = response.request.url.toString()
             }
@@ -279,18 +304,19 @@ class AppRepository(private val context: Context) {
 
             if (!isLoggedIn) {
                 val msgStatus = extractElementTextById(loginHtml, "UC_LogIn1_MsgStatus")
+                if (msgStatus.isBlank() && !loginHtml.contains("UC_LogIn1", ignoreCase = true)) {
+                    return@withContext CheckResult(
+                        isSuccess = false,
+                        statusText = PORTAL_UNREACHABLE_MSG,
+                        details = "Risposta imprevista dal portale ministeriale",
+                        statusCode = StatusCode.PORTAL_UNREACHABLE
+                    )
+                }
                 val errDetails = if (msgStatus.isNotBlank()) {
                     msgStatus
                 } else {
                     "User ID ($userId) o Password non riconosciuti dal Portale Immigrazione."
                 }
-                val history = StatusHistory(
-                    portalType = "PORTALE",
-                    statusText = "Credenziali non valide",
-                    isSuccess = false,
-                    details = errDetails
-                )
-                historyDao.insert(history)
                 return@withContext CheckResult(
                     isSuccess = false,
                     statusText = "Credenziali non valide",
@@ -307,10 +333,26 @@ class AppRepository(private val context: Context) {
                 .build()
 
             val istanzaHtml = sessionClient.newCall(istanzaRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext CheckResult(
+                        isSuccess = false,
+                        statusText = PORTAL_UNREACHABLE_MSG,
+                        details = "HTTP ${response.code}",
+                        statusCode = StatusCode.PORTAL_UNREACHABLE
+                    )
+                }
                 response.body?.string() ?: ""
             }
 
             val parsed = parsePortaleIstanzaHtml(istanzaHtml, userId, pass)
+            if (parsed.statusCode == StatusCode.PORTAL_UNREACHABLE) {
+                return@withContext CheckResult(
+                    isSuccess = false,
+                    statusText = PORTAL_UNREACHABLE_MSG,
+                    details = parsed.details,
+                    statusCode = StatusCode.PORTAL_UNREACHABLE
+                )
+            }
 
             // Update user credentials cache with all real fields from Dettaglio Istanza
             val currentCreds = credentialsDao.getCredentialsDirect() ?: UserCredentials()
@@ -353,16 +395,13 @@ class AppRepository(private val context: Context) {
                 convocazioneLocation = parsed.convocazioneLocation,
                 convocazioneMotivo = parsed.convocazioneMotivo
             )
-        } catch (e: IOException) {
-            val errorMsg = "Network Error: ${e.message}"
-            val history = StatusHistory(
-                portalType = "PORTALE",
-                statusText = "Errore di rete",
+        } catch (e: Exception) {
+            CheckResult(
                 isSuccess = false,
-                details = errorMsg
+                statusText = PORTAL_UNREACHABLE_MSG,
+                details = e.message ?: "Timeout / Connessione assente",
+                statusCode = StatusCode.PORTAL_UNREACHABLE
             )
-            historyDao.insert(history)
-            CheckResult(false, "Errore di rete. Controlla la tua connessione.", "")
         }
     }
 
@@ -436,11 +475,19 @@ class AppRepository(private val context: Context) {
 
         if (statoAttuale.isBlank() && codiceIstanza.isBlank()) {
             val msgStatus = extractElementTextById(html, "MsgStatus")
-            return ParsedStatus(
-                statusText = "Nessuna istanza trovata",
-                details = msgStatus.ifBlank { "Nessun dettaglio istanza presente per questo account." },
-                statusCode = StatusCode.NOT_FOUND
-            )
+            return if (msgStatus.isNotBlank()) {
+                ParsedStatus(
+                    statusText = "Nessuna istanza trovata",
+                    details = msgStatus,
+                    statusCode = StatusCode.NOT_FOUND
+                )
+            } else {
+                ParsedStatus(
+                    statusText = PORTAL_UNREACHABLE_MSG,
+                    details = PORTAL_UNREACHABLE_MSG,
+                    statusCode = StatusCode.PORTAL_UNREACHABLE
+                )
+            }
         }
 
         val statusSummary = if (statoAttuale.isNotBlank()) {
@@ -508,13 +555,10 @@ class AppRepository(private val context: Context) {
                 )
             }
             text.contains("non è presente in archivio", ignoreCase = true) ||
-            text.contains("non presente in archivio", ignoreCase = true) ||
-            text.contains("non presente", ignoreCase = true) ||
-            text.contains("nessun risultato", ignoreCase = true) ||
-            text.contains("non trovato", ignoreCase = true) -> {
+            text.contains("non presente in archivio", ignoreCase = true) -> {
                 ParsedStatus(
                     "Non presente in archivio",
-                    "Il documento di soggiorno non è presente in archivio.",
+                    "Il documento di soggiorno non è ancora presente nell'archivio pubblico Polizia di Stato.",
                     StatusCode.NOT_FOUND
                 )
             }
@@ -540,9 +584,9 @@ class AppRepository(private val context: Context) {
             }
             else -> {
                 ParsedStatus(
-                    "Non presente in archivio",
-                    "Il documento di soggiorno non è presente in archivio.",
-                    StatusCode.NOT_FOUND
+                    PORTAL_UNREACHABLE_MSG,
+                    PORTAL_UNREACHABLE_MSG,
+                    StatusCode.PORTAL_UNREACHABLE
                 )
             }
         }
@@ -576,10 +620,12 @@ class AppRepository(private val context: Context) {
     )
 
     enum class StatusCode {
-        READY, PROCESSING, NOT_FOUND, UNKNOWN
+        READY, PROCESSING, NOT_FOUND, PORTAL_UNREACHABLE, UNKNOWN
     }
 
     companion object {
+        const val PORTAL_UNREACHABLE_MSG =
+            "Il portale ministeriale è momentaneamente in manutenzione o non raggiungibile. Nessuna modifica rilevata sulla tua pratica."
         private const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
