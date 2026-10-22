@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.background.WorkScheduler
+import com.example.background.CheckInterval
 import com.example.data.AppRepository
 import com.example.data.UserCredentials
 import kotlinx.coroutines.flow.Flow
@@ -123,6 +124,31 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
         prefs.getStringSet("checked_docs", emptySet()) ?: emptySet()
     )
     val checkedDocs: StateFlow<Set<String>> = _checkedDocs.asStateFlow()
+
+    private val _syncInterval = MutableStateFlow(WorkScheduler.getSavedInterval(application))
+    val syncInterval: StateFlow<CheckInterval> = _syncInterval.asStateFlow()
+
+    fun updateSyncInterval(newInterval: CheckInterval) {
+        _syncInterval.value = newInterval
+        WorkScheduler.saveIntervalAndReschedule(getApplication(), newInterval)
+    }
+
+    fun applyScannedReceipt(data: com.example.util.ReceiptData) {
+        if (data.fullName.isNotBlank()) formFullName.value = data.fullName
+        if (data.userId.isNotBlank()) formUserId.value = data.userId
+        if (data.password.isNotBlank()) {
+            formPassword.value = data.password
+            if (formNumeroAssicurata.value.isBlank()) {
+                formNumeroAssicurata.value = data.numeroAssicurata.ifBlank { data.password.replace("-", "").replace(" ", "").trim() }
+            }
+        }
+        if (data.numeroAssicurata.isNotBlank() && formNumeroAssicurata.value.isBlank()) {
+            formNumeroAssicurata.value = data.numeroAssicurata
+        }
+        if (data.numeroPratica.isNotBlank()) {
+            formNumeroPratica.value = data.numeroPratica
+        }
+    }
 
     init {
         // Resume any active 60-second cooldown across app restarts
@@ -435,6 +461,10 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
                         if (successCount > 0) {
                             detailParts.add("Archivio Polizia di Stato: ${AppRepository.PORTAL_UNREACHABLE_MSG}")
                         }
+                    } else if (polResult.statusCode == AppRepository.StatusCode.NOT_FOUND) {
+                        successCount++
+                        statusParts.add("Questura: ${polResult.statusText}")
+                        detailParts.add("Polizia di Stato: ${polResult.details}")
                     } else {
                         errorCount++
                         val polInfo = "Archivio Questura (Polizia di Stato): ${polResult.statusText}"
@@ -453,25 +483,25 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
                             detailsText = detailParts.joinToString("\n\n")
                         )
                     }
+                    errorCount > 0 -> {
+                        _checkState.value = CheckUiState.Error(
+                            errorMessage = errorParts.joinToString("\n\n").ifBlank { "Credenziali o codice non riconosciuti. Verifica i dati inseriti." }
+                        )
+                    }
                     portalUnreachableCount > 0 -> {
                         _checkState.value = CheckUiState.PortalUnreachable(
                             message = AppRepository.PORTAL_UNREACHABLE_MSG
                         )
                     }
-                    errorCount > 0 -> {
-                        _checkState.value = CheckUiState.PortalUnreachable(
-                            message = AppRepository.PORTAL_UNREACHABLE_MSG
-                        )
-                    }
                     else -> {
-                        _checkState.value = CheckUiState.PortalUnreachable(
-                            message = AppRepository.PORTAL_UNREACHABLE_MSG
+                        _checkState.value = CheckUiState.Error(
+                            errorMessage = "Nessun dato trovato per i parametri specificati. Controlla User ID o Password."
                         )
                     }
                 }
             } catch (e: Exception) {
-                _checkState.value = CheckUiState.PortalUnreachable(
-                    message = AppRepository.PORTAL_UNREACHABLE_MSG
+                _checkState.value = CheckUiState.Error(
+                    errorMessage = e.localizedMessage ?: "Errore durante la verifica dello stato."
                 )
             }
         }

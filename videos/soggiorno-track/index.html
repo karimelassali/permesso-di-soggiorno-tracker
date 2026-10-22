@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Soggiorno Track — Official Launch Film with Real Assets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0B132B; /* App's Official DarkBackground */
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        color: #F8FAFC;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: radial-gradient(circle at 50% 30%, #162447 0%, #0B132B 80%);
+        perspective: 1400px;
+      }
+
+      /* Official Italian Tricolore Top Hairline */
+      .tricolore-hairline {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        display: flex;
+        z-index: 100;
+      }
+      .th-green { flex: 1; background: #008C45; box-shadow: 0 0 16px rgba(0, 140, 69, 0.8); }
+      .th-white { flex: 1; background: #FFFFFF; box-shadow: 0 0 16px rgba(255, 255, 255, 0.8); }
+      .th-red   { flex: 1; background: #CD212A; box-shadow: 0 0 16px rgba(205, 33, 42, 0.8); }
+
+      /* Technical Grid & Italian Atmosphere Glows */
+      .tech-grid {
+        position: absolute;
+        inset: 0;
+        background-size: 72px 72px;
+        background-image: 
+          linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 85%);
+        pointer-events: none;
+        z-index: 1;
+      }
+      .ambient-glow {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(140px);
+        pointer-events: none;
+        z-index: 2;
+        opacity: 0.28;
+      }
+      .glow-green { width: 900px; height: 900px; background: #008C45; top: -200px; left: -100px; }
+      .glow-red   { width: 750px; height: 750px; background: #CD212A; bottom: -200px; right: -50px; opacity: 0.2; }
+
+      /* Header HUD */
+      .header-hud {
+        position: absolute;
+        top: 36px;
+        left: 70px;
+        right: 70px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 50;
+      }
+      .brand-chip {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: rgba(28, 37, 65, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 8px 20px;
+        border-radius: 9999px;
+        backdrop-filter: blur(20px);
+      }
+      .brand-icon-img {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        object-fit: cover;
+      }
+      .brand-text {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: #F8FAFC;
+      }
+      .meta-tag {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: #86EFAC;
+        background: rgba(0, 140, 69, 0.15);
+        border: 1px solid rgba(0, 140, 69, 0.35);
+        padding: 6px 14px;
+        border-radius: 9999px;
+      }
+
+      /* Scene Containers */
+      .scene {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        transform-style: preserve-3d;
+      }
+
+      /* Big Typography */
+      .linear-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 6px 16px;
+        border-radius: 9999px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #CBD5E1;
+        margin-bottom: 20px;
+        backdrop-filter: blur(12px);
+      }
+      .badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .badge-dot-green { background: #008C45; box-shadow: 0 0 10px #008C45; }
+      .badge-dot-red   { background: #CD212A; box-shadow: 0 0 10px #CD212A; }
+
+      .headline-display {
+        font-size: 68px;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+        line-height: 1.1;
+        text-align: center;
+        color: #FFFFFF;
+        max-width: 1280px;
+        margin-bottom: 20px;
+      }
+      .headline-sub {
+        font-size: 20px;
+        font-weight: 400;
+        color: #94A3B8;
+        text-align: center;
+        max-width: 850px;
+        line-height: 1.5;
+        margin-bottom: 40px;
+      }
+
+      /* Realistic Smartphone Frame Mockup */
+      .phone-stage {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 48px;
+        margin-top: 10px;
+      }
+      .phone-chassis {
+        width: 360px;
+        height: 720px;
+        background: #000000;
+        border-radius: 44px;
+        padding: 10px;
+        border: 3px solid #2D3748;
+        box-shadow: 
+          0 0 0 1px rgba(255, 255, 255, 0.12),
+          0 30px 90px rgba(0, 0, 0, 0.8),
+          0 0 60px rgba(0, 140, 69, 0.2);
+        position: relative;
+        overflow: hidden;
+      }
+      .phone-notch {
+        position: absolute;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 18px;
+        background: #000000;
+        border-radius: 9999px;
+        z-index: 25;
+      }
+      .phone-screen-container {
+        width: 100%;
+        height: 100%;
+        border-radius: 34px;
+        overflow: hidden;
+        position: relative;
+        background: #F5F7F6;
+      }
+      .app-screenshot-img {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      .phone-glare {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0.12) 50%, transparent 55%);
+        pointer-events: none;
+        z-index: 20;
+      }
+
+      /* Callout Highlights flanking the phone */
+      .callout-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        width: 420px;
+      }
+      .feature-pill-card {
+        background: rgba(28, 37, 65, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        padding: 24px;
+        backdrop-filter: blur(24px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+      }
+      .fpc-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #F8FAFC;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .fpc-sub {
+        font-size: 13px;
+        color: #94A3B8;
+        line-height: 1.5;
+      }
+
+      /* Scene 1 Terminals */
+      .clash-stage {
+        display: flex;
+        gap: 36px;
+        align-items: center;
+      }
+      .clash-card {
+        width: 460px;
+        background: rgba(28, 37, 65, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 28px;
+        backdrop-filter: blur(24px);
+        box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+      }
+      .card-chip-err {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #FCA5A5;
+        background: rgba(205, 33, 42, 0.18);
+        border: 1px solid rgba(205, 33, 42, 0.35);
+        padding: 4px 10px;
+        border-radius: 6px;
+        display: inline-block;
+        margin-top: 12px;
+      }
+
+      /* Scene 4 Finale */
+      .hero-app-icon {
+        width: 110px;
+        height: 110px;
+        border-radius: 28px;
+        box-shadow: 0 0 60px rgba(0, 140, 69, 0.5), 0 25px 50px rgba(0,0,0,0.8);
+        margin-bottom: 28px;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+      }
+      .spec-pill-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 40px;
+      }
+      .spec-pill-item {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 10px 22px;
+        border-radius: 9999px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #E2E8F0;
+        backdrop-filter: blur(10px);
+      }
+      .hero-cta-btn {
+        background: linear-gradient(90deg, #008C45 0%, #15803D 100%);
+        color: #FFFFFF;
+        font-size: 20px;
+        font-weight: 700;
+        padding: 18px 50px;
+        border-radius: 9999px;
+        box-shadow: 0 10px 40px rgba(0, 140, 69, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .footer-hud {
+        position: absolute;
+        bottom: 30px;
+        left: 70px;
+        right: 70px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #64748B;
+        z-index: 50;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="15"
+      data-width="1920"
+      data-height="1080"
+      data-fps="30"
+    >
+      <!-- 9-Channel Audio Engine -->
+      <audio id="audio-bgm" class="clip" src="audio/bgm-tech-pulse.mp3" data-start="0" data-duration="15" data-volume="0.85"></audio>
+      <audio id="sfx-intro-impact" class="clip" src="audio/sfx/impact-bass-1.mp3" data-start="0.1" data-duration="2.1" data-volume="0.9"></audio>
+      <audio id="sfx-glitch" class="clip" src="audio/sfx/glitch-1.mp3" data-start="1.4" data-duration="1.6" data-volume="0.65"></audio>
+      <audio id="sfx-whoosh-hero" class="clip" src="audio/sfx/whoosh-cinematic.mp3" data-start="3.3" data-duration="2.0" data-volume="0.85"></audio>
+      <audio id="sfx-pop" class="clip" src="audio/sfx/pop.mp3" data-start="4.6" data-duration="0.6" data-volume="0.75"></audio>
+      <audio id="sfx-notify" class="clip" src="audio/sfx/notification.mp3" data-start="7.8" data-duration="1.5" data-volume="0.8"></audio>
+      <audio id="sfx-riser" class="clip" src="audio/sfx/riser.mp3" data-start="9.6" data-duration="2.6" data-volume="0.8"></audio>
+      <audio id="sfx-climax" class="clip" src="audio/sfx/impact-bass-2.mp3" data-start="11.5" data-duration="2.6" data-volume="1.0"></audio>
+      <audio id="sfx-sparkle" class="clip" src="audio/sfx/sparkle.mp3" data-start="12.8" data-duration="1.8" data-volume="0.7"></audio>
+
+      <!-- Background Architecture -->
+      <div class="tech-grid"></div>
+      <div class="ambient-glow glow-green"></div>
+      <div class="ambient-glow glow-red"></div>
+
+      <!-- Tricolore Accent Hairline -->
+      <div class="tricolore-hairline">
+        <div class="th-green"></div>
+        <div class="th-white"></div>
+        <div class="th-red"></div>
+      </div>
+
+      <!-- Navigation Header -->
+      <div class="header-hud">
+        <div class="brand-chip">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(135deg, #008C45 0%, #15803D 100%); display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow: 0 0 10px rgba(0, 140, 69, 0.4);">🇮🇹</div>
+          <span class="brand-text">Soggiorno Track</span>
+        </div>
+        <div class="meta-tag">🇮🇹 Official Immigration Companion</div>
+      </div>
+
+      <!-- =========================================
+           SCENE 1: The Problem (0.0s - 3.5s)
+           ========================================= -->
+      <div id="scene-1" class="scene clip" data-start="0" data-duration="3.8" data-track-index="0">
+        <div class="linear-badge" id="s1-badge">
+          <span class="badge-dot badge-dot-red"></span>
+          The Italian Immigration Problem
+        </div>
+
+        <h1 class="headline-display" id="s1-heading">
+          Tracking your Permesso di Soggiorno<br />
+          <span style="background: linear-gradient(90deg, #F87171, #FCA5A5); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">shouldn't take hours across two websites.</span>
+        </h1>
+
+        <p class="headline-sub" id="s1-sub">
+          Poste Italiane ELI2 codes. Polizia di Stato Questura portals. Session timeouts.
+        </p>
+
+        <div class="clash-stage" id="s1-clash">
+          <!-- Card 1: Portale Immigrazione -->
+          <div class="clash-card" id="term-1">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #94A3B8;">portaleimmigrazione.it</div>
+            <div style="font-size: 15px; margin-top: 10px; color: #E2E8F0;">"Username o password non validi. Verificare ricevuta assicurata (12 cifre)..."</div>
+            <div class="card-chip-err">ERR_SESSION_TIMEOUT</div>
+          </div>
+
+          <div style="font-size: 20px; font-weight: 800; color: #64748B;">VS</div>
+
+          <!-- Card 2: Polizia di Stato -->
+          <div class="clash-card" id="term-2">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #94A3B8;">poliziadistato.it/questura</div>
+            <div style="font-size: 15px; margin-top: 10px; color: #E2E8F0;">"Il documento di soggiorno non è presente in archivio. Verificare tra 30 giorni."</div>
+            <div class="card-chip-err" style="color: #FBBF24; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3);">NON IN ARCHIVIO</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =========================================
+           SCENE 2: The Solution / REAL APP BENTO (3.5s - 7.5s)
+           ========================================= -->
+      <div id="scene-2" class="scene clip" data-start="3.5" data-duration="4.3" data-track-index="1">
+        <div class="linear-badge" id="s2-badge">
+          <span class="badge-dot badge-dot-green"></span>
+          Live Native Jetpack Compose Interface
+        </div>
+
+        <h2 class="headline-display" id="s2-heading" style="font-size: 54px; margin-bottom: 8px;">
+          Both Portals. One Bento Dashboard.
+        </h2>
+        <p class="headline-sub" id="s2-sub" style="margin-bottom: 24px;">
+          Synchronized status tracking with the app's real Material 3 Bento architecture.
+        </p>
+
+        <div class="phone-stage">
+          <!-- Left Callout Stack -->
+          <div class="callout-stack" id="s2-callouts-left">
+            <div class="feature-pill-card">
+              <div class="fpc-title">🟢 Pronto per la Consegna</div>
+              <div class="fpc-sub">Instant pickup notification as soon as the Questura updates your smartcard.</div>
+            </div>
+            <div class="feature-pill-card">
+              <div class="fpc-title">🇮🇹 5-Milestone Visual Stepper</div>
+              <div class="fpc-sub">Tracks Poste Kit, Fingerprints, Dossier Investigation, Production & Delivery.</div>
+            </div>
+          </div>
+
+          <!-- Phone Chassis displaying REAL Bento Screenshot -->
+          <div class="phone-chassis" id="phone-hero">
+            <div class="phone-notch"></div>
+            <div class="phone-screen-container">
+              <img src="assets/real_bento_dashboard.png" alt="Real App Bento Dashboard" class="app-screenshot-img" />
+            </div>
+            <div class="phone-glare"></div>
+          </div>
+
+          <!-- Right Callout Stack -->
+          <div class="callout-stack" id="s2-callouts-right">
+            <div class="feature-pill-card">
+              <div class="fpc-title">⚡ Dual-Portal Sync Engine</div>
+              <div class="fpc-sub">Reconciles Poste Italiane Step 3 and Polizia di Stato Questura servers simultaneously.</div>
+            </div>
+            <div class="feature-pill-card">
+              <div class="fpc-title">🔒 100% Offline & Encrypted</div>
+              <div class="fpc-sub">Zero intermediate proxy servers. All credentials stored in Room SQLite.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =========================================
+           SCENE 3: Sofia AI & Vault (7.5s - 11.5s)
+           ========================================= -->
+      <div id="scene-3" class="scene clip" data-start="7.5" data-duration="4.3" data-track-index="2">
+        <div class="linear-badge" id="s3-badge">
+          <span class="badge-dot badge-dot-green"></span>
+          Intelligent Tools & Dark Theme
+        </div>
+
+        <h2 class="headline-display" id="s3-heading" style="font-size: 54px; margin-bottom: 8px;">
+          Meet Sofia AI & The Document Vault
+        </h2>
+        <p class="headline-sub" id="s3-sub" style="margin-bottom: 24px;">
+          Translates immigration legalese and tracks mandatory papers before Questura appointments.
+        </p>
+
+        <div class="phone-stage">
+          <!-- Phone 1: Real AI & Vault Screen -->
+          <div class="phone-chassis" id="phone-vault">
+            <div class="phone-notch"></div>
+            <div class="phone-screen-container">
+              <img src="assets/real_ai_vault.png" alt="Real App AI & Vault" class="app-screenshot-img" />
+            </div>
+            <div class="phone-glare"></div>
+          </div>
+
+          <!-- Middle Feature Card -->
+          <div class="callout-stack" style="width: 440px;">
+            <div class="feature-pill-card" style="border-left: 3px solid #008C45;">
+              <div class="fpc-title">🤖 Sofia AI Bureaucracy Advisor</div>
+              <div class="fpc-sub">Decodes official Italian immigration letters, rejection warnings, and Step 3 messages in 5 languages.</div>
+            </div>
+            <div class="feature-pill-card" style="border-left: 3px solid #CD212A;">
+              <div class="fpc-title">🗂️ Interactive Document Checklist</div>
+              <div class="fpc-sub">Stateful vault tracking passport, 4 photos, marca da bollo €16, and original postal receipts.</div>
+            </div>
+          </div>
+
+          <!-- Phone 2: Real Dark Theme Bento Screen -->
+          <div class="phone-chassis" id="phone-dark">
+            <div class="phone-notch"></div>
+            <div class="phone-screen-container" style="background:#0B132B;">
+              <img src="assets/real_bento_dashboard_dark.png" alt="Real App Dark Theme" class="app-screenshot-img" />
+            </div>
+            <div class="phone-glare"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =========================================
+           SCENE 4: Finale & CTA (11.5s - 15.0s)
+           ========================================= -->
+      <div id="scene-4" class="scene clip" data-start="11.5" data-duration="3.5" data-track-index="3">
+        <!-- Official Crest Badge -->
+        <div id="s4-crest" style="width: 104px; height: 104px; border-radius: 28px; background: linear-gradient(135deg, #1C2541 0%, #0B132B 100%); border: 2px solid rgba(0, 140, 69, 0.4); display: flex; align-items: center; justify-content: center; font-size: 52px; box-shadow: 0 0 60px rgba(0, 140, 69, 0.5), 0 25px 50px rgba(0,0,0,0.8); margin-bottom: 24px;">🇮🇹</div>
+
+        <h1 class="headline-display" id="s4-heading" style="font-size: 74px; margin-bottom: 12px;">
+          Soggiorno Track
+        </h1>
+
+        <p class="headline-sub" id="s4-sub" style="font-size: 24px; color: #E2E8F0; margin-bottom: 28px;">
+          The residence permit tracker built for peace of mind.
+        </p>
+
+        <div class="spec-pill-row" id="s4-specs">
+          <div class="spec-pill-item">🇮🇹 Jetpack Compose Bento</div>
+          <div class="spec-pill-item">🔒 100% Offline Room SQLite</div>
+          <div class="spec-pill-item">🤖 Sofia AI Immigrant Copilot</div>
+          <div class="spec-pill-item">⚡ WorkManager Background Checks</div>
+        </div>
+
+        <div class="hero-cta-btn" id="s4-cta">
+          <span>Track With Peace Of Mind</span>
+          <span>→</span>
+        </div>
+      </div>
+
+      <!-- Footer HUD -->
+      <div class="footer-hud">
+        <div>SOGGIORNO TRACK · 4K 60FPS MASTER · 9-CHANNEL AUDIO</div>
+        <div>NATIVE ANDROID · JETPACK COMPOSE · MATERIAL 3</div>
+      </div>
+    </div>
+
+    <!-- GSAP Master Animation Choreography -->
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Initial States
+      gsap.set(["#scene-1", "#scene-2", "#scene-3", "#scene-4"], { opacity: 0, pointerEvents: "none" });
+
+      // ==========================================
+      // SCENE 1: The Problem (0.0s - 3.5s)
+      // ==========================================
+      tl.set("#scene-1", { opacity: 1 }, 0);
+      tl.fromTo("#s1-badge", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 0.1);
+      tl.fromTo("#s1-heading", { opacity: 0, y: 30, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: "power3.out" }, 0.3);
+      tl.fromTo("#s1-sub", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.5);
+
+      tl.fromTo("#term-1", 
+        { opacity: 0, x: -100, rotationY: 15, scale: 0.9 }, 
+        { opacity: 1, x: 0, rotationY: 0, scale: 1, duration: 0.8, ease: "power4.out" }, 
+        0.8
+      );
+      tl.fromTo("#term-2", 
+        { opacity: 0, x: 100, rotationY: -15, scale: 0.9 }, 
+        { opacity: 1, x: 0, rotationY: 0, scale: 1, duration: 0.8, ease: "power4.out" }, 
+        1.0
+      );
+
+      // Deterministic Error Glitch Shake
+      tl.fromTo("#s1-clash", 
+        { x: -6 }, 
+        { x: 6, duration: 0.06, repeat: 5, yoyo: true, ease: "sine.inOut" }, 
+        1.4
+      );
+      tl.set("#s1-clash", { x: 0 }, 1.8);
+
+      // Scene 1 Outro
+      tl.to("#scene-1", {
+        opacity: 0,
+        scale: 0.92,
+        filter: "blur(12px)",
+        duration: 0.6,
+        ease: "power2.in"
+      }, 3.1);
+
+      // ==========================================
+      // SCENE 2: The Solution / REAL APP BENTO (3.5s - 7.5s)
+      // ==========================================
+      tl.set("#scene-2", { opacity: 1 }, 3.5);
+      tl.fromTo("#s2-badge", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.5)" }, 3.5);
+      tl.fromTo("#s2-heading", { opacity: 0, y: 30, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: "power3.out" }, 3.7);
+      tl.fromTo("#s2-sub", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 3.9);
+
+      // Real Phone Entrance with 3D Pop
+      tl.fromTo("#phone-hero", 
+        { opacity: 0, y: 120, rotationX: 20, scale: 0.85 }, 
+        { opacity: 1, y: 0, rotationX: 0, scale: 1, duration: 1.0, ease: "back.out(1.3)" }, 
+        4.0
+      );
+      tl.fromTo("#s2-callouts-left", 
+        { opacity: 0, x: -60 }, 
+        { opacity: 1, x: 0, duration: 0.8, ease: "power3.out" }, 
+        4.3
+      );
+      tl.fromTo("#s2-callouts-right", 
+        { opacity: 0, x: 60 }, 
+        { opacity: 1, x: 0, duration: 0.8, ease: "power3.out" }, 
+        4.4
+      );
+
+      // Gentle floating motion on the phone
+      tl.to("#phone-hero", { y: -12, duration: 1.4, repeat: 1, yoyo: true, ease: "sine.inOut" }, 5.0);
+
+      // Scene 2 Outro
+      tl.to("#scene-2", {
+        opacity: 0,
+        y: -40,
+        filter: "blur(12px)",
+        duration: 0.6,
+        ease: "power2.in"
+      }, 7.1);
+
+      // ==========================================
+      // SCENE 3: Sofia AI & Vault (7.5s - 11.5s)
+      // ==========================================
+      tl.set("#scene-3", { opacity: 1 }, 7.5);
+      tl.fromTo("#s3-badge", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 7.5);
+      tl.fromTo("#s3-heading", { opacity: 0, y: 30, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: "power3.out" }, 7.7);
+      tl.fromTo("#s3-sub", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 7.9);
+
+      // Dual Phone reveal
+      tl.fromTo("#phone-vault", 
+        { opacity: 0, x: -100, rotationY: 15, scale: 0.88 }, 
+        { opacity: 1, x: 0, rotationY: 0, scale: 1, duration: 0.9, ease: "power4.out" }, 
+        8.1
+      );
+      tl.fromTo("#phone-dark", 
+        { opacity: 0, x: 100, rotationY: -15, scale: 0.88 }, 
+        { opacity: 1, x: 0, rotationY: 0, scale: 1, duration: 0.9, ease: "power4.out" }, 
+        8.3
+      );
+
+      // Scene 3 Outro
+      tl.to("#scene-3", {
+        opacity: 0,
+        scale: 1.05,
+        filter: "blur(14px)",
+        duration: 0.6,
+        ease: "power2.in"
+      }, 11.1);
+
+      // ==========================================
+      // SCENE 4: Finale & CTA (11.5s - 15.0s)
+      // ==========================================
+      tl.set("#scene-4", { opacity: 1 }, 11.5);
+      tl.fromTo("#s4-crest", 
+        { opacity: 0, scale: 0.3, rotation: -20 }, 
+        { opacity: 1, scale: 1, rotation: 0, duration: 0.8, ease: "back.out(1.8)" }, 
+        11.5
+      );
+      tl.fromTo("#s4-heading", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 11.8);
+      tl.fromTo("#s4-sub", { opacity: 0, y: 25 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 12.0);
+
+      tl.fromTo("#s4-specs .spec-pill-item", 
+        { opacity: 0, y: 20 }, 
+        { opacity: 1, y: 0, stagger: 0.08, duration: 0.5, ease: "power2.out" }, 
+        12.2
+      );
+
+      tl.fromTo("#s4-cta", 
+        { opacity: 0, scale: 0.88 }, 
+        { opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.6)" }, 
+        12.6
+      );
+
+      tl.to("#s4-cta", {
+        scale: 1.03,
+        boxShadow: "0 15px 50px rgba(0, 140, 69, 0.7)",
+        duration: 0.8,
+        repeat: 1,
+        yoyo: true,
+        ease: "sine.inOut"
+      }, 13.3);
+
+      // Register Master Timeline
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

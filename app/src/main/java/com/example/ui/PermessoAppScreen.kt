@@ -1,10 +1,17 @@
 package com.example.ui
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
+import java.io.File
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
+import com.example.background.CheckInterval
+import com.example.util.ReceiptScannerHelper
+import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -1137,106 +1144,201 @@ fun BentoPrimaryStatusCard(credentials: UserCredentials?, selectedLanguageCode: 
     val poliziaStatus = credentials?.lastPoliziaStatus ?: "No checks yet"
     val portaleStatus = credentials?.lastPortaleStatus ?: "No checks yet"
 
-    val isPoliziaNotFound = poliziaStatus.contains("Non presente", ignoreCase = true) ||
-            poliziaStatus.contains("non trovato", ignoreCase = true)
+    val isPoliziaReady = poliziaStatus.contains("pronto", ignoreCase = true) || poliziaStatus.contains("consegna", ignoreCase = true)
+    val isPoliziaInProcessing = poliziaStatus.contains("trattazione", ignoreCase = true)
+    val isPoliziaNotFound = poliziaStatus.contains("non presente", ignoreCase = true) || poliziaStatus.contains("non trovato", ignoreCase = true)
 
-    val combinedStatus = when {
-        hasPolizia && hasPortale -> {
-            if (portaleStatus != "No checks yet" && (poliziaStatus == "No checks yet" || isPoliziaNotFound)) {
-                portaleStatus
-            } else if (poliziaStatus != "No checks yet" && portaleStatus != "No checks yet") {
-                val shortPolizia = if (poliziaStatus.length > 20) poliziaStatus.take(17) + "..." else poliziaStatus
-                val shortPortale = if (portaleStatus.length > 20) portaleStatus.take(17) + "..." else portaleStatus
-                "$shortPortale | $shortPolizia"
-            } else if (portaleStatus != "No checks yet") {
-                portaleStatus
-            } else if (poliziaStatus != "No checks yet") {
-                poliziaStatus
-            } else {
-                Localization.string("awaiting_check", selectedLanguageCode)
-            }
-        }
-        hasPortale -> {
-            if (portaleStatus != "No checks yet") portaleStatus else Localization.string("awaiting_check", selectedLanguageCode)
-        }
-        hasPolizia -> {
-            if (poliziaStatus != "No checks yet") poliziaStatus else Localization.string("awaiting_check", selectedLanguageCode)
-        }
-        else -> Localization.string("config_required", selectedLanguageCode)
-    }
-
-    val statusLabel = if (credentials == null || (!hasPolizia && !hasPortale)) {
-        Localization.string("tracking_to_configure", selectedLanguageCode)
-    } else {
-        combinedStatus
-    }
+    val isPortaleReady = portaleStatus.contains("consegna", ignoreCase = true) || portaleStatus.contains("pronto", ignoreCase = true)
+    val isPortalePreistruttoria = portaleStatus.contains("preistruttoria", ignoreCase = true)
 
     val isActiveTracking = credentials != null && (hasPolizia || hasPortale)
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(160.dp),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = BentoCardPrimaryBg)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, BentoCardBorder)
     ) {
         Column(
             modifier = Modifier
-                .padding(20.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(18.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Header: Live Status & Tracking Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Icon box
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(BentoBadgeGreenBg),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Description,
-                        contentDescription = null,
-                        tint = BentoCardPrimaryText,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(BentoBadgeGreenBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = null,
+                            tint = BentoCardPrimaryText,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = Localization.string("document_status", selectedLanguageCode),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BentoTextHeading
+                        )
+                        if (credentials != null && credentials.fullName.isNotBlank()) {
+                            Text(
+                                text = credentials.fullName,
+                                fontSize = 11.sp,
+                                color = BentoTextSecondary
+                            )
+                        }
+                    }
                 }
 
-                // Active Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(100.dp))
-                        .background(BentoBackground)
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                Surface(
+                    shape = RoundedCornerShape(100.dp),
+                    color = if (isActiveTracking) ItalianGreenLight else BentoCardBorder.copy(alpha = 0.3f)
                 ) {
                     Text(
-                        text = if (isActiveTracking) Localization.string("tracking_active", selectedLanguageCode) else Localization.string("tracking_to_configure", selectedLanguageCode),
-                        color = BentoBadgeGreen,
+                        text = if (isActiveTracking) "• " + Localization.string("tracking_active", selectedLanguageCode) else Localization.string("tracking_to_configure", selectedLanguageCode),
+                        color = if (isActiveTracking) ItalianGreen else BentoTextSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
             }
 
-            Column {
-                Text(
-                    text = Localization.string("document_status", selectedLanguageCode),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = BentoTextSecondary
-                )
-                Text(
-                    text = statusLabel,
-                    fontSize = 20.sp, // Slightly smaller to accommodate dual status elegantly
-                    fontWeight = FontWeight.Bold,
-                    color = BentoCardPrimaryText
-                )
+            HorizontalDivider(color = BentoCardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+            // Dual Portal Live Cards Grid
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Portal 1: Portale Immigrazione
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFFF0F9FF),
+                    border = BorderStroke(1.dp, Color(0xFF0284C7).copy(alpha = 0.3f))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isPortaleReady) ItalianGreen else Color(0xFF0284C7))
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Portale Immigrazione",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0369A1),
+                                maxLines = 1
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        val portaleDisplay = when {
+                            !hasPortale -> "Non configurato"
+                            portaleStatus == "No checks yet" -> "In attesa verifica"
+                            isPortalePreistruttoria -> "In Preistruttoria"
+                            isPortaleReady -> "Pronto per ritiro"
+                            else -> portaleStatus.substringBefore(" - ")
+                        }
+                        Text(
+                            text = portaleDisplay,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color(0xFF0C4A6E),
+                            maxLines = 2
+                        )
+                        if (credentials != null && credentials.codiceIstanza.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Istanza: ${credentials.codiceIstanza}",
+                                fontSize = 10.sp,
+                                color = Color(0xFF0284C7),
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+                }
+
+                // Portal 2: Polizia di Stato
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFFF0FDF4),
+                    border = BorderStroke(1.dp, ItalianGreen.copy(alpha = 0.3f))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        when {
+                                            isPoliziaReady -> ItalianGreen
+                                            isPoliziaInProcessing -> Color(0xFFEAB308)
+                                            isPoliziaNotFound -> Color(0xFFEF4444)
+                                            else -> BentoTextSecondary
+                                        }
+                                    )
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Polizia di Stato",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ItalianGreen,
+                                maxLines = 1
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        val poliziaDisplay = when {
+                            !hasPolizia -> "Non configurato"
+                            poliziaStatus == "No checks yet" -> "In attesa verifica"
+                            isPoliziaReady -> "Pronto Consegna"
+                            isPoliziaInProcessing -> "In Trattazione"
+                            isPoliziaNotFound -> "Non in archivio"
+                            else -> poliziaStatus
+                        }
+                        Text(
+                            text = poliziaDisplay,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = BentoTextHeading,
+                            maxLines = 2
+                        )
+                        val codeShown = credentials?.numeroPratica?.takeIf { it.isNotBlank() }
+                            ?: credentials?.numeroAssicurata?.takeIf { it.isNotBlank() }
+                            ?: ""
+                        if (codeShown.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Codice: $codeShown",
+                                fontSize = 10.sp,
+                                color = ItalianGreen,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -1997,6 +2099,184 @@ fun HistoryRecordItem(record: StatusHistory, selectedLanguageCode: String) {
     }
 }
 
+@Composable
+fun ReceiptAutoFillCard(
+    viewModel: PermessoViewModel,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var isScanning by remember { mutableStateOf(false) }
+
+    // Safe temporary URI creation for Camera capture via FileProvider
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        val uri = tempCameraUri
+        if (success && uri != null) {
+            isScanning = true
+            coroutineScope.launch {
+                val result = ReceiptScannerHelper.scanReceipt(context, uri)
+                isScanning = false
+                result.onSuccess { data ->
+                    viewModel.applyScannedReceipt(data)
+                    val details = buildString {
+                        if (data.fullName.isNotBlank()) append("• Nome: ${data.fullName}\n")
+                        if (data.userId.isNotBlank()) append("• User ID: ${data.userId}\n")
+                        if (data.password.isNotBlank()) append("• Password: ${data.password}\n")
+                        if (data.numeroAssicurata.isNotBlank()) append("• Assicurata: ${data.numeroAssicurata}\n")
+                        if (data.numeroPratica.isNotBlank()) append("• Polizia di Stato: ${data.numeroPratica}")
+                    }.trim()
+                    Toast.makeText(
+                        context,
+                        if (details.isNotBlank()) "Ricevuta elaborata con successo:\n$details" else "Ricevuta elaborata! Controlla i campi.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }.onFailure { err ->
+                    Toast.makeText(context, "Errore elaborazione: ${err.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            isScanning = true
+            coroutineScope.launch {
+                val result = ReceiptScannerHelper.scanReceipt(context, uri)
+                isScanning = false
+                result.onSuccess { data ->
+                    viewModel.applyScannedReceipt(data)
+                    val details = buildString {
+                        if (data.fullName.isNotBlank()) append("• Nome: ${data.fullName}\n")
+                        if (data.userId.isNotBlank()) append("• User ID: ${data.userId}\n")
+                        if (data.password.isNotBlank()) append("• Password: ${data.password}\n")
+                        if (data.numeroAssicurata.isNotBlank()) append("• Assicurata: ${data.numeroAssicurata}\n")
+                        if (data.numeroPratica.isNotBlank()) append("• Polizia di Stato: ${data.numeroPratica}")
+                    }.trim()
+                    Toast.makeText(
+                        context,
+                        if (details.isNotBlank()) "Ricevuta rilevata con successo:\n$details" else "Ricevuta elaborata! Controlla i campi.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }.onFailure { err ->
+                    Toast.makeText(context, "Errore scansione ricevuta: ${err.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, Color(0xFF0284C7).copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F9FF)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    color = Color(0xFF0284C7).copy(alpha = 0.15f),
+                    shape = CircleShape,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.DocumentScanner,
+                            contentDescription = null,
+                            tint = Color(0xFF0284C7),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Scansiona o Carica Ricevuta",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = Color(0xFF0C4A6E)
+                    )
+                    Text(
+                        text = "Estrae automaticamente Nome, User ID e Password dalla tua ricevuta postale Mod. 22A",
+                        fontSize = 11.sp,
+                        color = Color(0xFF0369A1),
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+
+            if (isScanning) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFF0284C7),
+                        trackColor = Color(0xFFBAE6FD)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Riconoscimento testo OCR in corso...",
+                        fontSize = 11.sp,
+                        color = Color(0xFF0369A1),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            val cacheDir = File(context.cacheDir, "camera_images").apply { mkdirs() }
+                            val tempFile = File.createTempFile("receipt_", ".jpg", cacheDir)
+                            val authority = "${context.packageName}.fileprovider"
+                            val uri = androidx.core.content.FileProvider.getUriForFile(context, authority, tempFile)
+                            tempCameraUri = uri
+                            cameraLauncher.launch(uri)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Impossibile avviare fotocamera: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f).height(42.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xFF0284C7)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF0284C7)),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Scatta Foto", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Button(
+                    onClick = { galleryLauncher.launch("image/*") },
+                    modifier = Modifier.weight(1f).height(42.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Carica File", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun PortalWebViewTab(
@@ -2081,12 +2361,13 @@ fun PortalWebViewTab(
                         }
                         return !!(userField || passField);
                     } else if (url.includes("poliziadistato.it")) {
-                        // Single input for Assicurata (10-12 digits) or Pratica (12 chars)
-                        const praticaField = document.querySelector('input[name*="pratica"], input[id*="pratica"], input[name*="numero"], input[id*="numero"], form input[type="text"]');
+                        // Accurately fill immigration practice field, strictly ignoring header search bar (#q)
+                        const praticaField = document.querySelector('form[name="lapratica"] input[name="pratica"], input#pratica, input[name="pratica"]:not(#q)');
                         if (praticaField) {
                             praticaField.value = '$assicurataOrPratica';
                             praticaField.dispatchEvent(new Event('input', { bubbles: true }));
                             praticaField.dispatchEvent(new Event('change', { bubbles: true }));
+                            praticaField.focus();
                             return true;
                         }
                     }
@@ -2175,10 +2456,16 @@ fun PortalWebViewTab(
                                 val helperJs = """
                                     (function() {
                                         var style = document.createElement('style');
-                                        style.innerHTML = 'body { padding-bottom: 220px !important; }';
+                                        style.innerHTML = 'body { padding-bottom: 120px !important; }';
                                         if (document.head) document.head.appendChild(style);
                                         
-                                        // On Portale Immigrazione startpage.aspx, accept cookie via __doPostBack so Conferma button is enabled
+                                        // 1. Polizia di Stato - auto-click cookie consent accept
+                                        var pdsCookieBtn = document.querySelector('.cc-btn, .cc-dismiss, .cc-allow, a.cc-btn, button.cc-btn');
+                                        if (pdsCookieBtn) {
+                                            try { pdsCookieBtn.click(); } catch(e){}
+                                        }
+
+                                        // 2. Portale Immigrazione - accept cookie via __doPostBack so Conferma button is enabled
                                         var portaleCookieBtn = document.getElementById('lnkAcceptCookie');
                                         var confermaBtn = document.getElementById('UC_LogIn1_btnConferma');
                                         if (portaleCookieBtn && confermaBtn && confermaBtn.disabled) {
@@ -2196,6 +2483,12 @@ fun PortalWebViewTab(
                                             confermaBtn.disabled = false;
                                             confermaBtn.removeAttribute('disabled');
                                         }
+
+                                        // 3. Auto-dismiss any other cookie banners and clean overlays
+                                        var banners = document.querySelectorAll('.cc-window, .cc-banner, #cookie-law-info-bar, div[class*="cookie"], div[id*="cookie"]');
+                                        for (var i = 0; i < banners.length; i++) {
+                                            banners[i].style.display = 'none';
+                                        }
                                         
                                         const url = window.location.href;
                                         if (url.includes("portaleimmigrazione.it") && '$userId'.length > 0 && '$password'.length > 0) {
@@ -2210,8 +2503,8 @@ fun PortalWebViewTab(
                                                 passField.dispatchEvent(new Event('input', { bubbles: true }));
                                             }
                                         } else if (url.includes("poliziadistato.it") && '$assicurataOrPratica'.length > 0) {
-                                            // Single input for Assicurata (10 digits) or Pratica (12 chars)
-                                            const praticaField = document.querySelector('input[name*="pratica"], input[id*="pratica"], input[name*="numero"], input[id*="numero"], form input[type="text"]');
+                                            // Accurately fill immigration practice field, strictly ignoring header search bar (#q)
+                                            const praticaField = document.querySelector('form[name="lapratica"] input[name="pratica"], input#pratica, input[name="pratica"]:not(#q)');
                                             if (praticaField && !praticaField.value) {
                                                 praticaField.value = '$assicurataOrPratica';
                                                 praticaField.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2303,52 +2596,6 @@ fun PortalWebViewTab(
                 update = { _ -> },
                 modifier = Modifier.fillMaxSize()
             )
-
-            // Custom floating action chip to manually force cookie removal and enable scroll on demand
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 24.dp, end = 16.dp)
-            ) {
-                FloatingActionButton(
-                    onClick = {
-                        webViewInstance?.evaluateJavascript("""
-                            (function() {
-                                // 1. Force remove all elements containing cookie or banner words
-                                var els = document.querySelectorAll('*');
-                                for (var i = 0; i < els.length; i++) {
-                                    var el = els[i];
-                                    var id = (el.id || '').toLowerCase();
-                                    var cls = (el.className || '');
-                                    if (typeof cls === 'string') cls = cls.toLowerCase();
-                                    else cls = '';
-                                    if (id.indexOf('cookie') !== -1 || cls.indexOf('cookie') !== -1 || id.indexOf('consent') !== -1 || cls.indexOf('consent') !== -1 || id.indexOf('banner') !== -1 || cls.indexOf('banner') !== -1) {
-                                        el.style.display = 'none';
-                                        try { el.parentNode.removeChild(el); } catch(e){}
-                                    }
-                                }
-                                // 2. Enable scrolling and scroll slightly to verify
-                                document.body.style.overflow = 'auto';
-                                document.documentElement.style.overflow = 'auto';
-                                document.body.style.paddingBottom = '220px';
-                            })()
-                        """.trimIndent(), null)
-                    },
-                    containerColor = ItalianRed,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.testTag("clean_cookies_fab")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Block, contentDescription = "Rimuovi Cookie", modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Nascondi Cookie 🍪", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
         }
     }
 }
@@ -2480,17 +2727,22 @@ fun CredentialsTab(
         }
 
         item {
+            ReceiptAutoFillCard(viewModel = viewModel)
+        }
+
+        item {
             SectionDividerHeader(
-                title = if (isEn) "Section 1 • Portale Immigrazione (Poste)" else "Sezione 1 • Portale Immigrazione (Kit Postale)",
-                subtitle = if (isEn) "Applicant name, Hologram User ID & Password (without dash)" else "Nome e Cognome, User ID (Ologramma) e Password (senza trattino)",
-                badgeText = "PORTALE",
-                icon = Icons.Default.AccountCircle,
+                title = if (isEn) "Official Receipt Credentials" else "Codici Ufficiali Ricevuta (Mod. 22A)",
+                subtitle = if (isEn) "Applicant name, User ID (top-right) and Password (top-left barcode)" else "Nome, User ID (in alto a destra) e Password (codice a barre a sinistra)",
+                badgeText = "DATI",
+                icon = Icons.Default.Badge,
                 accentColor = ItalianGreen
             )
         }
 
-        // Card Section 1: Dati Personali & Portale
         item {
+            var showAdvancedCreds by remember { mutableStateOf(false) }
+
             Card(
                 modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
                 colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
@@ -2499,42 +2751,51 @@ fun CredentialsTab(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.AccountCircle,
+                            imageVector = Icons.Default.Badge,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = ItalianGreen,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = Localization.string("portal_data_title", selectedLanguageCode),
+                            text = if (isEn) "Account Details" else "Credenziali di Accesso",
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
                             color = BentoTextHeading
                         )
                     }
 
-                    Text(
-                        text = Localization.string("portal_data_desc", selectedLanguageCode),
-                        fontSize = 12.sp,
-                        color = BentoTextSecondary
-                    )
-
                     OutlinedTextField(
                         value = fullName,
                         onValueChange = onFullNameChange,
-                        label = { Text(Localization.string("input_fullname", selectedLanguageCode)) },
-                        placeholder = { Text(Localization.string("input_fullname_placeholder", selectedLanguageCode)) },
+                        label = { Text("Nome e Cognome Intestatario") },
+                        placeholder = { Text("es. Karim El Assali") },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth().testTag("input_fullname")
                     )
 
+                    HorizontalDivider(color = BentoCardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                    // Sub-section A: Portale Immigrazione
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Language, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Portale Immigrazione (Poste Italiane)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = Color(0xFF0369A1)
+                        )
+                    }
+
                     OutlinedTextField(
                         value = userId,
                         onValueChange = onUserIdChange,
-                        label = { Text(Localization.string("input_userid", selectedLanguageCode)) },
-                        placeholder = { Text(Localization.string("input_userid_placeholder", selectedLanguageCode)) },
+                        label = { Text("User ID (12 Cifre)") },
+                        supportingText = { Text("In alto a destra sulla ricevuta (es. 550000133317)", fontSize = 11.sp, color = ItalianGreen) },
+                        placeholder = { Text("es. 550000133317") },
                         leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
@@ -2544,8 +2805,9 @@ fun CredentialsTab(
                     OutlinedTextField(
                         value = password,
                         onValueChange = onPasswordChange,
-                        label = { Text(Localization.string("input_password", selectedLanguageCode)) },
-                        placeholder = { Text(Localization.string("input_password_placeholder", selectedLanguageCode)) },
+                        label = { Text("Password (Codice a Barre)") },
+                        supportingText = { Text("In alto a sinistra sotto il codice a barre (es. 05598747694-1)", fontSize = 11.sp, color = ItalianGreen) },
+                        placeholder = { Text("es. 05598747694-1") },
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         trailingIcon = {
                             IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
@@ -2561,55 +2823,27 @@ fun CredentialsTab(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth().testTag("input_password")
                     )
-                }
-            }
-        }
 
-        item {
-            SectionDividerHeader(
-                title = if (isEn) "Section 2 • Polizia di Stato (Questura)" else "Sezione 2 • Polizia di Stato (Questura)",
-                subtitle = if (isEn) "Numero Assicurata or Numero Pratica for Questura database" else "Numero Assicurata o Numero Pratica per la banca dati Questura",
-                badgeText = "QUESTURA",
-                icon = Icons.Default.Verified,
-                accentColor = Color(0xFF7C3AED)
-            )
-        }
+                    HorizontalDivider(color = BentoCardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
 
-        // Card Section 2: Polizia di Stato
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    // Sub-section B: Polizia di Stato
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Verified,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(Icons.Default.Security, contentDescription = null, tint = ItalianGreen, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = Localization.string("polizia_tracking_title", selectedLanguageCode),
+                            text = "Polizia di Stato (Questura)",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
+                            fontSize = 13.sp,
                             color = BentoTextHeading
                         )
                     }
 
-                    Text(
-                        text = Localization.string("polizia_tracking_desc", selectedLanguageCode),
-                        fontSize = 12.sp,
-                        color = BentoTextSecondary
-                    )
-
                     OutlinedTextField(
                         value = numeroAssicurata,
                         onValueChange = onNumeroAssicurataChange,
-                        label = { Text(Localization.string("input_assicurata", selectedLanguageCode)) },
-                        placeholder = { Text(Localization.string("input_assicurata_placeholder", selectedLanguageCode)) },
+                        label = { Text("Numero Assicurata (12 Cifre)") },
+                        supportingText = { Text("Di solito coincide con la password senza trattino finale (es. 055987476941)", fontSize = 11.sp, color = BentoTextSecondary) },
+                        placeholder = { Text("es. 055987476941") },
                         leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
@@ -2619,8 +2853,9 @@ fun CredentialsTab(
                     OutlinedTextField(
                         value = numeroPratica,
                         onValueChange = onNumeroPraticaChange,
-                        label = { Text(Localization.string("input_pratica", selectedLanguageCode)) },
-                        placeholder = { Text(Localization.string("input_pratica_placeholder", selectedLanguageCode)) },
+                        label = { Text("Codice Pratica Questura (10 caratteri)") },
+                        supportingText = { Text("Codice tracking assegnato dalla Questura (es. 25PC006466)", fontSize = 11.sp, color = BentoTextSecondary) },
+                        placeholder = { Text("es. 25PC006466") },
                         leadingIcon = { Icon(Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
@@ -4762,9 +4997,13 @@ fun ProfileTab(
         }
 
         item {
+            ReceiptAutoFillCard(viewModel = viewModel)
+        }
+
+        item {
             SectionDividerHeader(
                 title = Localization.string("profile_title", selectedLanguageCode),
-                subtitle = if (isEn) "Edit your name and official receipt credentials" else "Modifica nome, cognome e codici ufficiali della ricevuta",
+                subtitle = if (isEn) "Applicant name, User ID (top-right) and Password (top-left barcode)" else "Nome, User ID (in alto a destra) e Password (codice a barre a sinistra)",
                 badgeText = "DATI",
                 icon = Icons.Default.Person,
                 accentColor = ItalianGreen
@@ -4773,6 +5012,8 @@ fun ProfileTab(
 
         // Section 2: Edit Profile Data (Dati Personali)
         item {
+            var showAdvancedProfile by remember { mutableStateOf(false) }
+
             Card(
                 modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
                 colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
@@ -4798,30 +5039,34 @@ fun ProfileTab(
                     OutlinedTextField(
                         value = fullName,
                         onValueChange = { viewModel.formFullName.value = it },
-                        label = { Text(Localization.string("input_fullname", selectedLanguageCode)) },
-                        placeholder = { Text(Localization.string("input_fullname_placeholder", selectedLanguageCode)) },
+                        label = { Text("Nome e Cognome Intestatario") },
+                        placeholder = { Text("es. Karim El Assali") },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    OutlinedTextField(
-                        value = numeroAssicurata,
-                        onValueChange = { viewModel.formNumeroAssicurata.value = it },
-                        label = { Text(Localization.string("input_assicurata", selectedLanguageCode)) },
-                        placeholder = { Text(Localization.string("input_assicurata_placeholder", selectedLanguageCode)) },
-                        leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    HorizontalDivider(color = BentoCardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                    // Sub-section A: Portale Immigrazione
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Language, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Portale Immigrazione (Poste Italiane)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = Color(0xFF0369A1)
+                        )
+                    }
 
                     OutlinedTextField(
                         value = userId,
                         onValueChange = { viewModel.formUserId.value = it },
-                        label = { Text(Localization.string("input_userid", selectedLanguageCode)) },
-                        placeholder = { Text(Localization.string("input_userid_placeholder", selectedLanguageCode)) },
+                        label = { Text("User ID (12 Cifre)") },
+                        supportingText = { Text("In alto a destra sulla ricevuta (es. 550000133317)", fontSize = 11.sp, color = ItalianGreen) },
+                        placeholder = { Text("es. 550000133317") },
                         leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
@@ -4831,8 +5076,9 @@ fun ProfileTab(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { viewModel.formPassword.value = it },
-                        label = { Text(Localization.string("input_password", selectedLanguageCode)) },
-                        placeholder = { Text(Localization.string("input_password_placeholder", selectedLanguageCode)) },
+                        label = { Text("Password (Codice a Barre)") },
+                        supportingText = { Text("In alto a sinistra sotto il codice a barre (es. 05598747694-1)", fontSize = 11.sp, color = ItalianGreen) },
+                        placeholder = { Text("es. 05598747694-1") },
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         trailingIcon = {
                             IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
@@ -4849,11 +5095,38 @@ fun ProfileTab(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    HorizontalDivider(color = BentoCardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                    // Sub-section B: Polizia di Stato
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Security, contentDescription = null, tint = ItalianGreen, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Polizia di Stato (Questura)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = BentoTextHeading
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = numeroAssicurata,
+                        onValueChange = { viewModel.formNumeroAssicurata.value = it },
+                        label = { Text("Numero Assicurata (12 Cifre)") },
+                        supportingText = { Text("Di solito coincide con la password senza trattino finale (es. 055987476941)", fontSize = 11.sp, color = BentoTextSecondary) },
+                        placeholder = { Text("es. 055987476941") },
+                        leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                     OutlinedTextField(
                         value = numeroPratica,
                         onValueChange = { viewModel.formNumeroPratica.value = it },
-                        label = { Text(Localization.string("input_pratica", selectedLanguageCode)) },
-                        placeholder = { Text(Localization.string("input_pratica_placeholder", selectedLanguageCode)) },
+                        label = { Text("Codice Pratica Questura (10 caratteri)") },
+                        supportingText = { Text("Codice tracking assegnato dalla Questura (es. 25PC006466)", fontSize = 11.sp, color = BentoTextSecondary) },
+                        placeholder = { Text("es. 25PC006466") },
                         leadingIcon = { Icon(Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
@@ -4876,6 +5149,116 @@ fun ProfileTab(
                         Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(Localization.string("button_save", selectedLanguageCode), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // Section 3: Automatic Check Interval (5 Options)
+        item {
+            val currentInterval by viewModel.syncInterval.collectAsStateWithLifecycle()
+            SectionDividerHeader(
+                title = if (isEn) "Automatic Check Interval" else "Intervallo Controllo Automatico",
+                subtitle = if (isEn) "Choose how often the app checks your permit status in the background" else "Scegli la frequenza di verifica automatica in background della pratica",
+                badgeText = currentInterval.name,
+                icon = Icons.Default.Schedule,
+                accentColor = Color(0xFF7C3AED)
+            )
+        }
+
+        item {
+            val currentInterval by viewModel.syncInterval.collectAsStateWithLifecycle()
+
+            Card(
+                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Sync,
+                            contentDescription = null,
+                            tint = Color(0xFF7C3AED),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isEn) "Check Frequency (5 Options)" else "Frequenza di Controllo (5 Opzioni)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = BentoTextHeading
+                        )
+                    }
+
+                    Text(
+                        text = if (isEn)
+                            "The app will automatically query Questura and Portale Immigrazione and notify you of any change."
+                        else
+                            "L'applicazione interrogherà automaticamente la Questura e il Portale Immigrazione e ti invierà una notifica ad ogni variazione.",
+                        fontSize = 12.sp,
+                        color = BentoTextSecondary,
+                        lineHeight = 16.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    val intervalList = listOf(
+                        CheckInterval.HOURS_6 to if (isEn) "4 checks daily • Frequent" else "4 controlli al giorno • Frequente",
+                        CheckInterval.HOURS_12 to if (isEn) "Morning & Evening • Balanced" else "Mattina e sera • Bilanciato",
+                        CheckInterval.DAILY to if (isEn) "Once every 24h • Recommended" else "1 volta al giorno • Consigliato",
+                        CheckInterval.WEEKLY to if (isEn) "Once every 7 days • Low battery use" else "1 volta a settimana • Minimo consumo",
+                        CheckInterval.MONTHLY to if (isEn) "Once every 30 days • Long wait" else "1 volta al mese • Lunghe attese"
+                    )
+
+                    intervalList.forEach { (interval, subtitle) ->
+                        val isSelected = currentInterval == interval
+                        Surface(
+                            onClick = {
+                                viewModel.updateSyncInterval(interval)
+                                Toast.makeText(
+                                    context,
+                                    if (isEn) "Interval set to: ${interval.titleEn}" else "Frequenza impostata: ${interval.titleIt}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            },
+                            color = if (isSelected) Color(0xFF7C3AED).copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) Color(0xFF7C3AED) else BentoCardBorder
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (isEn) interval.titleEn else interval.titleIt,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                        fontSize = 14.sp,
+                                        color = if (isSelected) Color(0xFF7C3AED) else BentoTextHeading
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = subtitle,
+                                        fontSize = 11.sp,
+                                        color = BentoTextSecondary
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Attivo",
+                                        tint = Color(0xFF7C3AED),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

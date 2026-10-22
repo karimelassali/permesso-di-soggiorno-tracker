@@ -98,6 +98,7 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.work.runtime.ktx)
   implementation(libs.converter.moshi)
+  implementation(libs.mlkit.text.recognition)
   implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
@@ -128,3 +129,4 @@ dependencies {
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
+
