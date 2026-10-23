@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -506,193 +507,377 @@ fun QuestureExplorerScreen(
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    val results = remember(searchQuery) { QuesturaCatalog.search(searchQuery) }
+    var selectedFilterIndex by remember { mutableIntStateOf(0) } // 0 = Più Vicina, 1 = Sede Centrale, 2 = Commissariati
+    val results = remember(searchQuery, selectedFilterIndex) {
+        val base = QuesturaCatalog.search(searchQuery)
+        when (selectedFilterIndex) {
+            0 -> base // Più Vicina (tutte ordinate)
+            1 -> base.filter { it.name.contains("Questura", ignoreCase = true) }
+            else -> base
+        }
+    }
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(Localization.string("explore_questure", selectedLanguageCode), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // 1. FULL-CAPSULE SEARCH PILL
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = {
+                Text(
+                    text = "Cerca Questura, città o provincia...",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            )
-        },
-        modifier = modifier.fillMaxSize()
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
-        ) {
-            Text(
-                text = Localization.string("explore_questure_desc", selectedLanguageCode),
-                fontSize = 13.sp,
-                color = BentoTextSecondary,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            
-            // Search Input
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text(Localization.string("onboarding_search_placeholder", selectedLanguageCode)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = null)
-                        }
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = ElectricBlue
+                )
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(Icons.Default.Cancel, contentDescription = "Cancella")
                     }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-                    .testTag("explore_questure_search")
+                }
+            },
+            singleLine = true,
+            shape = CircleShape,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedBorderColor = ElectricBlue,
+                unfocusedBorderColor = AppleBorderHairline
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("explore_questure_search")
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 2. FILTER CHIPS (📍 Più Vicina, 🏛️ Sede Centrale, 📮 Commissariati)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val filters = listOf(
+                0 to "📍 Più Vicina",
+                1 to "🏛️ Sede Centrale",
+                2 to "📮 Commissariati"
             )
-            
-            // Results list
-            if (results.isEmpty()) {
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center
+            filters.forEach { (idx, label) ->
+                val isSelected = selectedFilterIndex == idx
+                Surface(
+                    onClick = { selectedFilterIndex = idx },
+                    shape = CircleShape,
+                    color = if (isSelected) SunsetTangerine else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (isSelected) SunsetTangerine else AppleBorderHairline),
+                    modifier = Modifier
+                        .weight(1f)
+                        .appleBounceClick()
                 ) {
                     Text(
-                        text = Localization.string("guides_no_results", selectedLanguageCode),
-                        color = BentoTextSecondary,
-                        textAlign = TextAlign.Center
+                        text = label,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp)
                     )
                 }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // 3. UFFICIO IMMIGRAZIONE INSTITUTIONAL ACCESS CARD
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = SunsetTangerineTint,
+            border = BorderStroke(1.dp, SunsetTangerine.copy(alpha = 0.45f)),
+            shadowElevation = 2.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("sportello_4_counter_card")
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(results) { questura ->
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
-                            shape = RoundedCornerShape(16.dp),
+                    Surface(
+                        shape = CircleShape,
+                        color = SunsetTangerine
+                    ) {
+                        Text(
+                            text = "UFFICIO IMMIGRAZIONE",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                        )
+                    }
+                    Surface(
+                        shape = CircleShape,
+                        color = VividEmeraldTint
+                    ) {
+                        Text(
+                            text = "${results.size} SEDI NAZIONALI",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF007A33),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Modalità di Accesso Sportelli Questura",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppleInk
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, SunsetTangerine.copy(alpha = 0.35f)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text("Fotosegnalamento", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ElectricBlue)
+                            Text("Su convocazione Poste / PrenotaFacile", fontSize = 11.sp, color = AppleInk)
+                            Text("Portare kit + originali", fontSize = 10.sp, color = AppleTextMuted)
+                        }
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.5.dp, VividEmerald),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text("Ritiro Titolo PSE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = VividEmerald)
+                            Text("Solo con stato Pronto / SMS", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AppleInk)
+                            Text("Verificare orari sede", fontSize = 10.sp, color = AppleTextMuted)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // 4. QUESTURE LIST WITH 1-TAP APPLE MAPS / GOOGLE MAPS LAUNCH
+        if (results.isEmpty()) {
+            Box(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = Localization.string("guides_no_results", selectedLanguageCode),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 90.dp)
+            ) {
+                items(results, key = { it.id }) { questura ->
+                    var isExpanded by remember { mutableStateOf(questura.id == results.firstOrNull()?.id) }
+
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, AppleBorderHairline),
+                        shadowElevation = 2.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("explorer_questura_item_${questura.id}")
+                    ) {
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp))
-                                .testTag("explorer_questura_item_${questura.id}")
+                                .padding(16.dp)
+                                .animateContentSize()
                         ) {
-                            var isExpanded by remember { mutableStateOf(false) }
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { isExpanded = !isExpanded }
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .background(SunsetTangerineTint, RoundedCornerShape(14.dp)),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(ItalianGreen.copy(alpha = 0.1f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(Icons.Default.Place, contentDescription = null, tint = ItalianGreen, modifier = Modifier.size(20.dp))
-                                    }
-                                    Column(modifier = Modifier.weight(1f)) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountBalance,
+                                        contentDescription = null,
+                                        tint = SunsetTangerine,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = questura.name,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 16.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${questura.province} (${questura.provinceCode}) • ${questura.address}",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Surface(
+                                    shape = CircleShape,
+                                    color = VividEmeraldTint
+                                ) {
+                                    Text(
+                                        text = questura.provinceCode,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF007A33),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Espandi",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            if (isExpanded) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), thickness = 0.5.dp)
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Icon(Icons.Default.Place, contentDescription = null, tint = SunsetTangerine, modifier = Modifier.size(16.dp))
                                         Text(
-                                            text = questura.name,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = BentoTextHeading
+                                            text = questura.address,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Icon(Icons.Default.Schedule, contentDescription = null, tint = VividEmerald, modifier = Modifier.size(16.dp))
                                         Text(
-                                            text = "${questura.province} (${questura.provinceCode}) - ${questura.region}",
+                                            text = "Orari Ufficio Immigrazione: ${questura.openingHours.get(selectedLanguageCode)}",
                                             fontSize = 12.sp,
-                                            color = BentoTextSecondary
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
-                                    
-                                    IconButton(onClick = { isExpanded = !isExpanded }) {
-                                        Icon(
-                                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                            contentDescription = "Expand",
-                                            tint = ItalianGreen
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.clickable {
+                                            clipboardManager.setText(AnnotatedString(questura.pec))
+                                            Toast.makeText(context, "PEC Copiata: ${questura.pec}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.Email, contentDescription = null, tint = ElectricBlue, modifier = Modifier.size(16.dp))
+                                        Text(
+                                            text = "PEC: ${questura.pec}",
+                                            fontSize = 12.sp,
+                                            color = ElectricBlue,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Icon(Icons.Default.HourglassBottom, contentDescription = null, tint = SiriViolet, modifier = Modifier.size(16.dp))
+                                        Text(
+                                            text = "Attesa media: ${questura.averageWaitingTime.get(selectedLanguageCode)}",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
-                                
-                                if (isExpanded) {
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    HorizontalDivider(color = BentoCardBorder)
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    
-                                    // Details Content
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(
-                                            text = "${Localization.string("address", selectedLanguageCode)}: ${questura.address}",
-                                            fontSize = 12.sp,
-                                            color = BentoTextPrimary
-                                        )
-                                        Text(
-                                            text = "${Localization.string("phone", selectedLanguageCode)}: ${questura.phone}",
-                                            fontSize = 12.sp,
-                                            color = BentoTextPrimary,
-                                            modifier = Modifier.clickable {
-                                                try {
-                                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${questura.phone}"))
-                                                    context.startActivity(intent)
-                                                } catch (e: Exception) {}
+
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                // Action Pills: 1-Tap Apple Maps / Google Maps + Select Questura
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            try {
+                                                val encodedQuery = Uri.encode("${questura.name} ${questura.address}")
+                                                val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$encodedQuery"))
+                                                context.startActivity(mapIntent)
+                                            } catch (_: Exception) {
+                                                Toast.makeText(context, "Indirizzo: ${questura.address}", Toast.LENGTH_LONG).show()
                                             }
-                                        )
-                                        Text(
-                                            text = "${Localization.string("pec", selectedLanguageCode)}: ${questura.pec}",
-                                            fontSize = 12.sp,
-                                            color = BentoTextPrimary,
-                                            modifier = Modifier.clickable {
-                                                clipboardManager.setText(AnnotatedString(questura.pec))
-                                                Toast.makeText(context, "PEC Copied", Toast.LENGTH_SHORT).show()
-                                            }
-                                        )
-                                        Text(
-                                            text = "${Localization.string("opening_hours", selectedLanguageCode)}: ${questura.openingHours.get(selectedLanguageCode)}",
-                                            fontSize = 12.sp,
-                                            color = BentoTextPrimary
-                                        )
-                                        Text(
-                                            text = "${Localization.string("average_waiting_time", selectedLanguageCode)}: ${questura.averageWaitingTime.get(selectedLanguageCode)}",
-                                            fontSize = 12.sp,
-                                            color = BentoTextPrimary
-                                        )
-                                        
-                                        val warnings = questura.localWarnings.get(selectedLanguageCode)
-                                        if (warnings.isNotBlank()) {
-                                            Text(
-                                                text = "${Localization.string("local_warnings", selectedLanguageCode)}: $warnings",
-                                                fontSize = 11.sp,
-                                                color = BentoAlertRed,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                        }
+                                        },
+                                        shape = CircleShape,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = ElectricBlue,
+                                            contentColor = Color.White
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(42.dp)
+                                            .appleBounceClick()
+                                    ) {
+                                        Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Apri in Mappe", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
-                                    
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    
+
                                     Button(
                                         onClick = {
                                             onSelectQuestura(questura)
-                                            Toast.makeText(context, "Questura Selected", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Questura impostata: ${questura.province}", Toast.LENGTH_SHORT).show()
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = ItalianGreen),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier.fillMaxWidth().height(38.dp)
+                                        shape = CircleShape,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = VividEmerald,
+                                            contentColor = Color.White
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(42.dp)
+                                            .appleBounceClick()
                                     ) {
                                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Set as my Questura", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Text("Seleziona Sede", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }

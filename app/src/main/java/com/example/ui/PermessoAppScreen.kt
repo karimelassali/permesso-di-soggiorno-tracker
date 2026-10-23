@@ -43,6 +43,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -55,9 +56,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.SavedCredentialVaultEntry
 import com.example.data.StatusHistory
 import com.example.data.UserCredentials
 import com.example.ui.theme.*
+import com.example.util.BiometricAuthHelper
 import com.example.util.Localization
 import com.example.util.AppLanguage
 import java.text.SimpleDateFormat
@@ -118,16 +121,15 @@ fun PermessoAppScreen(
     viewModel: PermessoViewModel,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val credentials by viewModel.credentials.collectAsStateWithLifecycle()
     val historyList by viewModel.history.collectAsStateWithLifecycle()
     val checkState by viewModel.checkState.collectAsStateWithLifecycle()
-    val cooldownSeconds by viewModel.cooldownSecondsRemaining.collectAsStateWithLifecycle()
     val selectedLanguageCode by viewModel.selectedLanguage.collectAsStateWithLifecycle()
+    val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
+    val isDemoMode by viewModel.isInstitutionalDemoMode.collectAsStateWithLifecycle()
 
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
-    var showingGuidesScreen by remember { mutableStateOf(false) }
-    var showingQuestureExplorer by remember { mutableStateOf(false) }
+    var currentRoute by remember { mutableStateOf(AppleScreenRoute.STATO_HOME) }
+    var isBurgerDrawerOpen by remember { mutableStateOf(false) }
 
     // Request permissions for notifications on Android 13+
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -144,385 +146,405 @@ fun PermessoAppScreen(
 
     LaunchedEffect(onboardingCompleted) {
         if (!onboardingCompleted) {
-            selectedTabIndex = 0
-            showingGuidesScreen = false
-            showingQuestureExplorer = false
+            currentRoute = AppleScreenRoute.STATO_HOME
+            isBurgerDrawerOpen = false
+        }
+    }
+
+    // Handle physical back button for drawer and sub-screens
+    val isPrimaryTab = currentRoute == AppleScreenRoute.STATO_HOME ||
+        currentRoute == AppleScreenRoute.STRUMENTI_HUB ||
+        currentRoute == AppleScreenRoute.SOFIA_CHAT ||
+        currentRoute == AppleScreenRoute.PROFILO_PASS
+
+    androidx.activity.compose.BackHandler(enabled = isBurgerDrawerOpen || !isPrimaryTab || currentRoute != AppleScreenRoute.STATO_HOME) {
+        when {
+            isBurgerDrawerOpen -> isBurgerDrawerOpen = false
+            !isPrimaryTab -> currentRoute = AppleScreenRoute.STRUMENTI_HUB
+            currentRoute != AppleScreenRoute.STATO_HOME -> currentRoute = AppleScreenRoute.STATO_HOME
         }
     }
 
     val layoutDirection = if (selectedLanguageCode == "ar") {
-        androidx.compose.ui.unit.LayoutDirection.Rtl
+        LayoutDirection.Rtl
     } else {
-        androidx.compose.ui.unit.LayoutDirection.Ltr
+        LayoutDirection.Ltr
     }
 
-    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides layoutDirection) {
+    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
         if (!onboardingCompleted) {
             OnboardingScreen(
                 viewModel = viewModel,
                 onComplete = {
                     viewModel.completeOnboarding()
-                    selectedTabIndex = 0
+                    currentRoute = AppleScreenRoute.STATO_HOME
                 }
             )
         } else {
-            Scaffold(
-        topBar = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                TopAppBar(
-                    title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Fingerprint,
-                                contentDescription = "App Logo",
-                                tint = ItalianGreen,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Text(
-                                text = Localization.string("app_name", selectedLanguageCode),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                fontFamily = FontFamily.SansSerif,
-                                color = BentoTextHeading
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = BentoBackground
-                    ),
-                    actions = {
-                        UserPersistentAvatar(
-                            fullName = credentials?.fullName,
-                            size = 38.dp,
-                            fontSize = 13.sp,
-                            isSelected = selectedTabIndex == 4,
-                            borderColor = BentoAvatarBorder,
-                            borderWidth = 1.5.dp,
-                            onClick = { selectedTabIndex = 4 },
-                            modifier = Modifier
-                                .padding(end = 16.dp)
-                                .testTag("topbar_profile_avatar")
-                        )
-                    }
-                )
-                // Premium thin Italian flag colored stripe (strictly LTR: Green -> White -> Red)
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp)
-                    ) {
-                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianGreen))
-                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianWhite))
-                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(ItalianRed))
-                    }
-                }
-            }
-        },
-        bottomBar = {
-            Column {
-                HorizontalDivider(color = BentoCardBorder, thickness = 1.dp)
-                NavigationBar(
-                    containerColor = BentoBackground,
-                    tonalElevation = 0.dp
-                ) {
-                    NavigationBarItem(
-                        selected = selectedTabIndex == 0,
-                        onClick = { selectedTabIndex = 0 },
-                        icon = { Icon(Icons.Default.Home, contentDescription = "Dashboard") },
-                        label = { Text(Localization.string("tab_status", selectedLanguageCode)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = BentoCardPrimaryText,
-                            selectedTextColor = BentoCardPrimaryText,
-                            indicatorColor = BentoAvatarBg,
-                            unselectedIconColor = BentoTextSecondary,
-                            unselectedTextColor = BentoTextSecondary
-                        ),
-                        modifier = Modifier.testTag("nav_dashboard")
-                    )
-                    NavigationBarItem(
-                        selected = selectedTabIndex == 1,
-                        onClick = { selectedTabIndex = 1 },
-                        icon = { Icon(Icons.Default.Language, contentDescription = "Portale Web") },
-                        label = { Text(Localization.string("tab_portal", selectedLanguageCode)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = BentoCardPrimaryText,
-                            selectedTextColor = BentoCardPrimaryText,
-                            indicatorColor = BentoAvatarBg,
-                            unselectedIconColor = BentoTextSecondary,
-                            unselectedTextColor = BentoTextSecondary
-                        ),
-                        modifier = Modifier.testTag("nav_portale")
-                    )
-                    NavigationBarItem(
-                        selected = selectedTabIndex == 2,
-                        onClick = { selectedTabIndex = 2 },
-                        icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = "Dati Ricevuta") },
-                        label = { Text(Localization.string("tab_receipt", selectedLanguageCode)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = BentoCardPrimaryText,
-                            selectedTextColor = BentoCardPrimaryText,
-                            indicatorColor = BentoAvatarBg,
-                            unselectedIconColor = BentoTextSecondary,
-                            unselectedTextColor = BentoTextSecondary
-                        ),
-                        modifier = Modifier.testTag("nav_ricevuta")
-                    )
-                    NavigationBarItem(
-                        selected = selectedTabIndex == 3,
-                        onClick = { selectedTabIndex = 3 },
-                        icon = { Icon(Icons.Default.Face, contentDescription = "Sofia AI") },
-                        label = { Text(Localization.string("tab_sofia", selectedLanguageCode)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = BentoCardPrimaryText,
-                            selectedTextColor = BentoCardPrimaryText,
-                            indicatorColor = BentoAvatarBg,
-                            unselectedIconColor = BentoTextSecondary,
-                            unselectedTextColor = BentoTextSecondary
-                        ),
-                        modifier = Modifier.testTag("nav_sofia")
-                    )
-                    NavigationBarItem(
-                        selected = selectedTabIndex == 4,
-                        onClick = { selectedTabIndex = 4 },
-                        icon = {
-                            UserPersistentAvatar(
-                                fullName = credentials?.fullName,
-                                size = 26.dp,
-                                fontSize = 10.sp,
-                                isSelected = selectedTabIndex == 4,
-                                borderColor = if (selectedTabIndex == 4) ItalianGreen else Color.White,
-                                borderWidth = if (selectedTabIndex == 4) 2.dp else 1.2.dp,
-                                modifier = Modifier.testTag("navbar_profile_avatar")
-                            )
-                        },
-                        label = { Text(Localization.string("tab_profile", selectedLanguageCode)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = BentoCardPrimaryText,
-                            selectedTextColor = BentoCardPrimaryText,
-                            indicatorColor = BentoAvatarBg,
-                            unselectedIconColor = BentoTextSecondary,
-                            unselectedTextColor = BentoTextSecondary
-                        ),
-                        modifier = Modifier.testTag("nav_profile")
-                    )
-                }
-            }
-        },
-        floatingActionButton = {
-            val localCreds = credentials
-            val hasCode = localCreds != null && 
-                    (localCreds.numeroAssicurata.isNotBlank() || localCreds.numeroPratica.isNotBlank())
-            if (selectedTabIndex == 0 && hasCode) {
-                FloatingActionButton(
-                    onClick = {
-                        if (cooldownSeconds <= 0) {
-                            viewModel.checkStatusNow()
-                        }
-                    },
-                    containerColor = if (cooldownSeconds > 0) MaterialTheme.colorScheme.surfaceVariant else BentoBadgeGreen,
-                    contentColor = if (cooldownSeconds > 0) BentoTextSecondary else Color.White,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .padding(bottom = 16.dp, end = 8.dp)
-                        .testTag("refresh_status_fab")
-                ) {
-                    if (cooldownSeconds > 0) {
-                        Text(
-                            text = "${cooldownSeconds}s",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 12.sp
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Aggiorna Stato",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-        },
-        containerColor = BentoBackground,
-        modifier = modifier.fillMaxSize()
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            when (selectedTabIndex) {
-                0 -> {
-                    val selectedProvince by viewModel.selectedProvince.collectAsStateWithLifecycle()
-                    val appointmentDate by viewModel.appointmentDate.collectAsStateWithLifecycle()
-                    val appointmentTime by viewModel.appointmentTime.collectAsStateWithLifecycle()
-                    val appointmentLocation by viewModel.appointmentLocation.collectAsStateWithLifecycle()
-                    val checkedDocs by viewModel.checkedDocs.collectAsStateWithLifecycle()
-                    val activeGuideId by viewModel.activeGuideId.collectAsStateWithLifecycle()
-
-                    if (showingQuestureExplorer) {
-                        QuestureExplorerScreen(
-                            onBack = { showingQuestureExplorer = false },
-                            onSelectQuestura = { questura ->
-                                viewModel.selectQuesturaAndProvince(questura.id, questura.provinceCode, questura.province)
-                                showingQuestureExplorer = false
-                            },
-                            selectedLanguageCode = selectedLanguageCode
-                        )
-                    } else if (showingGuidesScreen || activeGuideId != null) {
-                        ImmigrationGuidesScreen(
-                            viewModel = viewModel,
-                            onBack = {
-                                showingGuidesScreen = false
-                                viewModel.activeGuideId.value = null
-                            },
-                            selectedLanguageCode = selectedLanguageCode
-                        )
-                    } else {
-                        DashboardTab(
-                            viewModel = viewModel,
+            Box(modifier = modifier.fillMaxSize()) {
+                Scaffold(
+                    topBar = {
+                        AppleTopHeaderBar(
+                            currentRoute = currentRoute,
+                            selectedLanguageCode = selectedLanguageCode,
                             credentials = credentials,
-                            history = historyList,
-                            checkState = checkState,
-                            selectedProvince = selectedProvince,
-                            onProvinceSelected = { viewModel.selectProvince(it) },
-                            appointmentDate = appointmentDate,
-                            appointmentTime = appointmentTime,
-                            appointmentLocation = appointmentLocation,
-                            onUpdateAppointment = { d, t, l -> viewModel.updateAppointment(d, t, l) },
-                            checkedDocs = checkedDocs,
-                            onToggleDocument = { viewModel.toggleDocument(it) },
-                            onCheckNow = { viewModel.checkStatusNow() },
-                            onResetCheckState = { viewModel.resetCheckState() },
-                            onClearHistory = { viewModel.clearCheckHistory() },
-                            onGoToCredentials = { selectedTabIndex = 2 },
-                            onOpenGuides = { showingGuidesScreen = true },
-                            onChooseQuestura = { showingQuestureExplorer = true },
-                            onSyncVerifiedDossier = { name, uid, pass, istanza ->
-                                viewModel.formFullName.value = name
-                                viewModel.formUserId.value = uid
-                                viewModel.formPassword.value = pass
-                                viewModel.formNumeroAssicurata.value = pass
-                                viewModel.formNumeroPratica.value = istanza
-                                viewModel.saveCredentials()
-                            },
-                            selectedLanguageCode = selectedLanguageCode
+                            onSelectLanguage = { langCode -> viewModel.selectLanguage(langCode) },
+                            onBackClick = if (!isPrimaryTab) {
+                                { currentRoute = AppleScreenRoute.STRUMENTI_HUB }
+                            } else null,
+                            onOpenBurgerMenu = { isBurgerDrawerOpen = true }
                         )
-                    }
-                }
-                1 -> PortalWebViewTab(
-                    credentials = credentials,
-                    onStatusDetected = { poliziaStatus, portaleStatus ->
-                        viewModel.updateLoggedStatus(poliziaStatus, portaleStatus)
                     },
-                    selectedLanguageCode = selectedLanguageCode
-                )
-                2 -> {
-                    val formFullName by viewModel.formFullName.collectAsStateWithLifecycle()
-                    val formUserId by viewModel.formUserId.collectAsStateWithLifecycle()
-                    val formPassword by viewModel.formPassword.collectAsStateWithLifecycle()
-                    val formNumeroAssicurata by viewModel.formNumeroAssicurata.collectAsStateWithLifecycle()
-                    val formNumeroPratica by viewModel.formNumeroPratica.collectAsStateWithLifecycle()
-
-                    CredentialsTab(
-                        viewModel = viewModel,
-                        credentials = credentials,
-                        fullName = formFullName,
-                        onFullNameChange = { viewModel.formFullName.value = it },
-                        userId = formUserId,
-                        onUserIdChange = { viewModel.formUserId.value = it },
-                        password = formPassword,
-                        onPasswordChange = { viewModel.formPassword.value = it },
-                        numeroAssicurata = formNumeroAssicurata,
-                        onNumeroAssicurataChange = { viewModel.formNumeroAssicurata.value = it },
-                        numeroPratica = formNumeroPratica,
-                        onNumeroPraticaChange = { viewModel.formNumeroPratica.value = it },
-                        onSave = {
-                            viewModel.saveCredentials()
-                            selectedTabIndex = 0 // Go back to status check
-                        },
-                        selectedLanguageCode = selectedLanguageCode
-                    )
-                }
-                3 -> {
-                    val isDemoMode by viewModel.isInstitutionalDemoMode.collectAsStateWithLifecycle()
-                    val userFullName = credentials?.fullName?.takeIf { it.isNotBlank() }
-                        ?: if (isDemoMode) PermessoViewModel.DEMO_FULL_NAME else Localization.string("friend", selectedLanguageCode)
-                    val sofiaViewModel: SofiaViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-                    SofiaScreen(
-                        viewModel = sofiaViewModel,
-                        userFullName = userFullName,
-                        selectedLanguageCode = selectedLanguageCode,
-                        onNavigateAction = { action ->
-                            when (action) {
-                                SofiaActionEvent.ExplainStatus -> {
-                                    selectedTabIndex = 0
-                                    showingGuidesScreen = false
-                                    showingQuestureExplorer = false
-                                }
-                                SofiaActionEvent.ShowRequiredDocuments -> {
-                                    selectedTabIndex = 0
-                                    showingGuidesScreen = false
-                                    showingQuestureExplorer = false
-                                }
-                                SofiaActionEvent.ShowAppointment -> {
-                                    selectedTabIndex = 0
-                                    showingGuidesScreen = false
-                                    showingQuestureExplorer = false
-                                }
-                                SofiaActionEvent.ShowMyQuestura -> {
-                                    selectedTabIndex = 0
-                                    showingQuestureExplorer = true
-                                    showingGuidesScreen = false
-                                }
-                                SofiaActionEvent.OpenOfficialWebsite -> {
-                                    selectedTabIndex = 1
-                                }
-                                SofiaActionEvent.OpenRenewalGuide -> {
-                                    selectedTabIndex = 0
-                                    showingGuidesScreen = true
-                                    showingQuestureExplorer = false
-                                }
-                                SofiaActionEvent.GoToProfile -> {
-                                    selectedTabIndex = 4
-                                }
-                                SofiaActionEvent.OpenBookmarks -> {
-                                    selectedTabIndex = 0
-                                    showingGuidesScreen = true
-                                    showingQuestureExplorer = false
-                                }
-                                SofiaActionEvent.OpenImmigrationGuides -> {
-                                    selectedTabIndex = 0
-                                    showingGuidesScreen = true
-                                    showingQuestureExplorer = false
-                                }
-                                SofiaActionEvent.OpenMyGuide -> {
-                                    selectedTabIndex = 0
-                                    showingGuidesScreen = true
-                                    showingQuestureExplorer = false
-                                }
-                                SofiaActionEvent.OpenTimeline -> {
-                                    selectedTabIndex = 0
-                                    showingGuidesScreen = false
-                                    showingQuestureExplorer = false
-                                }
+                    bottomBar = {
+                        Column {
+                            HorizontalDivider(color = AppleBorderHairline, thickness = 1.dp)
+                            NavigationBar(
+                                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                                tonalElevation = 0.dp
+                            ) {
+                                NavigationBarItem(
+                                    selected = currentRoute == AppleScreenRoute.STATO_HOME,
+                                    onClick = { currentRoute = AppleScreenRoute.STATO_HOME },
+                                    icon = { Icon(Icons.Default.Verified, contentDescription = "Stato") },
+                                    label = {
+                                        Text(
+                                            text = Localization.string("tab_status", selectedLanguageCode),
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp
+                                        )
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = VividEmerald,
+                                        selectedTextColor = VividEmerald,
+                                        indicatorColor = VividEmeraldTint,
+                                        unselectedIconColor = AppleTextMuted,
+                                        unselectedTextColor = AppleTextMuted
+                                    ),
+                                    modifier = Modifier.testTag("nav_dashboard")
+                                )
+                                NavigationBarItem(
+                                    selected = currentRoute == AppleScreenRoute.STRUMENTI_HUB || !isPrimaryTab,
+                                    onClick = { currentRoute = AppleScreenRoute.STRUMENTI_HUB },
+                                    icon = { Icon(Icons.Default.GridView, contentDescription = "Strumenti") },
+                                    label = {
+                                        Text(
+                                            text = when (selectedLanguageCode) {
+                                                "en" -> "Tools"
+                                                "ar" -> "الأدوات"
+                                                "fr" -> "Outils"
+                                                "es" -> "Herramientas"
+                                                else -> "Strumenti"
+                                            },
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp
+                                        )
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = ElectricBlue,
+                                        selectedTextColor = ElectricBlue,
+                                        indicatorColor = ElectricBlueTint,
+                                        unselectedIconColor = AppleTextMuted,
+                                        unselectedTextColor = AppleTextMuted
+                                    ),
+                                    modifier = Modifier.testTag("nav_strumenti")
+                                )
+                                NavigationBarItem(
+                                    selected = currentRoute == AppleScreenRoute.SOFIA_CHAT,
+                                    onClick = { currentRoute = AppleScreenRoute.SOFIA_CHAT },
+                                    icon = { Icon(Icons.Default.Gavel, contentDescription = "Consulente") },
+                                    label = {
+                                        Text(
+                                            text = Localization.string("tab_sofia", selectedLanguageCode),
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp
+                                        )
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = SiriViolet,
+                                        selectedTextColor = SiriViolet,
+                                        indicatorColor = SiriVioletTint,
+                                        unselectedIconColor = AppleTextMuted,
+                                        unselectedTextColor = AppleTextMuted
+                                    ),
+                                    modifier = Modifier.testTag("nav_sofia")
+                                )
+                                NavigationBarItem(
+                                    selected = currentRoute == AppleScreenRoute.PROFILO_PASS,
+                                    onClick = { currentRoute = AppleScreenRoute.PROFILO_PASS },
+                                    icon = {
+                                        if (!credentials?.fullName.isNullOrBlank()) {
+                                            UserPersistentAvatar(
+                                                fullName = credentials?.fullName,
+                                                size = 26.dp,
+                                                fontSize = 10.sp,
+                                                isSelected = currentRoute == AppleScreenRoute.PROFILO_PASS,
+                                                borderColor = if (currentRoute == AppleScreenRoute.PROFILO_PASS) VividEmerald else AppleBorderHairline,
+                                                borderWidth = if (currentRoute == AppleScreenRoute.PROFILO_PASS) 2.dp else 1.dp,
+                                                modifier = Modifier.testTag("navbar_profile_avatar")
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Default.Badge,
+                                                contentDescription = "Profilo",
+                                                modifier = Modifier.testTag("navbar_profile_avatar")
+                                            )
+                                        }
+                                    },
+                                    label = {
+                                        Text(
+                                            text = Localization.string("tab_profile", selectedLanguageCode),
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp
+                                        )
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = VividEmerald,
+                                        selectedTextColor = VividEmerald,
+                                        indicatorColor = VividEmeraldTint,
+                                        unselectedIconColor = AppleTextMuted,
+                                        unselectedTextColor = AppleTextMuted
+                                    ),
+                                    modifier = Modifier.testTag("nav_profile")
+                                )
                             }
                         }
-                    )
+                    },
+                    // Rule 2: NO duplicate Floating Action Button (FAB)
+                    floatingActionButton = {},
+                    containerColor = MaterialTheme.colorScheme.background,
+                    modifier = Modifier.fillMaxSize()
+                ) { innerPadding ->
+                    Box(
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .fillMaxSize()
+                    ) {
+                        val selectedProvince by viewModel.selectedProvince.collectAsStateWithLifecycle()
+                        val appointmentDate by viewModel.appointmentDate.collectAsStateWithLifecycle()
+                        val appointmentTime by viewModel.appointmentTime.collectAsStateWithLifecycle()
+                        val appointmentLocation by viewModel.appointmentLocation.collectAsStateWithLifecycle()
+                        val checkedDocs by viewModel.checkedDocs.collectAsStateWithLifecycle()
+
+                        when (currentRoute) {
+                            AppleScreenRoute.STATO_HOME -> {
+                                DashboardTab(
+                                    viewModel = viewModel,
+                                    credentials = credentials,
+                                    history = historyList,
+                                    checkState = checkState,
+                                    selectedProvince = selectedProvince,
+                                    onProvinceSelected = { viewModel.selectProvince(it) },
+                                    appointmentDate = appointmentDate,
+                                    appointmentTime = appointmentTime,
+                                    appointmentLocation = appointmentLocation,
+                                    onUpdateAppointment = { d, t, l -> viewModel.updateAppointment(d, t, l) },
+                                    checkedDocs = checkedDocs,
+                                    onToggleDocument = { viewModel.toggleDocument(it) },
+                                    onCheckNow = { viewModel.checkStatusNow() },
+                                    onResetCheckState = { viewModel.resetCheckState() },
+                                    onClearHistory = { viewModel.clearCheckHistory() },
+                                    onGoToCredentials = { currentRoute = AppleScreenRoute.PROFILO_PASS },
+                                    onOpenGuides = { currentRoute = AppleScreenRoute.GUIDE_IMMIGRAZIONE },
+                                    onChooseQuestura = { currentRoute = AppleScreenRoute.ESPLORA_QUESTURE },
+                                    onNavigateRoute = { currentRoute = it },
+                                    selectedLanguageCode = selectedLanguageCode
+                                )
+                            }
+
+                            AppleScreenRoute.STRUMENTI_HUB -> {
+                                AppleStrumentiVividHubScreen(
+                                    selectedLanguageCode = selectedLanguageCode,
+                                    onOpenSofiaAi = { currentRoute = AppleScreenRoute.SOFIA_CHAT },
+                                    onOpenPecGenerator = { currentRoute = AppleScreenRoute.SOLLECITO_PEC },
+                                    onOpenTravelSimulator = { currentRoute = AppleScreenRoute.SIMULATORE_VIAGGI },
+                                    onOpenQuestureMap = { currentRoute = AppleScreenRoute.ESPLORA_QUESTURE },
+                                    onOpenChecklist = { currentRoute = AppleScreenRoute.CHECKLIST_FOTOSEGNALAMENTO },
+                                    onOpenPortalWebView = { currentRoute = AppleScreenRoute.PORTALE_WEB },
+                                    onOpenRedditoSimulator = { currentRoute = AppleScreenRoute.REDDITO_SIMULATOR },
+                                    onOpenImmigrationGuides = { currentRoute = AppleScreenRoute.GUIDE_IMMIGRAZIONE }
+                                )
+                            }
+
+                            AppleScreenRoute.PROFILO_PASS -> {
+                                ProfileTab(
+                                    viewModel = viewModel,
+                                    selectedLanguageCode = selectedLanguageCode
+                                )
+                            }
+
+                            AppleScreenRoute.SOFIA_CHAT -> {
+                                val userFullName = credentials?.fullName?.takeIf { it.isNotBlank() }.orEmpty()
+                                val sofiaViewModel: SofiaViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+                                SofiaScreen(
+                                    viewModel = sofiaViewModel,
+                                    userFullName = userFullName,
+                                    selectedLanguageCode = selectedLanguageCode,
+                                    onNavigateAction = { action ->
+                                        when (action) {
+                                            SofiaActionEvent.ExplainStatus,
+                                            SofiaActionEvent.OpenTimeline,
+                                            SofiaActionEvent.ShowAppointment -> {
+                                                currentRoute = AppleScreenRoute.STATO_HOME
+                                            }
+                                            SofiaActionEvent.ShowRequiredDocuments -> {
+                                                currentRoute = AppleScreenRoute.CHECKLIST_FOTOSEGNALAMENTO
+                                            }
+                                            SofiaActionEvent.ShowMyQuestura -> {
+                                                currentRoute = AppleScreenRoute.ESPLORA_QUESTURE
+                                            }
+                                            SofiaActionEvent.OpenOfficialWebsite -> {
+                                                currentRoute = AppleScreenRoute.PORTALE_WEB
+                                            }
+                                            SofiaActionEvent.OpenRenewalGuide,
+                                            SofiaActionEvent.OpenBookmarks,
+                                            SofiaActionEvent.OpenImmigrationGuides,
+                                            SofiaActionEvent.OpenMyGuide -> {
+                                                currentRoute = AppleScreenRoute.GUIDE_IMMIGRAZIONE
+                                            }
+                                            SofiaActionEvent.GoToProfile -> {
+                                                currentRoute = AppleScreenRoute.PROFILO_PASS
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+
+                            AppleScreenRoute.SOLLECITO_PEC -> {
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.background)
+                                        .padding(horizontal = 16.dp),
+                                    contentPadding = PaddingValues(top = 14.dp, bottom = 88.dp)
+                                ) {
+                                    item {
+                                        PecSollecitoGeneratorView(
+                                            viewModel = viewModel,
+                                            lang = selectedLanguageCode,
+                                            onBack = { currentRoute = AppleScreenRoute.STRUMENTI_HUB }
+                                        )
+                                    }
+                                }
+                            }
+
+                            AppleScreenRoute.SIMULATORE_VIAGGI -> {
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.background)
+                                        .padding(horizontal = 16.dp),
+                                    contentPadding = PaddingValues(top = 14.dp, bottom = 88.dp)
+                                ) {
+                                    item {
+                                        TravelRegulationsSimulatorView(
+                                            lang = selectedLanguageCode,
+                                            onBack = { currentRoute = AppleScreenRoute.STRUMENTI_HUB },
+                                            enableInternalScroll = false
+                                        )
+                                    }
+                                }
+                            }
+
+                            AppleScreenRoute.ESPLORA_QUESTURE -> {
+                                QuestureExplorerScreen(
+                                    onBack = { currentRoute = AppleScreenRoute.STRUMENTI_HUB },
+                                    onSelectQuestura = { questura ->
+                                        viewModel.selectQuesturaAndProvince(questura.id, questura.provinceCode, questura.province)
+                                        currentRoute = AppleScreenRoute.STATO_HOME
+                                    },
+                                    selectedLanguageCode = selectedLanguageCode
+                                )
+                            }
+
+                            AppleScreenRoute.CHECKLIST_FOTOSEGNALAMENTO -> {
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.background)
+                                        .padding(horizontal = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                                    contentPadding = PaddingValues(top = 14.dp, bottom = 88.dp)
+                                ) {
+                                    item {
+                                        AppointmentVaultView(
+                                            viewModel = viewModel,
+                                            lang = selectedLanguageCode,
+                                            onBack = { currentRoute = AppleScreenRoute.STRUMENTI_HUB },
+                                            enableInternalScroll = false
+                                        )
+                                    }
+                                    item {
+                                        BentoAppointmentsAndVaultCard(
+                                            appointmentDate = appointmentDate,
+                                            appointmentTime = appointmentTime,
+                                            appointmentLocation = appointmentLocation,
+                                            onUpdateAppointment = { d, t, l -> viewModel.updateAppointment(d, t, l) },
+                                            checkedDocs = checkedDocs,
+                                            onToggleDocument = { viewModel.toggleDocument(it) },
+                                            selectedLanguageCode = selectedLanguageCode
+                                        )
+                                    }
+                                }
+                            }
+
+                            AppleScreenRoute.PORTALE_WEB -> {
+                                PortalWebViewTab(
+                                    credentials = credentials,
+                                    onStatusDetected = { poliziaStatus, portaleStatus ->
+                                        viewModel.updateLoggedStatus(poliziaStatus, portaleStatus)
+                                    },
+                                    selectedLanguageCode = selectedLanguageCode
+                                )
+                            }
+
+                            AppleScreenRoute.REDDITO_SIMULATOR -> {
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.background)
+                                        .padding(horizontal = 16.dp),
+                                    contentPadding = PaddingValues(top = 14.dp, bottom = 88.dp)
+                                ) {
+                                    item {
+                                        RedditoCalculatorSimulatorView(
+                                            lang = selectedLanguageCode,
+                                            onBack = { currentRoute = AppleScreenRoute.STRUMENTI_HUB },
+                                            enableInternalScroll = false
+                                        )
+                                    }
+                                }
+                            }
+
+                            AppleScreenRoute.GUIDE_IMMIGRAZIONE -> {
+                                ImmigrationGuidesScreen(
+                                    viewModel = viewModel,
+                                    onBack = {
+                                        viewModel.activeGuideId.value = null
+                                        currentRoute = AppleScreenRoute.STRUMENTI_HUB
+                                    },
+                                    selectedLanguageCode = selectedLanguageCode
+                                )
+                            }
+                        }
+                    }
                 }
-                4 -> {
-                    ProfileTab(
-                        viewModel = viewModel,
-                        selectedLanguageCode = selectedLanguageCode
-                    )
-                }
+
+                // SCREEN 8: Global Slide-Over Burger Drawer (Slides from Right over any screen)
+                SlideOverBurgerDrawer(
+                    isDrawerOpen = isBurgerDrawerOpen,
+                    onClose = { isBurgerDrawerOpen = false },
+                    currentRoute = currentRoute,
+                    onNavigate = { targetRoute -> currentRoute = targetRoute },
+                    credentials = credentials,
+                    selectedLanguageCode = selectedLanguageCode,
+                    onSelectLanguage = { langCode -> viewModel.selectLanguage(langCode) },
+                    isDarkMode = isDarkMode,
+                    onToggleDarkMode = { enabled -> viewModel.setDarkMode(enabled) },
+                    isDemoMode = isDemoMode,
+                    onToggleDemoMode = { enabled -> viewModel.setInstitutionalDemoMode(enabled) }
+                )
             }
         }
-    }
-    }
     }
 }
 
@@ -546,6 +568,7 @@ fun DashboardTab(
     onGoToCredentials: () -> Unit,
     onOpenGuides: () -> Unit,
     onChooseQuestura: () -> Unit,
+    onNavigateRoute: (AppleScreenRoute) -> Unit = {},
     onSyncVerifiedDossier: (String, String, String, String) -> Unit = { _, _, _, _ -> },
     selectedLanguageCode: String
 ) {
@@ -554,30 +577,20 @@ fun DashboardTab(
              credentials.numeroPratica.isNotBlank() ||
              (credentials.userId.isNotBlank() && credentials.password.isNotBlank()))
 
-    var activeSubTab by remember { mutableIntStateOf(0) }
-    var activeSmartTool by remember { mutableStateOf<SmartToolType?>(null) }
     var showAllHistory by remember { mutableStateOf(false) }
+    var showCommunityStats by remember { mutableStateOf(false) }
     val cooldownSeconds by viewModel.cooldownSecondsRemaining.collectAsStateWithLifecycle()
     val isDemoMode by viewModel.isInstitutionalDemoMode.collectAsStateWithLifecycle()
-    val isEn = selectedLanguageCode == "en"
-
-    androidx.activity.compose.BackHandler(enabled = activeSmartTool != null || activeSubTab != 0) {
-        if (activeSmartTool != null) {
-            activeSmartTool = null
-        } else {
-            activeSubTab = 0
-        }
-    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(BentoBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(top = 12.dp, bottom = 88.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(top = 14.dp, bottom = 96.dp)
     ) {
-        // 1. Calm Greeting with Persistent Profile Avatar & Quick Notification Test Header
+        // 1. Clean iOS 18 Greeting Header (Rule 3: No "Test Notifica" button)
         item {
             val name = credentials?.fullName?.trim().orEmpty()
             val greetingText = if (name.isNotBlank()) {
@@ -585,7 +598,13 @@ fun DashboardTab(
             } else {
                 Localization.string("greeting_general", selectedLanguageCode)
             }
-            val context = androidx.compose.ui.platform.LocalContext.current
+            val lastCheckedStr = if (credentials != null && credentials.lastCheckedTime != 0L) {
+                val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                Localization.string("last_checked", selectedLanguageCode, sdf.format(Date(credentials.lastCheckedTime)))
+            } else {
+                Localization.string("no_checks", selectedLanguageCode)
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -600,501 +619,252 @@ fun DashboardTab(
                 ) {
                     UserPersistentAvatar(
                         fullName = credentials?.fullName,
-                        size = 44.dp,
-                        fontSize = 14.sp,
-                        borderColor = ItalianGreen.copy(alpha = 0.45f),
-                        borderWidth = 1.5.dp
+                        size = 46.dp,
+                        fontSize = 15.sp,
+                        borderColor = VividEmerald,
+                        borderWidth = 2.dp,
+                        onClick = onGoToCredentials
                     )
                     Column {
                         Text(
-                            text = "$greetingText 👋",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = BentoTextHeading
+                            text = greetingText,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.30).sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                        val lastCheckedStr = if (credentials?.lastCheckedTime != 0L) {
-                            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                            Localization.string("last_checked", selectedLanguageCode, sdf.format(Date(credentials?.lastCheckedTime ?: 0L)))
-                        } else {
-                            Localization.string("no_checks", selectedLanguageCode)
-                        }
                         Text(
                             text = lastCheckedStr,
                             fontSize = 12.sp,
-                            color = BentoTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                OutlinedButton(
-                    onClick = {
-                        com.example.util.NotificationHelper.showStatusNotification(
-                            context,
-                            Localization.string("notif_active", selectedLanguageCode),
-                            Localization.string("notif_active_desc", selectedLanguageCode)
+                // Province Quick Badge
+                Surface(
+                    onClick = onChooseQuestura,
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, AppleBorderHairline),
+                    shadowElevation = 1.dp,
+                    modifier = Modifier.appleBounceClick()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = SunsetTangerine,
+                            modifier = Modifier.size(14.dp)
                         )
+                        Text(
+                            text = selectedProvince,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+
+        // 2. SCREEN 1: HERO STATUS WIDGET (22dp White Squircle, Glowing Pill Badge, Dossier Number, Plain-Language Guidance)
+        item {
+            AppleHeroStatusWidget(
+                credentials = credentials,
+                isDemoMode = isDemoMode,
+                selectedLanguageCode = selectedLanguageCode,
+                onEditCredentials = onGoToCredentials
+            )
+        }
+
+        // 3. SCREEN 1: SINGLE PRIMARY ACTION BUTTON
+        item {
+            val isCooldownActive = cooldownSeconds > 0
+            val requiresSetup = !hasCode && !isDemoMode
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Button(
+                    onClick = {
+                        if (requiresSetup) {
+                            onResetCheckState()
+                            onGoToCredentials()
+                        } else {
+                            onCheckNow()
+                        }
                     },
-                    border = BorderStroke(1.dp, BentoCardBorder),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ItalianGreen),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                    modifier = Modifier.testTag("test_notif_btn")
+                    enabled = !isCooldownActive && checkState !is CheckUiState.Loading,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (requiresSetup) ElectricBlue else VividEmerald,
+                        contentColor = Color.White,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 2.dp,
+                        pressedElevation = 0.dp,
+                        disabledElevation = 0.dp
+                    ),
+                    contentPadding = PaddingValues(vertical = 15.dp, horizontal = 22.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .appleBounceClick()
+                        .testTag("check_status_btn")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Test Notifica",
-                        modifier = Modifier.size(15.dp)
+                        imageVector = when {
+                            isCooldownActive -> Icons.Default.HourglassBottom
+                            requiresSetup -> Icons.Default.QrCodeScanner
+                            else -> Icons.Default.Sync
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(Localization.string("test_button", selectedLanguageCode), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        // 2. Clean 3-Section Workspace Pill Switcher (No Visual Overload)
-        item {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    val subTabs = listOf(
-                        0 to Localization.string("subtab_practice", selectedLanguageCode),
-                        1 to Localization.string("subtab_tools", selectedLanguageCode),
-                        2 to Localization.string("subtab_stats_tab", selectedLanguageCode)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = when {
+                            isCooldownActive -> Localization.string("check_cooldown_button", selectedLanguageCode, cooldownSeconds)
+                            requiresSetup -> Localization.string("config_receipt_btn", selectedLanguageCode)
+                            else -> "Verifica Stato Live (Polizia & Portale)"
+                        },
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        letterSpacing = (-0.2).sp
                     )
-                    subTabs.forEach { (index, title) ->
-                        val isSelected = activeSubTab == index
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) BentoBadgeGreen else Color.Transparent)
-                                .clickable {
-                                    activeSubTab = index
-                                    if (index != 1) activeSmartTool = null
-                                }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = title,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) Color.White else BentoTextSecondary,
-                                maxLines = 1,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
                 }
-            }
-        }
 
-        // =========================================================================
-        // WORKSPACE 0: LA TUA PRATICA (WITH CLEAR SECTION DIVIDERS)
-        // =========================================================================
-        if (activeSubTab == 0) {
-            item {
-                SectionDividerHeader(
-                    title = Localization.string("section_main_status_title", selectedLanguageCode),
-                    subtitle = Localization.string("section_main_status_sub", selectedLanguageCode),
-                    badgeText = "LIVE",
-                    icon = Icons.Default.Verified,
-                    accentColor = ItalianGreen
-                )
-            }
-
-            // Hero Status Card
-            item {
-                BentoPrimaryStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
-            }
-
-            // Primary Action Button ("Controlla Ora" / "Configura") right under Hero Card for effortless reach
-            if (!hasCode && !isDemoMode) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = BentoAlertRed.copy(alpha = 0.08f)),
-                        border = BorderStroke(1.dp, BentoCardBorder)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = Localization.string("config_required", selectedLanguageCode),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = BentoAlertRed,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Start
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = Localization.string("config_required_desc", selectedLanguageCode),
-                                fontSize = 12.sp,
-                                color = BentoTextSecondary,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Button(
-                                onClick = onGoToCredentials,
-                                colors = ButtonDefaults.buttonColors(containerColor = BentoBadgeGreen),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(44.dp)
-                                    .testTag("setup_ricevuta_btn")
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(Localization.string("config_receipt_btn", selectedLanguageCode), fontWeight = FontWeight.Bold, color = Color.White)
-                            }
-                        }
-                    }
-                }
-            } else {
-                item {
-                    val isCooldownActive = cooldownSeconds > 0
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Button(
-                            onClick = onCheckNow,
-                            enabled = !isCooldownActive && checkState !is CheckUiState.Loading,
-                            shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = BentoBadgeGreen,
-                                contentColor = Color.White,
-                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                disabledContentColor = BentoTextSecondary
-                            ),
-                            contentPadding = PaddingValues(vertical = 15.dp, horizontal = 18.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("check_status_btn")
-                        ) {
-                            Icon(
-                                imageVector = if (isCooldownActive) Icons.Default.HourglassBottom else Icons.Default.Refresh,
-                                contentDescription = null
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isCooldownActive) {
-                                    Localization.string("check_cooldown_button", selectedLanguageCode, cooldownSeconds)
-                                } else {
-                                    Localization.string("button_check_now", selectedLanguageCode)
-                                },
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            )
-                        }
-                        if (isCooldownActive) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = Localization.string("check_cooldown_subtitle", selectedLanguageCode),
-                                fontSize = 11.sp,
-                                color = BentoTextSecondary,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("check_cooldown_subtitle")
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Live Check Feedback Card (when checking or completed)
-            if (checkState !is CheckUiState.Idle) {
-                item {
-                    CheckStateCard(checkState = checkState, onDismiss = onResetCheckState, selectedLanguageCode = selectedLanguageCode)
-                }
-            }
-
-            // Divider before 1-Tap Quick Strip
-            item {
-                SectionDividerHeader(
-                    title = Localization.string("section_quick_tools_title", selectedLanguageCode),
-                    subtitle = Localization.string("section_quick_tools_sub", selectedLanguageCode),
-                    badgeText = Localization.string("badge_4_tools", selectedLanguageCode),
-                    icon = Icons.Default.AutoAwesome,
-                    accentColor = Color(0xFF0284C7)
-                )
-            }
-
-            // 1-Tap Quick Strip to jump directly to Smart Tools #1, #2, #3, #5 without visual clutter
-            item {
-                SmartToolsQuickStrip(
-                    onSelectTool = { tool ->
-                        activeSmartTool = tool
-                        activeSubTab = 1
-                    },
-                    selectedLanguageCode = selectedLanguageCode
-                )
-            }
-
-            // Divider before Official Portals & Dossier Details
-            item {
-                SectionDividerHeader(
-                    title = Localization.string("section_portals_detail_title", selectedLanguageCode),
-                    subtitle = Localization.string("section_portals_detail_sub", selectedLanguageCode),
-                    badgeText = Localization.string("badge_2_sources", selectedLanguageCode),
-                    icon = Icons.Default.AccountBalance,
-                    accentColor = ItalianGreen
-                )
-            }
-
-            // Dual Official Portals Comparison Row (Portale Immigrazione & Polizia di Stato)
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        BentoPortalStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        BentoPoliziaStatusCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
-                    }
-                }
-            }
-
-            // Real Portale Immigrazione Dettaglio Istanza & Convocazione Card
-            if (credentials != null && (credentials.codiceIstanza.isNotBlank() || credentials.convocazioneDate.isNotBlank() || credentials.dettaglioAnomalie.isNotBlank())) {
-                item {
-                    BentoIstanzaDetailsCard(credentials = credentials)
-                }
-            }
-
-            // 5-Step Progress Timeline Card
-            if (credentials != null && credentials.lastCheckedTime != 0L) {
-                item {
-                    BentoPermessoTimelineCard(credentials = credentials, selectedLanguageCode = selectedLanguageCode)
-                }
-            }
-
-            // Divider before Questura & Immigration Guides
-            item {
-                SectionDividerHeader(
-                    title = Localization.string("section_questura_guides_title", selectedLanguageCode),
-                    subtitle = Localization.string("section_questura_guides_sub", selectedLanguageCode),
-                    badgeText = selectedProvince.uppercase(Locale.getDefault()),
-                    icon = Icons.Default.LocationOn,
-                    accentColor = Color(0xFF7C3AED)
-                )
-            }
-
-            // Personalized Questura Card (now clean and collapsible)
-            item {
-                PersonalizedQuesturaCard(
-                    credentials = credentials,
-                    onChooseQuestura = onChooseQuestura,
-                    selectedLanguageCode = selectedLanguageCode
-                )
-            }
-
-            // Compact Immigration Guides Banner Card
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onOpenGuides() }
-                        .testTag("immigration_guides_card"),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                ) {
-                    Row(
+                if (isCooldownActive) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = Localization.string("check_cooldown_subtitle", selectedLanguageCode),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MenuBook,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = Localization.string("guides_card_title", selectedLanguageCode),
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = Localization.string("guides_card_desc", selectedLanguageCode),
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                            .testTag("check_cooldown_subtitle")
+                    )
                 }
             }
+        }
 
-            // Divider before Status Check History
+        // Live Check Feedback Card (when checking or completed)
+        if (checkState !is CheckUiState.Idle) {
             item {
-                SectionDividerHeader(
-                    title = Localization.string("history_title", selectedLanguageCode),
-                    subtitle = Localization.string("section_history_sub", selectedLanguageCode),
-                    badgeText = "${history.size}",
-                    icon = Icons.Default.History,
-                    accentColor = Color(0xFFD97706)
+                CheckStateCard(
+                    checkState = checkState,
+                    onDismiss = onResetCheckState,
+                    selectedLanguageCode = selectedLanguageCode
                 )
             }
+        }
 
-            // Calm, Collapsible Status Check History Section Controls
-            if (history.isNotEmpty()) {
-                item {
+        // 4. SCREEN 1: APPOINTMENT ALERT CARD (Sunset Tangerine #FF9500 Apple Wallet-style pass alert)
+        item {
+            AppleAppointmentAlertCard(
+                appointmentDate = appointmentDate.ifBlank { credentials?.convocazioneDate.orEmpty() },
+                appointmentTime = appointmentTime,
+                appointmentLocation = appointmentLocation.ifBlank { credentials?.convocazioneLocation.orEmpty() },
+                selectedProvince = selectedProvince,
+                onUpdateAppointment = onUpdateAppointment
+            )
+        }
+
+        // 5. SCREEN 1: 4-STAGE VERTICAL STEPPER WITH BREATHING EMERALD NODE
+        item {
+            AppleVerticalStepperCard(
+                credentials = credentials,
+                selectedLanguageCode = selectedLanguageCode
+            )
+        }
+
+        // Real Portale Immigrazione Dettaglio Istanza Card (when live details exist)
+        if (credentials != null && (credentials.codiceIstanza.isNotBlank() || credentials.convocazioneDate.isNotBlank() || credentials.dettaglioAnomalie.isNotBlank())) {
+            item {
+                BentoIstanzaDetailsCard(credentials = credentials)
+            }
+        }
+
+        // Quick 1-Tap Action Row to Strumenti & Statistiche
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Surface(
+                    onClick = { onNavigateRoute(AppleScreenRoute.STRUMENTI_HUB) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = ElectricBlueTint,
+                    border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.3f)),
+                    modifier = Modifier
+                        .weight(1f)
+                        .appleBounceClick()
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        if (history.size > 2) {
-                            TextButton(onClick = { showAllHistory = !showAllHistory }) {
-                                Text(
-                                    text = if (showAllHistory) "Mostra meno" else "Vedi tutti (${history.size})",
-                                    fontSize = 12.sp,
-                                    color = BentoTextSecondary
-                                )
-                            }
-                        }
-                        TextButton(onClick = onClearHistory) {
-                            Icon(Icons.Default.Delete, contentDescription = "Cancella", modifier = Modifier.size(15.dp), tint = BentoBadgeGreen)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(Localization.string("history_clear", selectedLanguageCode), fontSize = 12.sp, color = BentoBadgeGreen)
-                        }
+                        Icon(
+                            imageVector = Icons.Default.GridView,
+                            contentDescription = null,
+                            tint = ElectricBlue,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Strumenti & PEC",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ElectricBlue,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
-            }
 
-            if (history.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, BentoCardBorder)
+                Surface(
+                    onClick = { showCommunityStats = !showCommunityStats },
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, AppleBorderHairline),
+                    modifier = Modifier
+                        .weight(1f)
+                        .appleBounceClick()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .padding(20.dp)
-                                .fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.History,
-                                contentDescription = "Nessuna cronologia",
-                                tint = BentoTextSecondary.copy(alpha = 0.5f),
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = Localization.string("no_history_recorded", selectedLanguageCode),
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 13.sp,
-                                color = BentoTextSecondary
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.QueryStats,
+                            contentDescription = null,
+                            tint = VividEmerald,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (showCommunityStats) "Nascondi Tempi" else "Tempi Questura",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                }
-            } else {
-                val visibleHistory = if (showAllHistory) history else history.take(2)
-                items(visibleHistory) { record ->
-                    HistoryRecordItem(record = record, selectedLanguageCode = selectedLanguageCode)
                 }
             }
         }
 
-        // =========================================================================
-        // WORKSPACE 1: KIT STRUMENTI SMART (FEATURES #1, #2, #3, #5 + CHECKLIST)
-        // =========================================================================
-        if (activeSubTab == 1) {
-            item {
-                SmartToolsCalmHub(
-                    viewModel = viewModel,
-                    selectedLanguageCode = selectedLanguageCode,
-                    activeTool = activeSmartTool,
-                    onSelectTool = { activeSmartTool = it }
-                )
-            }
-
-            // When in the 2x2 Grid overview (not inside a single focused tool), also show the Appointment Checklist & FAQ below with clear section dividers
-            if (activeSmartTool == null) {
-                item {
-                    SectionDividerHeader(
-                        title = Localization.string("section_appointment_checklist_title", selectedLanguageCode),
-                        subtitle = Localization.string("section_appointment_checklist_sub", selectedLanguageCode),
-                        badgeText = Localization.string("badge_checklist", selectedLanguageCode),
-                        icon = Icons.Default.FactCheck,
-                        accentColor = Color(0xFF0284C7)
-                    )
-                }
-
-                item {
-                    BentoAppointmentsAndVaultCard(
-                        appointmentDate = appointmentDate,
-                        appointmentTime = appointmentTime,
-                        appointmentLocation = appointmentLocation,
-                        onUpdateAppointment = onUpdateAppointment,
-                        checkedDocs = checkedDocs,
-                        onToggleDocument = onToggleDocument,
-                        selectedLanguageCode = selectedLanguageCode
-                    )
-                }
-
-                item {
-                    SectionDividerHeader(
-                        title = Localization.string("section_faq_title", selectedLanguageCode),
-                        subtitle = Localization.string("section_faq_sub", selectedLanguageCode),
-                        badgeText = Localization.string("badge_guide", selectedLanguageCode),
-                        icon = Icons.Default.HelpOutline,
-                        accentColor = Color(0xFF7C3AED)
-                    )
-                }
-
-                item {
-                    BentoStatusAdvisorCard(selectedLanguageCode = selectedLanguageCode)
-                }
-            }
-        }
-
-        // =========================================================================
-        // WORKSPACE 2: STATISTICHE, PORTALI & CREDENZIALI (WITH CLEAR DIVIDERS)
-        // =========================================================================
-        if (activeSubTab == 2) {
-            item {
-                SectionDividerHeader(
-                    title = Localization.string("section_wait_times_title", selectedLanguageCode),
-                    subtitle = Localization.string("section_wait_times_sub", selectedLanguageCode),
-                    badgeText = selectedProvince.uppercase(Locale.getDefault()),
-                    icon = Icons.Default.Groups,
-                    accentColor = ItalianGreen
-                )
-            }
-
+        if (showCommunityStats) {
             item {
                 BentoCommunityStatsCard(
                     selectedProvince = selectedProvince,
@@ -1102,33 +872,53 @@ fun DashboardTab(
                     selectedLanguageCode = selectedLanguageCode
                 )
             }
+        }
 
+        // Collapsible Status Check History
+        if (history.isNotEmpty()) {
             item {
-                SectionDividerHeader(
-                    title = Localization.string("section_uptime_title", selectedLanguageCode),
-                    subtitle = Localization.string("section_uptime_sub", selectedLanguageCode),
-                    badgeText = "ONLINE",
-                    icon = Icons.Default.Dns,
-                    accentColor = Color(0xFF0284C7)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = Localization.string("history_title", selectedLanguageCode),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (history.size > 2) {
+                            TextButton(onClick = { showAllHistory = !showAllHistory }) {
+                                Text(
+                                    text = if (showAllHistory) "Mostra meno" else "Vedi tutti (${history.size})",
+                                    fontSize = 12.sp,
+                                    color = ElectricBlue
+                                )
+                            }
+                        }
+                        TextButton(onClick = onClearHistory) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Cancella",
+                                modifier = Modifier.size(15.dp),
+                                tint = AlertRed
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                Localization.string("history_clear", selectedLanguageCode),
+                                fontSize = 12.sp,
+                                color = AlertRed
+                            )
+                        }
+                    }
+                }
             }
 
-            item {
-                BentoPortalMonitorCard(selectedLanguageCode = selectedLanguageCode)
-            }
-
-            item {
-                SectionDividerHeader(
-                    title = Localization.string("section_credentials_summary_title", selectedLanguageCode),
-                    subtitle = Localization.string("section_credentials_summary_sub", selectedLanguageCode),
-                    badgeText = Localization.string("badge_active", selectedLanguageCode),
-                    icon = Icons.Default.Key,
-                    accentColor = Color(0xFFD97706)
-                )
-            }
-
-            item {
-                BentoCredentialsCard(credentials = credentials, onGoToCredentials = onGoToCredentials, selectedLanguageCode = selectedLanguageCode)
+            val visibleHistory = if (showAllHistory) history else history.take(2)
+            items(visibleHistory) { record ->
+                HistoryRecordItem(record = record, selectedLanguageCode = selectedLanguageCode)
             }
         }
     }
@@ -2284,6 +2074,7 @@ fun PortalWebViewTab(
     onStatusDetected: (String?, String?) -> Unit,
     selectedLanguageCode: String
 ) {
+    val context = LocalContext.current
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var webProgress by remember { mutableIntStateOf(0) }
     
@@ -2407,15 +2198,41 @@ fun PortalWebViewTab(
 
                 Button(
                     onClick = {
-                        webViewInstance?.evaluateJavascript(buildAutofillJs, null)
+                        val isAr = selectedLanguageCode == "ar"
+                        val isEn = selectedLanguageCode == "en"
+                        BiometricAuthHelper.authenticateSingleTap(
+                            context = context,
+                            title = when {
+                                isAr -> "التعبئة التلقائية بالبصمة"
+                                isEn -> "Biometric 1-Tap Auto-Fill"
+                                else -> "Auto-Fill Biometrico 1-Tap"
+                            },
+                            subtitle = when {
+                                isAr -> "تحقق لإدخال بيانات إيصال Mod. 22A تلقائياً"
+                                isEn -> "Verify identity to inject Mod. 22A credentials"
+                                else -> "Verifica identità per inserire i codici Mod. 22A"
+                            },
+                            description = when {
+                                isAr -> "قاعدة بيانات Room المشفرة محلياً"
+                                isEn -> "Room Local Encrypted Credential Vault"
+                                else -> "Cassaforte Credenziali Locale Room"
+                            },
+                            onAuthenticated = {
+                                webViewInstance?.evaluateJavascript(buildAutofillJs, null)
+                            },
+                            onError = { msg ->
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            }
+                        )
                     },
                     enabled = hasCredentials,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = VividEmerald, contentColor = Color.White),
                     modifier = Modifier.testTag("autofill_btn")
                 ) {
-                    Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Fingerprint, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Auto-fill", fontSize = 12.sp)
+                    Text("1-Tap Auto-fill", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -4849,502 +4666,1081 @@ fun ProfileTab(
     selectedLanguageCode: String
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val fullName by viewModel.formFullName.collectAsStateWithLifecycle()
     val userId by viewModel.formUserId.collectAsStateWithLifecycle()
     val password by viewModel.formPassword.collectAsStateWithLifecycle()
     val numeroAssicurata by viewModel.formNumeroAssicurata.collectAsStateWithLifecycle()
     val numeroPratica by viewModel.formNumeroPratica.collectAsStateWithLifecycle()
+    val selectedProvince by viewModel.selectedProvince.collectAsStateWithLifecycle()
+    val isBackgroundSyncEnabled by viewModel.isBackgroundSyncEnabled.collectAsStateWithLifecycle()
+    val currentInterval by viewModel.syncInterval.collectAsStateWithLifecycle()
+    val credentials by viewModel.credentials.collectAsStateWithLifecycle()
+    val vaultEntries by viewModel.vaultEntries.collectAsStateWithLifecycle()
+    val isBiometricSessionUnlocked by viewModel.isBiometricSessionUnlocked.collectAsStateWithLifecycle()
     val isEn = selectedLanguageCode == "en"
-    
+    val isAr = selectedLanguageCode == "ar"
+
+    val isBiometricProtectionEnabled = credentials?.biometricProtectionEnabled == true
+    val isBiometricLocked = isBiometricProtectionEnabled && !isBiometricSessionUnlocked
+    val biometricHardwareStatus = remember(context) { BiometricAuthHelper.getHardwareStatus(context) }
+
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var isScanning by remember { mutableStateOf(false) }
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    val triggerSingleTapBiometricUnlock: (() -> Unit) -> Unit = { onSuccessAction ->
+        BiometricAuthHelper.authenticateSingleTap(
+            context = context,
+            title = when {
+                isAr -> "فتح خزنة بيانات الإقامة (Mod. 22A)"
+                isEn -> "Unlock Mod. 22A Credential Vault"
+                else -> "Sblocca Cassaforte Credenziali Mod. 22A"
+            },
+            subtitle = when {
+                isAr -> "الدخول السريع بلمسة واحدة عبر البصمة أو رمز الجهاز"
+                isEn -> "Single-tap biometric access to your Room database credentials"
+                else -> "Accesso rapido 1-Tap alle credenziali salvate nel database Room"
+            },
+            description = when {
+                isAr -> "بياناتك محفوظة محلياً بأمان تام على جهازك"
+                isEn -> "Your postal receipt & Questura credentials are stored locally in Room"
+                else -> "I tuoi codici Assicurata, Ologramma e Pratica sono protetti localmente"
+            },
+            onAuthenticated = { usedHardware ->
+                viewModel.unlockWithBiometrics()
+                onSuccessAction()
+                val msg = when {
+                    isAr -> if (usedHardware) "تم فتح الخزنة بالبصمة بنجاح" else "تم فتح الخزنة بنجاح"
+                    isEn -> if (usedHardware) "Biometric Vault Unlocked" else "Credential Vault Unlocked"
+                    else -> if (usedHardware) "Cassaforte sbloccata con Biometria!" else "Cassaforte credenziali sbloccata!"
+                }
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            },
+            onError = { errMsg ->
+                Toast.makeText(context, errMsg, Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        val uri = tempCameraUri
+        if (success && uri != null) {
+            isScanning = true
+            coroutineScope.launch {
+                val result = ReceiptScannerHelper.scanReceipt(context, uri)
+                isScanning = false
+                result.onSuccess { data ->
+                    viewModel.applyScannedReceipt(data)
+                    viewModel.saveCredentials()
+                    Toast.makeText(
+                        context,
+                        "Ricevuta Mod. 22A acquisita e sincronizzata nel Pass!",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }.onFailure { err ->
+                    Toast.makeText(context, "Errore OCR: ${err.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            isScanning = true
+            coroutineScope.launch {
+                val result = ReceiptScannerHelper.scanReceipt(context, uri)
+                isScanning = false
+                result.onSuccess { data ->
+                    viewModel.applyScannedReceipt(data)
+                    viewModel.saveCredentials()
+                    Toast.makeText(
+                        context,
+                        "Ricevuta Mod. 22A acquisita da immagine!",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }.onFailure { err ->
+                    Toast.makeText(context, "Errore scansione: ${err.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    val launchCameraScan = {
+        try {
+            val cacheDir = File(context.cacheDir, "camera_images").apply { mkdirs() }
+            val tempFile = File.createTempFile("receipt_", ".jpg", cacheDir)
+            val authority = "${context.packageName}.fileprovider"
+            val uri = androidx.core.content.FileProvider.getUriForFile(context, authority, tempFile)
+            tempCameraUri = uri
+            cameraLauncher.launch(uri)
+        } catch (_: Exception) {
+            galleryLauncher.launch("image/*")
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(top = 14.dp, bottom = 96.dp)
     ) {
+        // 1. APPLE WALLET STYLE PASS CARD (Emerald Gradient, Side Ticket Notches, Barcode & 1-Tap Camera Scan)
         item {
-            SectionDividerHeader(
-                title = if (isEn) "Persistent User Identity" else "Identità Utente & Avatar Persistente",
-                subtitle = if (isEn) "Profile picture automatically generated from your First & Last Name" else "Immagine profilo generata e salvata dal tuo Nome e Cognome",
-                badgeText = extractFirstAndLastNameInitials(fullName),
-                icon = Icons.Default.Badge,
-                accentColor = ItalianGreen
+            AppleWalletPassCard(
+                fullName = fullName,
+                userId = if (isBiometricLocked && userId.isNotBlank()) "•••• •••• ${userId.takeLast(3)}" else userId,
+                assicurataCode = if (isBiometricLocked && (numeroAssicurata.isNotBlank() || password.isNotBlank())) {
+                    "•••• •••• ${(numeroAssicurata.ifBlank { password }).takeLast(3)}"
+                } else {
+                    numeroAssicurata.ifBlank { password }
+                },
+                praticaCode = if (isBiometricLocked && numeroPratica.isNotBlank()) "••••••${numeroPratica.takeLast(3)}" else numeroPratica,
+                selectedProvince = selectedProvince,
+                onScanWithCamera = launchCameraScan
             )
         }
 
-        // User Profile Header with Persistent Avatar
+        // 1B. BIOMETRIC PROMPT & ROOM CREDENTIAL VAULT (SINGLE-TAP ACCESS & MULTI-DOSSIER AUTO-FILL)
         item {
-            val (parsedFirst, parsedLast) = remember(fullName) { parseFirstAndLastName(fullName) }
-            Card(
-                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = ItalianGreenLight.copy(alpha = 0.4f)),
-                shape = RoundedCornerShape(16.dp)
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(
+                    1.dp,
+                    if (isBiometricLocked) SunsetTangerine.copy(alpha = 0.45f) else AppleBorderHairline
+                ),
+                shadowElevation = 1.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("biometric_credential_vault_card")
             ) {
-                Row(
+                Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    UserPersistentAvatar(
-                        fullName = fullName,
-                        size = 60.dp,
-                        fontSize = 20.sp,
-                        borderColor = Color.White,
-                        borderWidth = 2.dp,
-                        modifier = Modifier.testTag("profile_persistent_avatar")
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = fullName.ifBlank { Localization.string("friend", selectedLanguageCode) },
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = BentoTextHeading
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = if (parsedLast.isNotBlank()) {
-                                "Nome: $parsedFirst • Cognome: $parsedLast"
-                            } else {
-                                Localization.string("profile_subtitle", selectedLanguageCode)
-                            },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = ItalianGreen
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = Localization.string("profile_subtitle", selectedLanguageCode),
-                            fontSize = 11.sp,
-                            color = BentoTextSecondary
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            SectionDividerHeader(
-                title = Localization.string("select_language", selectedLanguageCode),
-                subtitle = if (isEn) "Choose your preferred display language" else "Seleziona la lingua dell'interfaccia e dell'assistente",
-                badgeText = selectedLanguageCode.uppercase(Locale.ROOT),
-                icon = Icons.Default.Language,
-                accentColor = Color(0xFF0284C7)
-            )
-        }
-
-        // Section 1: Seleziona Lingua (Select Language)
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = null,
-                            tint = ItalianGreen,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = Localization.string("select_language", selectedLanguageCode),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = BentoTextHeading
-                        )
-                    }
-
-                    val languages = listOf(
-                        AppLanguage.ITALIAN,
-                        AppLanguage.ENGLISH,
-                        AppLanguage.ARABIC,
-                        AppLanguage.SPANISH,
-                        AppLanguage.FRENCH
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        languages.forEach { lang ->
-                            val isSelected = selectedLanguageCode == lang.code
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { viewModel.selectLanguage(lang.code) },
-                                label = {
-                                    Text("${lang.flag} ${lang.displayName}", fontSize = 13.sp)
-                                },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = ItalianGreenLight,
-                                    selectedLabelColor = ItalianGreen,
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    labelColor = BentoTextSecondary
-                                ),
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = if (isSelected) ItalianGreen else BentoCardBorder
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            ReceiptAutoFillCard(viewModel = viewModel)
-        }
-
-        item {
-            SectionDividerHeader(
-                title = Localization.string("profile_title", selectedLanguageCode),
-                subtitle = if (isEn) "Applicant name, User ID (top-right) and Password (top-left barcode)" else "Nome, User ID (in alto a destra) e Password (codice a barre a sinistra)",
-                badgeText = "DATI",
-                icon = Icons.Default.Person,
-                accentColor = ItalianGreen
-            )
-        }
-
-        // Section 2: Edit Profile Data (Dati Personali)
-        item {
-            var showAdvancedProfile by remember { mutableStateOf(false) }
-
-            Card(
-                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = ItalianGreen,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = Localization.string("profile_title", selectedLanguageCode),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = BentoTextHeading
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = fullName,
-                        onValueChange = { viewModel.formFullName.value = it },
-                        label = { Text("Nome e Cognome Intestatario") },
-                        placeholder = { Text("es. Karim El Assali") },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    HorizontalDivider(color = BentoCardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
-
-                    // Sub-section A: Portale Immigrazione
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Language, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Portale Immigrazione (Poste Italiane)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = Color(0xFF0369A1)
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = userId,
-                        onValueChange = { viewModel.formUserId.value = it },
-                        label = { Text("User ID (12 Cifre)") },
-                        supportingText = { Text("In alto a destra sulla ricevuta (es. 550000133317)", fontSize = 11.sp, color = ItalianGreen) },
-                        placeholder = { Text("es. 550000133317") },
-                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { viewModel.formPassword.value = it },
-                        label = { Text("Password (Codice a Barre)") },
-                        supportingText = { Text("In alto a sinistra sotto il codice a barre (es. 05598747694-1)", fontSize = 11.sp, color = ItalianGreen) },
-                        placeholder = { Text("es. 05598747694-1") },
-                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                        trailingIcon = {
-                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                                Icon(
-                                    imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = Localization.string("show_password_desc", selectedLanguageCode),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        },
-                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    HorizontalDivider(color = BentoCardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
-
-                    // Sub-section B: Polizia di Stato
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Security, contentDescription = null, tint = ItalianGreen, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Polizia di Stato (Questura)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = BentoTextHeading
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = numeroAssicurata,
-                        onValueChange = { viewModel.formNumeroAssicurata.value = it },
-                        label = { Text("Numero Assicurata (12 Cifre)") },
-                        supportingText = { Text("Di solito coincide con la password senza trattino finale (es. 055987476941)", fontSize = 11.sp, color = BentoTextSecondary) },
-                        placeholder = { Text("es. 055987476941") },
-                        leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = numeroPratica,
-                        onValueChange = { viewModel.formNumeroPratica.value = it },
-                        label = { Text("Codice Pratica Questura (10 caratteri)") },
-                        supportingText = { Text("Codice tracking assegnato dalla Questura (es. 25PC006466)", fontSize = 11.sp, color = BentoTextSecondary) },
-                        placeholder = { Text("es. 25PC006466") },
-                        leadingIcon = { Icon(Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Button(
-                        onClick = {
-                            viewModel.saveCredentials()
-                            android.widget.Toast.makeText(
-                                context,
-                                Localization.string("profile_edit_success", selectedLanguageCode),
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = ItalianGreen),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(Localization.string("button_save", selectedLanguageCode), fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-
-        // Section 3: Automatic Check Interval (5 Options)
-        item {
-            val currentInterval by viewModel.syncInterval.collectAsStateWithLifecycle()
-            SectionDividerHeader(
-                title = if (isEn) "Automatic Check Interval" else "Intervallo Controllo Automatico",
-                subtitle = if (isEn) "Choose how often the app checks your permit status in the background" else "Scegli la frequenza di verifica automatica in background della pratica",
-                badgeText = currentInterval.name,
-                icon = Icons.Default.Schedule,
-                accentColor = Color(0xFF7C3AED)
-            )
-        }
-
-        item {
-            val currentInterval by viewModel.syncInterval.collectAsStateWithLifecycle()
-
-            Card(
-                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Sync,
-                            contentDescription = null,
-                            tint = Color(0xFF7C3AED),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isEn) "Check Frequency (5 Options)" else "Frequenza di Controllo (5 Opzioni)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = BentoTextHeading
-                        )
-                    }
-
-                    Text(
-                        text = if (isEn)
-                            "The app will automatically query Questura and Portale Immigrazione and notify you of any change."
-                        else
-                            "L'applicazione interrogherà automaticamente la Questura e il Portale Immigrazione e ti invierà una notifica ad ogni variazione.",
-                        fontSize = 12.sp,
-                        color = BentoTextSecondary,
-                        lineHeight = 16.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    val intervalList = listOf(
-                        CheckInterval.HOURS_6 to if (isEn) "4 checks daily • Frequent" else "4 controlli al giorno • Frequente",
-                        CheckInterval.HOURS_12 to if (isEn) "Morning & Evening • Balanced" else "Mattina e sera • Bilanciato",
-                        CheckInterval.DAILY to if (isEn) "Once every 24h • Recommended" else "1 volta al giorno • Consigliato",
-                        CheckInterval.WEEKLY to if (isEn) "Once every 7 days • Low battery use" else "1 volta a settimana • Minimo consumo",
-                        CheckInterval.MONTHLY to if (isEn) "Once every 30 days • Long wait" else "1 volta al mese • Lunghe attese"
-                    )
-
-                    intervalList.forEach { (interval, subtitle) ->
-                        val isSelected = currentInterval == interval
-                        Surface(
-                            onClick = {
-                                viewModel.updateSyncInterval(interval)
-                                Toast.makeText(
-                                    context,
-                                    if (isEn) "Interval set to: ${interval.titleEn}" else "Frequenza impostata: ${interval.titleIt}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            },
-                            color = if (isSelected) Color(0xFF7C3AED).copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(
-                                width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) Color(0xFF7C3AED) else BentoCardBorder
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = if (isEn) interval.titleEn else interval.titleIt,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                        fontSize = 14.sp,
-                                        color = if (isSelected) Color(0xFF7C3AED) else BentoTextHeading
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = subtitle,
-                                        fontSize = 11.sp,
-                                        color = BentoTextSecondary
-                                    )
-                                }
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = "Attivo",
-                                        tint = Color(0xFF7C3AED),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            SectionDividerHeader(
-                title = Localization.string("about_section", selectedLanguageCode),
-                subtitle = if (isEn) "Background sync and application information" else "Sincronizzazione in background e informazioni sull'applicazione",
-                badgeText = "SYNC",
-                icon = Icons.Default.Info,
-                accentColor = Color(0xFF7C3AED)
-            )
-        }
-
-        // Section 3: App Settings (Informazioni)
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().border(1.dp, BentoCardBorder, RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = BentoCardLightBg),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = ItalianGreen,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = Localization.string("about_section", selectedLanguageCode),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = BentoTextHeading
-                        )
-                    }
-
-                    Text(
-                        text = Localization.string("about_text", selectedLanguageCode),
-                        fontSize = 12.sp,
-                        color = BentoTextSecondary,
-                        lineHeight = 16.sp
-                    )
-
-                    HorizontalDivider(color = BentoCardBorder, thickness = 1.dp, modifier = Modifier.padding(vertical = 4.dp))
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = Localization.string("bg_sync", selectedLanguageCode),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = BentoTextHeading
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (isBiometricLocked) SunsetTangerineTint else VividEmeraldTint
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isBiometricLocked) Icons.Default.Lock else Icons.Default.Fingerprint,
+                                    contentDescription = null,
+                                    tint = if (isBiometricLocked) SunsetTangerine else VividEmerald,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = when {
+                                        isAr -> "الدخول السريع بالبصمة وخزنة Room"
+                                        isEn -> "Biometric 1-Tap & Room Vault"
+                                        else -> "BiometricPrompt 1-Tap & Vault Room"
+                                    },
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = BiometricAuthHelper.getStatusBadgeText(biometricHardwareStatus, selectedLanguageCode),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
                         Switch(
-                            checked = true,
-                            onCheckedChange = { /* Always enabled for real-time checks */ },
+                            checked = isBiometricProtectionEnabled,
+                            onCheckedChange = { enable ->
+                                BiometricAuthHelper.authenticateSingleTap(
+                                    context = context,
+                                    title = when {
+                                        isAr -> "تأكيد إعداد الحماية بالبصمة"
+                                        isEn -> "Confirm Biometric Vault Setting"
+                                        else -> "Conferma Protezione Biometrica"
+                                    },
+                                    subtitle = when {
+                                        isAr -> "تفعيل أو إيقاف قفل بيانات الإيصال بلمسة واحدة"
+                                        isEn -> "Enable or disable single-tap biometric protection"
+                                        else -> "Attiva o disattiva il blocco biometrico 1-Tap"
+                                    },
+                                    description = "Room Database Credential Vault",
+                                    onAuthenticated = {
+                                        viewModel.setBiometricProtectionEnabled(enable)
+                                    },
+                                    onError = { errMsg ->
+                                        Toast.makeText(context, errMsg, Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = ItalianGreen
+                                checkedTrackColor = VividEmerald
+                            ),
+                            modifier = Modifier.testTag("biometric_protection_switch")
+                        )
+                    }
+
+                    // Stacked Full-Width Action Buttons (Never wraps text across lines)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                if (isBiometricLocked) {
+                                    triggerSingleTapBiometricUnlock {}
+                                } else if (isBiometricProtectionEnabled) {
+                                    viewModel.lockBiometricSession()
+                                } else {
+                                    triggerSingleTapBiometricUnlock {
+                                        viewModel.setBiometricProtectionEnabled(true)
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isBiometricLocked) ElectricBlue else VividEmerald,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .appleBounceClick()
+                                .testTag("biometric_single_tap_unlock_btn")
+                        ) {
+                            Icon(
+                                imageVector = if (isBiometricLocked) Icons.Default.Fingerprint else Icons.Default.LockOpen,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = when {
+                                    isBiometricLocked -> when {
+                                        isAr -> "فتح بالبصمة (لمسة واحدة)"
+                                        isEn -> "1-Tap Biometric Unlock"
+                                        else -> "Sblocca 1-Tap con Biometria"
+                                    }
+                                    isBiometricProtectionEnabled -> when {
+                                        isAr -> "قفل الخزنة الآن"
+                                        isEn -> "Lock Vault Session"
+                                        else -> "Blocca Sessione Ora"
+                                    }
+                                    else -> when {
+                                        isAr -> "تفعيل الدخول بالبصمة 1-Tap"
+                                        isEn -> "Activate 1-Tap Biometric Entry"
+                                        else -> "Attiva Accesso Biometrico 1-Tap"
+                                    }
+                                },
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                triggerSingleTapBiometricUnlock {
+                                    val label = fullName.ifBlank {
+                                        numeroPratica.ifBlank { "Mod. 22A" }
+                                    }
+                                    viewModel.saveCurrentCredentialsToVault(label)
+                                    Toast.makeText(
+                                        context,
+                                        if (isEn) "Saved to Room Vault!" else "Salvato nella Cassaforte Room!",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.45f)),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 11.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .appleBounceClick()
+                                .testTag("save_to_room_vault_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EnhancedEncryption,
+                                contentDescription = null,
+                                tint = ElectricBlue,
+                                modifier = Modifier.size(17.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isEn) "Save Current Dossier to Room Vault" else if (isAr) "حفظ الملف الحالي بالخزنة" else "Salva Dossier Attuale nel Vault Room",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = ElectricBlue,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    val lastAuthTs = credentials?.lastBiometricAuthTimestamp ?: 0L
+                    if (lastAuthTs > 0L) {
+                        val formattedTime = remember(lastAuthTs) {
+                            SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(lastAuthTs))
+                        }
+                        Text(
+                            text = when {
+                                isAr -> "آخر تحقق بالبصمة: $formattedTime • متكامل مع قاعدة بيانات Room"
+                                isEn -> "Last biometric verification: $formattedTime • Backed by Room Database"
+                                else -> "Ultima verifica biometrica: $formattedTime • Sincronizzato con Room DB"
+                            },
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Saved Room Credential Vault Profiles (Single-Tap Biometric Switch & Auto-Fill)
+                    if (vaultEntries.isNotEmpty()) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+                        Text(
+                            text = when {
+                                isAr -> "ملفات الإقامة المحفوظة في قاعدة بيانات ROOM (${vaultEntries.size})"
+                                isEn -> "SAVED ROOM VAULT PROFILES (${vaultEntries.size})"
+                                else -> "PROFILI SALVATI NEL VAULT ROOM (${vaultEntries.size})"
+                            },
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 0.6.sp
+                        )
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            vaultEntries.forEach { entry ->
+                                val maskedCode = remember(entry, isBiometricLocked) {
+                                    val raw = entry.numeroAssicurata.ifBlank { entry.numeroPratica.ifBlank { entry.userId } }
+                                    if (isBiometricLocked && raw.length > 3) {
+                                        "•••• •••• ${raw.takeLast(3)}"
+                                    } else {
+                                        raw.ifBlank { "Mod. 22A" }
+                                    }
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                    border = BorderStroke(1.dp, AppleBorderHairline),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = entry.fullName.ifBlank { entry.label },
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "${entry.selectedProvince} • $maskedCode",
+                                                fontSize = 11.sp,
+                                                fontFamily = FontFamily.Monospace,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Surface(
+                                                onClick = {
+                                                    triggerSingleTapBiometricUnlock {
+                                                        viewModel.applyVaultEntryToActiveCredentials(entry)
+                                                    }
+                                                },
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = ElectricBlueTint,
+                                                border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.3f)),
+                                                modifier = Modifier
+                                                    .appleBounceClick()
+                                                    .testTag("vault_autofill_btn_${entry.entryId}")
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Fingerprint,
+                                                        contentDescription = null,
+                                                        tint = ElectricBlue,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(
+                                                        text = if (isAr) "تعبئة 1-Tap" else "1-Tap Fill",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = ElectricBlue,
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
+
+                                            IconButton(
+                                                onClick = { viewModel.deleteVaultEntry(entry.entryId) },
+                                                modifier = Modifier
+                                                    .size(32.dp)
+                                                    .testTag("vault_delete_btn_${entry.entryId}")
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.DeleteOutline,
+                                                    contentDescription = "Delete vault entry",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(17.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (isScanning) {
+            item {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = ElectricBlueTint,
+                    border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = ElectricBlue
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Scansione OCR Mod. 22A in corso...",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = ElectricBlue
                         )
                     }
                 }
             }
         }
 
+        // Secondary Button to import from Gallery / Photo Picker
         item {
-            SectionDividerHeader(
-                title = "GDPR & Privacy (Art. 17)",
-                subtitle = if (isEn) "Permanent erasure of local personal data" else "Cancellazione permanente dei dati personali dal dispositivo",
-                badgeText = "PRIVACY",
-                icon = Icons.Default.Delete,
-                accentColor = Color(0xFFD32F2F)
+            Surface(
+                onClick = { galleryLauncher.launch("image/*") },
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, AppleBorderHairline),
+                shadowElevation = 1.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .appleBounceClick()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PhotoLibrary,
+                        contentDescription = null,
+                        tint = ElectricBlue,
+                        modifier = Modifier.size(17.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Importa Foto Ricevuta da Galleria",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ElectricBlue,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        // 2. INSET GROUPED SETTINGS LIST (Single Source of Truth for Credentials)
+        item {
+            Text(
+                text = "CREDENZIALI RICEVUTA MOD. 22A (UNICA FONTE)",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 0.7.sp,
+                modifier = Modifier.padding(start = 4.dp)
             )
         }
 
-        // Section 4: Privacy & GDPR (Danger Zone)
+        item {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, AppleBorderHairline),
+                shadowElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            UserPersistentAvatar(
+                                fullName = fullName,
+                                size = 40.dp,
+                                fontSize = 14.sp,
+                                borderColor = VividEmerald,
+                                borderWidth = 1.5.dp,
+                                modifier = Modifier.testTag("profile_persistent_avatar")
+                            )
+                            Column {
+                                Text(
+                                    text = "Dati Intestatario & Codici",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Sincronizzati con Portale Poste e Questura",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = VividEmeraldTint
+                        ) {
+                            Text(
+                                text = "MOD. 22A",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF007A33),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                    if (isBiometricLocked) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = SunsetTangerineTint,
+                            border = BorderStroke(1.dp, SunsetTangerine.copy(alpha = 0.35f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Fingerprint,
+                                    contentDescription = null,
+                                    tint = SunsetTangerine,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                                Text(
+                                    text = when {
+                                        isAr -> "البيانات محمية بالبصمة (BiometricPrompt)"
+                                        isEn -> "Credentials Protected by BiometricPrompt"
+                                        else -> "Credenziali Protette da BiometricPrompt"
+                                    },
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = when {
+                                        isAr -> "اضغط بلمسة واحدة لفتح وتعديل أرقام الإيصال البريدي (Mod. 22A) المحفوظة في قاعدة بيانات Room."
+                                        isEn -> "Authenticate with a single tap to view, edit, or auto-fill your Mod. 22A credentials stored in Room."
+                                        else -> "Autenticati con un solo tocco per visualizzare, modificare o compilare i codici Mod. 22A salvati in Room."
+                                    },
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                                Button(
+                                    onClick = { triggerSingleTapBiometricUnlock {} },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = VividEmerald,
+                                        contentColor = Color.White
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .appleBounceClick()
+                                        .testTag("unlock_credentials_form_btn")
+                                ) {
+                                    Icon(Icons.Default.Fingerprint, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = when {
+                                            isAr -> "فتح البيانات بالبصمة (1-Tap)"
+                                            isEn -> "1-Tap Biometric Unlock"
+                                            else -> "Sblocca Credenziali (1-Tap)"
+                                        },
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        // Row 1: Nome e Cognome
+                        OutlinedTextField(
+                            value = fullName,
+                            onValueChange = { viewModel.formFullName.value = it },
+                            label = { Text("Nome e Cognome Intestatario") },
+                            placeholder = { Text("Come riportato sul passaporto") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = VividEmerald, modifier = Modifier.size(20.dp))
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("input_fullname")
+                        )
+
+                        // Row 2: Password / Codice Assicurata
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = {
+                                viewModel.formPassword.value = it
+                                if (numeroAssicurata.isBlank() || numeroAssicurata == password) {
+                                    viewModel.formNumeroAssicurata.value = it.replace("-", "")
+                                }
+                            },
+                            label = { Text("Password / Codice Assicurata (12 cifre)") },
+                            supportingText = {
+                                Text("Sotto il codice a barre in alto a sinistra sulla ricevuta Mod. 22A", fontSize = 11.sp)
+                            },
+                            placeholder = { Text("12 cifre numeriche") },
+                            leadingIcon = {
+                                Icon(Icons.Default.QrCode, contentDescription = null, tint = ElectricBlue, modifier = Modifier.size(20.dp))
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = Localization.string("show_password_desc", selectedLanguageCode),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            },
+                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("input_password")
+                        )
+
+                        // Row 3: User ID (Ologramma)
+                        OutlinedTextField(
+                            value = userId,
+                            onValueChange = { viewModel.formUserId.value = it },
+                            label = { Text("User ID / Codice Ologramma (12 cifre)") },
+                            supportingText = {
+                                Text("In alto a destra sopra l'ologramma Poste Italiane", fontSize = 11.sp)
+                            },
+                            placeholder = { Text("12 cifre ologramma") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Badge, contentDescription = null, tint = ElectricBlue, modifier = Modifier.size(20.dp))
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("input_userid")
+                        )
+
+                        // Row 4: Numero Assicurata (Polizia di Stato)
+                        OutlinedTextField(
+                            value = numeroAssicurata,
+                            onValueChange = { viewModel.formNumeroAssicurata.value = it },
+                            label = { Text("Numero Assicurata Postale") },
+                            placeholder = { Text("12 cifre senza trattini") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Pin, contentDescription = null, tint = VividEmerald, modifier = Modifier.size(20.dp))
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("input_assicurata")
+                        )
+
+                        // Row 5: Codice Pratica / Questura
+                        OutlinedTextField(
+                            value = numeroPratica,
+                            onValueChange = { viewModel.formNumeroPratica.value = it },
+                            label = { Text("Codice Pratica / Questura (10 caratteri)") },
+                            supportingText = {
+                                Text("Codice alfanumerico assegnato dalla Questura di $selectedProvince", fontSize = 11.sp)
+                            },
+                            placeholder = { Text("10 caratteri alfanumerici") },
+                            leadingIcon = {
+                                Icon(Icons.Default.AccountBalance, contentDescription = null, tint = SunsetTangerine, modifier = Modifier.size(20.dp))
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("input_pratica")
+                        )
+
+                        // Save CTA
+                        Button(
+                            onClick = {
+                                viewModel.saveCredentials()
+                                Toast.makeText(
+                                    context,
+                                    Localization.string("profile_edit_success", selectedLanguageCode),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = VividEmerald,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(vertical = 14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .appleBounceClick()
+                                .testTag("save_creds_btn")
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(19.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = Localization.string("button_save", selectedLanguageCode),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. EXPANDABLE LANGUAGE OPTIONS TOGGLE
+        item {
+            Text(
+                text = "OPZIONI LINGUA INTERFACCIA",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 0.7.sp,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+
+        item {
+            var isLangOptionsOpen by remember { mutableStateOf(false) }
+            val languages = listOf(
+                AppLanguage.ITALIAN,
+                AppLanguage.ENGLISH,
+                AppLanguage.FRENCH,
+                AppLanguage.SPANISH,
+                AppLanguage.ARABIC
+            )
+            val activeLang = languages.find { it.code == selectedLanguageCode } ?: AppLanguage.ITALIAN
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, AppleBorderHairline),
+                shadowElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isLangOptionsOpen = !isLangOptionsOpen }
+                            .padding(horizontal = 16.dp, vertical = 14.dp)
+                            .testTag("language_options_toggle_button"),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .background(ElectricBlueTint, RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Language,
+                                    contentDescription = null,
+                                    tint = ElectricBlue,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Lingua Applicazione",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${activeLang.displayName} (${activeLang.code.uppercase()})",
+                                    fontSize = 12.sp,
+                                    color = ElectricBlue,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(1.dp, AppleBorderHairline)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = activeLang.code.uppercase(),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Icon(
+                                    imageVector = if (isLangOptionsOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Cambia lingua",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (isLangOptionsOpen) {
+                        HorizontalDivider(color = AppleBorderHairline, thickness = 1.dp)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            languages.forEach { lang ->
+                                val isSelected = selectedLanguageCode == lang.code
+                                Surface(
+                                    onClick = {
+                                        viewModel.selectLanguage(lang.code)
+                                        isLangOptionsOpen = false
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) ElectricBlueTint else Color.Transparent,
+                                    border = if (isSelected) BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.35f)) else null,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${lang.flag}  ${lang.displayName}",
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) ElectricBlue else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.CheckCircle,
+                                                contentDescription = null,
+                                                tint = ElectricBlue,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. TOGGLE SWITCH FOR CONTROLLO AUTOMATICO (24h) & FREQUENCY
+        item {
+            Text(
+                text = "SINCRONIZZAZIONE AUTOMATICA IN BACKGROUND",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 0.7.sp,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+
+        item {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, AppleBorderHairline),
+                shadowElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .background(VividEmeraldTint, RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sync,
+                                    contentDescription = null,
+                                    tint = VividEmerald,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Controllo Automatico (24h)",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Notifica push istantanea appena il PSE è pronto",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = isBackgroundSyncEnabled,
+                            onCheckedChange = { viewModel.setBackgroundSyncEnabled(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = VividEmerald
+                            ),
+                            modifier = Modifier.testTag("bg_sync_24h_switch")
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                    // Compact Segmented Options Row for Frequency
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CheckInterval.entries.forEach { interval ->
+                            val isSelected = currentInterval == interval
+                            Surface(
+                                onClick = { viewModel.updateSyncInterval(interval) },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) ElectricBlue else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .appleBounceClick()
+                            ) {
+                                Text(
+                                    text = if (isEn) interval.titleEn else interval.titleIt,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. SECURE ENCLAVE PRIVACY BADGE & GDPR RIGHT TO ERASURE (Full-Width Button, Never Wraps)
         item {
             var showDeleteDialog by remember { mutableStateOf(false) }
-            
+
             if (showDeleteDialog) {
                 AlertDialog(
                     onDismissRequest = { showDeleteDialog = false },
@@ -5352,13 +5748,12 @@ fun ProfileTab(
                         Text(
                             text = Localization.string("delete_profile_confirm_title", selectedLanguageCode),
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error
+                            color = AlertRed
                         )
                     },
                     text = {
                         Text(
                             text = Localization.string("delete_profile_confirm_msg", selectedLanguageCode),
-                            color = BentoTextSecondary,
                             fontSize = 14.sp
                         )
                     },
@@ -5367,83 +5762,98 @@ fun ProfileTab(
                             onClick = {
                                 showDeleteDialog = false
                                 viewModel.deleteProfileAndReset()
-                                android.widget.Toast.makeText(
+                                Toast.makeText(
                                     context,
                                     Localization.string("delete_profile_success", selectedLanguageCode),
-                                    android.widget.Toast.LENGTH_LONG
+                                    Toast.LENGTH_LONG
                                 ).show()
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            colors = ButtonDefaults.buttonColors(containerColor = AlertRed),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Text(Localization.string("confirm", selectedLanguageCode), color = Color.White)
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { showDeleteDialog = false }) {
-                            Text(Localization.string("cancel", selectedLanguageCode), color = BentoTextSecondary)
+                            Text(Localization.string("cancel", selectedLanguageCode))
                         }
                     },
-                    shape = RoundedCornerShape(16.dp),
-                    containerColor = MaterialTheme.colorScheme.surface
+                    shape = RoundedCornerShape(12.dp)
                 )
             }
 
-            Card(
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, AppleBorderHairline),
+                shadowElevation = 1.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, Color(0xFFFFCDD2).copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE).copy(alpha = 0.3f)),
-                shape = RoundedCornerShape(16.dp)
+                    .testTag("secure_enclave_privacy_badge")
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
-                            tint = Color(0xFFD32F2F),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "GDPR & Privacy (Danger Zone)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = Color(0xFFC62828)
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(VividEmeraldTint, RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = VividEmerald,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Crittografia Locale AES-256",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "I codici Mod. 22A sono cifrati esclusivamente sul dispositivo e interrogati direttamente sui portali Polizia di Stato e Poste Italiane.",
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
+                    HorizontalDivider(color = AppleBorderHairline, thickness = 1.dp)
+
                     Text(
-                        text = if (selectedLanguageCode == "it") {
-                            "Ai sensi dell'Art. 17 del GDPR (Diritto alla Cancellazione), hai il diritto di eliminare permanentemente tutte le tue informazioni personali da questa applicazione in qualsiasi momento."
-                        } else if (selectedLanguageCode == "es") {
-                            "Según el Art. 17 del GDPR (Derecho de Supresión), tienes derecho a eliminar permanentemente toda tu información personal de esta aplicación en cualquier momento."
-                        } else if (selectedLanguageCode == "fr") {
-                            "Conformément à l'Art. 17 du RGPD (Droit à l'Effacement), vous avez le droit de supprimer définitivement toutes vos informations personnelles de cette application à tout moment."
-                        } else if (selectedLanguageCode == "ar") {
-                            "بموجب المادة 17 من قانون حماية البيانات العام (GDPR) (الحق في المحو)، يحق لك حذف جميع معلوماتك الشخصية من هذا التطبيق نهائياً في أي وقت."
-                        } else {
-                            "Under GDPR Art. 17 (Right to Erasure), you have the right to permanently delete all your personal identifying information from this application at any time."
-                        },
+                        text = "Diritto alla Cancellazione (Art. 17 GDPR)",
                         fontSize = 12.sp,
-                        color = BentoTextSecondary,
-                        lineHeight = 16.sp
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Button(
+                    OutlinedButton(
                         onClick = { showDeleteDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, AlertRed.copy(alpha = 0.45f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AlertRed),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 11.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                        Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(17.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = Localization.string("delete_profile", selectedLanguageCode),
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

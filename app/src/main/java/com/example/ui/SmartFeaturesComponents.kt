@@ -316,21 +316,16 @@ private fun SmartFeaturesOverviewContent(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Quick Summary Banner
-        Card(
+        // Quick Summary Banner (Clean Light-Mode Technical Card)
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0A2540)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            shadowElevation = 1.dp
         ) {
             Column(
-                modifier = Modifier
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(Color(0xFF0A2540), Color(0xFF154360))
-                        )
-                    )
-                    .padding(20.dp)
+                modifier = Modifier.padding(18.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -338,23 +333,23 @@ private fun SmartFeaturesOverviewContent(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Surface(
-                        color = Color(0xFF00E676).copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(50)
+                        color = Color(0xFF007A33).copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(6.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 Icons.Default.Verified,
                                 contentDescription = null,
-                                tint = Color(0xFF00E676),
+                                tint = Color(0xFF007A33),
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (isDemoMode) "MODALITÀ DEMO ISTITUZIONALE" else "PROFILO PRATICA",
-                                color = Color(0xFF00E676),
+                                text = "PROFILO PRATICA",
+                                color = Color(0xFF007A33),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -362,23 +357,23 @@ private fun SmartFeaturesOverviewContent(
                     }
                     Text(
                         text = "Assicurata: $displayAssicurata",
-                        color = Color.White.copy(alpha = 0.85f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = displayName,
-                    color = Color.White,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.ExtraBold
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Scegli uno strumento qui sotto. Tutto è diviso in 3 aree chiare per non confonderti.",
-                    color = Color.White.copy(alpha = 0.85f),
+                    text = "Strumenti operativi suddivisi per fase procedurale.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                     lineHeight = 18.sp
                 )
@@ -1850,10 +1845,10 @@ fun SmartToolsCalmHub(
 
 fun parseFirstAndLastName(fullName: String?): Pair<String, String> {
     val cleaned = fullName?.trim().orEmpty()
-    if (cleaned.isEmpty()) return "Mario" to "Rossi"
+    if (cleaned.isEmpty()) return "" to ""
     val parts = cleaned.split(Regex("\\s+")).filter { it.isNotEmpty() }
     val firstPart = parts.firstOrNull().orEmpty()
-    if (firstPart.isEmpty()) return "Mario" to "Rossi"
+    if (firstPart.isEmpty()) return "" to ""
     return if (parts.size == 1) {
         firstPart to ""
     } else {
@@ -1863,12 +1858,12 @@ fun parseFirstAndLastName(fullName: String?): Pair<String, String> {
 
 fun extractFirstAndLastNameInitials(fullName: String?): String {
     val cleaned = fullName?.trim().orEmpty()
-    if (cleaned.isEmpty()) return "MR"
+    if (cleaned.isEmpty()) return ""
     val parts = cleaned.split(Regex("\\s+")).filter { it.isNotEmpty() }
-    if (parts.isEmpty()) return "MR"
+    if (parts.isEmpty()) return ""
     if (parts.size == 1) {
         val single = parts.firstOrNull().orEmpty()
-        return if (single.isNotEmpty()) single.take(2).uppercase(Locale.ROOT) else "MR"
+        return if (single.isNotEmpty()) single.take(2).uppercase(Locale.ROOT) else ""
     }
     val firstChar = parts.firstOrNull()?.firstOrNull()
     val lastChar = parts.lastOrNull()?.firstOrNull()
@@ -1877,7 +1872,7 @@ fun extractFirstAndLastNameInitials(fullName: String?): String {
     } else if (firstChar != null) {
         firstChar.toString().uppercase(Locale.ROOT)
     } else {
-        "MR"
+        ""
     }
 }
 
@@ -1887,50 +1882,48 @@ fun UserPersistentAvatar(
     size: Dp = 40.dp,
     fontSize: TextUnit = 14.sp,
     isSelected: Boolean = false,
-    borderColor: Color = Color.White,
-    borderWidth: Dp = 1.5.dp,
+    borderColor: Color = Color(0xFF0066CC),
+    borderWidth: Dp = 1.dp,
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val initials = remember(fullName) { extractFirstAndLastNameInitials(fullName) }
-    val palette = listOf(
-        Color(0xFF00796B),
-        Color(0xFF0B3D91),
-        Color(0xFF2E7D32),
-        Color(0xFF6A1B9A),
-        Color(0xFFC62828),
-        Color(0xFF0277BD)
-    )
-    val bgColor = remember(fullName) {
-        val hash = (fullName?.trim()?.uppercase(Locale.ROOT)?.hashCode() ?: 0).let { kotlin.math.abs(it) }
-        palette[hash % palette.size]
-    }
+    val hasInitials = initials.isNotBlank()
+    val tintBg = if (isSelected) Color(0xFFE6F9ED) else Color(0xFFEBF3FF)
+    val fgColor = if (isSelected) Color(0xFF007A33) else Color(0xFF0066CC)
+    val effectiveBorderColor = if (borderColor == Color.White) fgColor.copy(alpha = 0.35f) else borderColor.copy(alpha = 0.45f)
 
     Box(
         modifier = modifier
             .size(size)
-            .clip(CircleShape)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(bgColor, bgColor.copy(alpha = 0.8f))
-                )
-            )
+            .clip(RoundedCornerShape(10.dp))
+            .background(tintBg)
             .border(
                 width = if (isSelected) borderWidth + 0.5.dp else borderWidth,
-                color = borderColor,
-                shape = CircleShape
+                color = effectiveBorderColor,
+                shape = RoundedCornerShape(10.dp)
             )
             .then(
                 if (onClick != null) Modifier.clickable { onClick() } else Modifier
             ),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = initials,
-            color = Color.White,
-            fontSize = fontSize,
-            fontWeight = FontWeight.ExtraBold
-        )
+        if (hasInitials) {
+            Text(
+                text = initials,
+                color = fgColor,
+                fontSize = fontSize,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.PersonOutline,
+                contentDescription = "Profilo",
+                tint = fgColor,
+                modifier = Modifier.size(size * 0.52f)
+            )
+        }
     }
 }
 

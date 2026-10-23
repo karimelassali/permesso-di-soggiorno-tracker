@@ -16,12 +16,14 @@ import java.util.concurrent.TimeUnit
 class AppRepository(private val context: Context) {
     private val database = AppDatabase.getDatabase(context)
     private val credentialsDao = database.userCredentialsDao()
+    private val credentialVaultDao = database.credentialVaultDao()
     private val historyDao = database.statusHistoryDao()
     private val bookmarkDao = database.guideBookmarkDao()
     private val checklistDao = database.documentChecklistDao()
     private val sofiaDao = database.sofiaChatDao()
 
     val credentialsFlow: Flow<UserCredentials?> = credentialsDao.getCredentialsFlow()
+    val vaultEntriesFlow: Flow<List<SavedCredentialVaultEntry>> = credentialVaultDao.getAllVaultEntriesFlow()
     val historyFlow: Flow<List<StatusHistory>> = historyDao.getAllHistoryFlow()
     val bookmarksFlow: Flow<List<GuideBookmark>> = bookmarkDao.getAllBookmarksFlow()
     val allConversationsFlow: Flow<List<SofiaConversation>> = sofiaDao.getAllConversationsFlow()
@@ -106,6 +108,37 @@ class AppRepository(private val context: Context) {
 
     suspend fun saveCredentials(credentials: UserCredentials) {
         credentialsDao.insertOrUpdate(credentials)
+    }
+
+    suspend fun setBiometricProtectionEnabled(enabled: Boolean) {
+        val current = credentialsDao.getCredentialsDirect() ?: UserCredentials()
+        credentialsDao.insertOrUpdate(current.copy(biometricProtectionEnabled = enabled))
+    }
+
+    suspend fun setBiometricAutoFillEnabled(enabled: Boolean) {
+        val current = credentialsDao.getCredentialsDirect() ?: UserCredentials()
+        credentialsDao.insertOrUpdate(current.copy(biometricAutoFillEnabled = enabled))
+    }
+
+    suspend fun recordBiometricAuthentication(timestampMillis: Long = System.currentTimeMillis()) {
+        val current = credentialsDao.getCredentialsDirect() ?: UserCredentials()
+        credentialsDao.insertOrUpdate(current.copy(lastBiometricAuthTimestamp = timestampMillis))
+    }
+
+    suspend fun getVaultEntriesDirect(): List<SavedCredentialVaultEntry> {
+        return credentialVaultDao.getAllVaultEntriesDirect()
+    }
+
+    suspend fun saveVaultEntry(entry: SavedCredentialVaultEntry): Long {
+        return credentialVaultDao.insertOrUpdateVaultEntry(entry)
+    }
+
+    suspend fun deleteVaultEntry(entryId: Long) {
+        credentialVaultDao.deleteVaultEntryById(entryId)
+    }
+
+    suspend fun clearAllVaultEntries() {
+        credentialVaultDao.clearAllVaultEntries()
     }
 
     suspend fun clearHistory() {

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.background.WorkScheduler
 import com.example.background.CheckInterval
 import com.example.data.AppRepository
+import com.example.data.SavedCredentialVaultEntry
 import com.example.data.UserCredentials
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,16 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
+
+    val vaultEntries: StateFlow<List<SavedCredentialVaultEntry>> = repository.vaultEntriesFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    private val _isBiometricSessionUnlocked = MutableStateFlow(false)
+    val isBiometricSessionUnlocked: StateFlow<Boolean> = _isBiometricSessionUnlocked.asStateFlow()
 
     val history = repository.historyFlow
         .stateIn(
@@ -113,6 +124,12 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
 
     private val _isInstitutionalDemoMode = MutableStateFlow(prefs.getBoolean("institutional_demo_mode", false))
     val isInstitutionalDemoMode: StateFlow<Boolean> = _isInstitutionalDemoMode.asStateFlow()
+
+    private val _isDarkMode = MutableStateFlow(prefs.getBoolean("apple_dark_mode", false))
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+
+    private val _isBackgroundSyncEnabled = MutableStateFlow(prefs.getBoolean("bg_sync_enabled", true))
+    val isBackgroundSyncEnabled: StateFlow<Boolean> = _isBackgroundSyncEnabled.asStateFlow()
 
     // 60-second anti-DDoS / rate-limit cooldown state (persisted across restarts)
     private var lastCheckTimestampMillis: Long = prefs.getLong("last_check_timestamp_millis", 0L)
@@ -207,6 +224,19 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putBoolean("institutional_demo_mode", enabled).apply()
     }
 
+    fun setDarkMode(enabled: Boolean) {
+        _isDarkMode.value = enabled
+        prefs.edit().putBoolean("apple_dark_mode", enabled).apply()
+    }
+
+    fun setBackgroundSyncEnabled(enabled: Boolean) {
+        _isBackgroundSyncEnabled.value = enabled
+        prefs.edit().putBoolean("bg_sync_enabled", enabled).apply()
+        if (enabled) {
+            WorkScheduler.scheduleDailyCheck(getApplication())
+        }
+    }
+
     fun updateExtendedProfile(
         passportNum: String = _passportNumber.value,
         passportExp: String = _passportExpiry.value,
@@ -276,6 +306,100 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putStringSet("checked_docs", current).apply()
     }
 
+    fun setBiometricProtectionEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.setBiometricProtectionEnabled(enabled)
+            if (enabled) {
+                _isBiometricSessionUnlocked.value = true
+                repository.recordBiometricAuthentication()
+            } else {
+                _isBiometricSessionUnlocked.value = false
+            }
+        }
+    }
+
+    fun unlockWithBiometrics() {
+        _isBiometricSessionUnlocked.value = true
+        viewModelScope.launch {
+            repository.recordBiometricAuthentication()
+        }
+    }
+
+    fun lockBiometricSession() {
+        _isBiometricSessionUnlocked.value = false
+    }
+
+    fun saveCurrentCredentialsToVault(customLabel: String = "") {
+        viewModelScope.launch {
+            val cleanUserId = formUserId.value.replace("-", "").replace(" ", "").trim()
+            val cleanPassword = formPassword.value.replace("-", "").replace(" ", "").trim()
+            val cleanAssicurata = formNumeroAssicurata.value.replace("-", "").replace(" ", "").trim()
+                .ifBlank { if (cleanPassword.length == 12 && cleanPassword.all { it.isDigit() }) cleanPassword else "" }
+            val cleanPratica = formNumeroPratica.value.replace("-", "").replace(" ", "").trim()
+            val cleanName = formFullName.value.trim()
+
+            if (cleanUserId.isBlank() && cleanPassword.isBlank() && cleanAssicurata.isBlank() && cleanPratica.isBlank()) {
+                return@launch
+            }
+
+            val label = customLabel.trim().ifBlank {
+                if (cleanName.isNotBlank()) "Dossier • $cleanName" else "Pratica Mod. 22A"
+            }
+
+            val existingEntries = repository.getVaultEntriesDirect()
+            val matching = existingEntries.find {
+                (cleanAssicurata.isNotBlank() && it.numeroAssicurata == cleanAssicurata) ||
+                (cleanUserId.isNotBlank() && it.userId == cleanUserId) ||
+                (cleanPratica.isNotBlank() && it.numeroPratica == cleanPratica)
+            }
+
+            val entry = SavedCredentialVaultEntry(
+                entryId = matching?.entryId ?: 0L,
+                label = label,
+                fullName = cleanName,
+                userId = cleanUserId,
+                password = cleanPassword,
+                numeroAssicurata = cleanAssicurata,
+                numeroPratica = cleanPratica,
+                selectedProvince = _selectedProvince.value,
+                updatedAt = System.currentTimeMillis()
+            )
+            repository.saveVaultEntry(entry)
+        }
+    }
+
+    fun applyVaultEntryToActiveCredentials(entry: SavedCredentialVaultEntry) {
+        viewModelScope.launch {
+            _isBiometricSessionUnlocked.value = true
+            formFullName.value = entry.fullName
+            formUserId.value = entry.userId
+            formPassword.value = entry.password
+            formNumeroAssicurata.value = entry.numeroAssicurata
+            formNumeroPratica.value = entry.numeroPratica
+            if (entry.selectedProvince.isNotBlank()) {
+                _selectedProvince.value = entry.selectedProvince
+                prefs.edit().putString("selected_province", entry.selectedProvince).apply()
+            }
+
+            val currentCreds = repository.getCredentialsDirect() ?: UserCredentials()
+            val updated = currentCreds.copy(
+                fullName = entry.fullName,
+                userId = entry.userId,
+                password = entry.password,
+                numeroAssicurata = entry.numeroAssicurata,
+                numeroPratica = entry.numeroPratica,
+                lastBiometricAuthTimestamp = System.currentTimeMillis()
+            )
+            repository.saveCredentials(updated)
+        }
+    }
+
+    fun deleteVaultEntry(entryId: Long) {
+        viewModelScope.launch {
+            repository.deleteVaultEntry(entryId)
+        }
+    }
+
     fun saveCredentials() {
         viewModelScope.launch {
             val cleanUserId = formUserId.value.replace("-", "").replace(" ", "").trim()
@@ -316,6 +440,7 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
                 convocazioneMotivo = if (credsChanged) "" else currentCreds.convocazioneMotivo
             )
             repository.saveCredentials(updated)
+            saveCurrentCredentialsToVault()
             WorkScheduler.scheduleDailyCheck(getApplication())
 
             // Automatically run a live check against the portals with the newly saved credentials
@@ -623,9 +748,11 @@ class PermessoViewModel(application: Application) : AndroidViewModel(application
                 selectedPermitType = null
             )
             repository.saveCredentials(emptyCreds)
+            repository.clearAllVaultEntries()
             repository.clearHistory()
             repository.clearAllSofiaData()
 
+            _isBiometricSessionUnlocked.value = false
             _onboardingCompleted.value = false
             _selectedProvince.value = "Roma"
             _appointmentDate.value = ""

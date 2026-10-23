@@ -22,5 +22,22 @@ data class UserCredentials(
     val convocazioneMotivo: String = "",
     val selectedQuesturaId: String? = null,
     val selectedProvinceCode: String? = null,
-    val selectedPermitType: String? = null
+    val selectedPermitType: String? = null,
+    val biometricProtectionEnabled: Boolean = false,
+    val biometricAutoFillEnabled: Boolean = true,
+    val lastBiometricAuthTimestamp: Long = 0L
 )
+
+@Entity(tableName = "saved_credential_vault")
+data class SavedCredentialVaultEntry(
+    @PrimaryKey(autoGenerate = true) val entryId: Long = 0,
+    val label: String = "Pratica Principale",
+    val fullName: String = "",
+    val userId: String = "",
+    val password: String = "",
+    val numeroAssicurata: String = "",
+    val numeroPratica: String = "",
+    val selectedProvince: String = "Roma",
+    val updatedAt: Long = System.currentTimeMillis()
+)
+

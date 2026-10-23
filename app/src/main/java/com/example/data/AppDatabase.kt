@@ -20,6 +20,33 @@ interface UserCredentialsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(credentials: UserCredentials)
+
+    @Query("UPDATE user_credentials SET biometricProtectionEnabled = :enabled WHERE id = 1")
+    suspend fun updateBiometricProtection(enabled: Boolean)
+
+    @Query("UPDATE user_credentials SET biometricAutoFillEnabled = :enabled WHERE id = 1")
+    suspend fun updateBiometricAutoFill(enabled: Boolean)
+
+    @Query("UPDATE user_credentials SET lastBiometricAuthTimestamp = :timestamp WHERE id = 1")
+    suspend fun updateLastBiometricAuthTimestamp(timestamp: Long)
+}
+
+@Dao
+interface CredentialVaultDao {
+    @Query("SELECT * FROM saved_credential_vault ORDER BY updatedAt DESC")
+    fun getAllVaultEntriesFlow(): Flow<List<SavedCredentialVaultEntry>>
+
+    @Query("SELECT * FROM saved_credential_vault ORDER BY updatedAt DESC")
+    suspend fun getAllVaultEntriesDirect(): List<SavedCredentialVaultEntry>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateVaultEntry(entry: SavedCredentialVaultEntry): Long
+
+    @Query("DELETE FROM saved_credential_vault WHERE entryId = :entryId")
+    suspend fun deleteVaultEntryById(entryId: Long)
+
+    @Query("DELETE FROM saved_credential_vault")
+    suspend fun clearAllVaultEntries()
 }
 
 @Dao
@@ -55,9 +82,22 @@ interface DocumentChecklistDao {
     suspend fun insertOrUpdate(state: DocumentChecklistState)
 }
 
-@Database(entities = [UserCredentials::class, StatusHistory::class, GuideBookmark::class, DocumentChecklistState::class, SofiaConversation::class, SofiaMessage::class], version = 5, exportSchema = false)
+@Database(
+    entities = [
+        UserCredentials::class,
+        SavedCredentialVaultEntry::class,
+        StatusHistory::class,
+        GuideBookmark::class,
+        DocumentChecklistState::class,
+        SofiaConversation::class,
+        SofiaMessage::class
+    ],
+    version = 6,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userCredentialsDao(): UserCredentialsDao
+    abstract fun credentialVaultDao(): CredentialVaultDao
     abstract fun statusHistoryDao(): StatusHistoryDao
     abstract fun guideBookmarkDao(): GuideBookmarkDao
     abstract fun documentChecklistDao(): DocumentChecklistDao

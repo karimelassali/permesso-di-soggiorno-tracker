@@ -1192,11 +1192,11 @@ fun GuideDetailScreen(
                 }
             }
 
-            // SECTION 4: Ask AI Assistant Chat Interface
+            // SECTION 4: Regulatory Reference Desk
             item {
                 SectionCard(
                     title = Localization.string("guides_ask_ai", selectedLanguageCode),
-                    icon = Icons.Default.AutoAwesome
+                    icon = Icons.Default.Gavel
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
@@ -1278,7 +1278,7 @@ fun GuideDetailScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(text = "Soggiorno AI 🤖", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                        Text(text = "Nota Tecnica Normativa", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
 
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             IconButton(

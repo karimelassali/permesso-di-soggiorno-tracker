@@ -54,12 +54,12 @@ val BentoBadgeOrange = Color(0xFFD84315)
 object SofiaLocalization {
     private val strings = mapOf(
         "it" to mapOf(
-            "sofia_title" to "Sofia AI",
-            "sofia_subtitle" to "Esperta di Immigrazione Italiana",
-            "sofia_status_online" to "● Online",
-            "hello_user" to "Ciao %s 👋",
-            "intro_text" to "Sono Sofia. La tua consulente personale per l'immigrazione italiana. Sono qui per aiutarti a navigare la burocrazia 24/7.",
-            "ask_me_about" to "Chiedimi qualsiasi cosa su:",
+            "sofia_title" to "Consulente D.Lgs. 286/98",
+            "sofia_subtitle" to "Prontuario Normativo Immigrazione",
+            "sofia_status_online" to "● Attivo",
+            "hello_user" to "Benvenuto, %s",
+            "intro_text" to "Sportello di orientamento normativo sull'immigrazione italiana (T.U. D.Lgs. 286/98 e D.P.R. 394/99). Consulta procedure, requisiti documentali e riferimenti ufficiali.",
+            "ask_me_about" to "Aree normative disponibili:",
             "residence_permits" to "Permessi di soggiorno",
             "questure" to "Questure e uffici",
             "appointments" to "Appuntamenti e impronte",
@@ -70,36 +70,36 @@ object SofiaLocalization {
             "travel" to "Viaggiare con ricevuta",
             "work" to "Lavoro e contratti",
             "bureaucracy" to "Burocrazia e leggi",
-            "my_journey_title" to "Il Mio Percorso",
-            "what_users_ask" to "Cosa chiedono spesso gli utenti",
+            "my_journey_title" to "Riepilogo Fascicolo",
+            "what_users_ask" to "Quesiti frequenti",
             "source_title" to "Fonti delle informazioni",
-            "source_ai" to "IA",
+            "source_ai" to "Normativa",
             "source_official" to "Ufficiale",
             "source_community" to "Comunità",
-            "disclaimer" to "Sofia fornisce informazioni orientative basate su fonti pubbliche e non costituisce consulenza legale professionale. Per assistenza sulla tua pratica, rivolgiti a un Patronato.",
-            "placeholder_chat" to "Chiedi a Sofia...",
-            "empty_convs" to "Nessuna conversazione precedente. Fai una domanda per iniziare!",
-            "recent_conversations" to "Conversazioni recenti",
-            "start_chat" to "Nuova Conversazione",
+            "disclaimer" to "Il prontuario fornisce indicazioni basate su fonti pubbliche (D.Lgs. 286/98) e non sostituisce il parere di un avvocato o Patronato accreditato.",
+            "placeholder_chat" to "Inserisci un quesito normativo...",
+            "empty_convs" to "Nessuna consultazione archiviata. Seleziona un tema o inserisci un quesito.",
+            "recent_conversations" to "Consultazioni recenti",
+            "start_chat" to "Nuova Consultazione",
             "copy_success" to "Copiato negli appunti",
-            "liked_success" to "Feedback registrato, grazie!",
-            "search_conv_placeholder" to "Cerca conversazioni...",
-            "rename_dialog_title" to "Rinomina Conversazione",
-            "delete_dialog_title" to "Elimina Conversazione",
-            "delete_dialog_msg" to "Sei sicuro di voler eliminare questa conversazione?",
+            "liked_success" to "Feedback registrato",
+            "search_conv_placeholder" to "Cerca consultazioni...",
+            "rename_dialog_title" to "Rinomina Consultazione",
+            "delete_dialog_title" to "Elimina Consultazione",
+            "delete_dialog_msg" to "Sei sicuro di voler eliminare questa consultazione?",
             "confirm" to "Conferma",
             "cancel" to "Annulla",
-            "conv_starters" to "Spunti di conversazione",
-            "suggestions" to "Suggerimenti",
-            "starter_initial_query" to "Parlami dei requisiti per: %s"
+            "conv_starters" to "Temi normativi principali",
+            "suggestions" to "Approfondimenti",
+            "starter_initial_query" to "Quali sono i riferimenti normativi e i requisiti per: %s"
         ),
         "en" to mapOf(
-            "sofia_title" to "Sofia AI",
-            "sofia_subtitle" to "Italian Immigration Expert",
-            "sofia_status_online" to "● Online",
-            "hello_user" to "Hello %s 👋",
-            "intro_text" to "I'm Sofia. Your personal Italian immigration advisor. I am here to help you navigate bureaucracy 24/7.",
-            "ask_me_about" to "Ask me anything about:",
+            "sofia_title" to "Legal Reference Desk",
+            "sofia_subtitle" to "Italian Immigration Law (D.Lgs. 286/98)",
+            "sofia_status_online" to "● Active",
+            "hello_user" to "Welcome, %s",
+            "intro_text" to "Regulatory reference desk for Italian immigration procedures (Consolidated Act D.Lgs. 286/98). Verify document requirements, deadlines, and statutory rules.",
+            "ask_me_about" to "Regulatory topics:",
             "residence_permits" to "Residence permits",
             "questure" to "Questure & offices",
             "appointments" to "Appointments & fingerprints",
@@ -110,36 +110,36 @@ object SofiaLocalization {
             "travel" to "Traveling with receipt",
             "work" to "Work & contracts",
             "bureaucracy" to "Bureaucracy & laws",
-            "my_journey_title" to "My Journey",
-            "what_users_ask" to "What users usually ask",
+            "my_journey_title" to "Dossier Summary",
+            "what_users_ask" to "Frequent inquiries",
             "source_title" to "Information sources",
-            "source_ai" to "AI",
+            "source_ai" to "Statutory",
             "source_official" to "Official",
             "source_community" to "Community",
-            "disclaimer" to "Sofia provides orientative information based on public sources and does not constitute professional legal counsel. For assistance with your application, contact an accredited Patronato.",
-            "placeholder_chat" to "Ask Sofia...",
-            "empty_convs" to "No previous conversations. Ask a question to start!",
-            "recent_conversations" to "Recent conversations",
-            "start_chat" to "New Conversation",
+            "disclaimer" to "This desk provides regulatory guidance based on public statutes (D.Lgs. 286/98) and does not constitute formal legal representation.",
+            "placeholder_chat" to "Enter a procedural question...",
+            "empty_convs" to "No archived consultations. Select a topic or enter a question below.",
+            "recent_conversations" to "Recent consultations",
+            "start_chat" to "New Consultation",
             "copy_success" to "Copied to clipboard",
-            "liked_success" to "Feedback recorded, thank you!",
-            "search_conv_placeholder" to "Search conversations...",
-            "rename_dialog_title" to "Rename Conversation",
-            "delete_dialog_title" to "Delete Conversation",
-            "delete_dialog_msg" to "Are you sure you want to delete this conversation?",
+            "liked_success" to "Feedback recorded",
+            "search_conv_placeholder" to "Search consultations...",
+            "rename_dialog_title" to "Rename Consultation",
+            "delete_dialog_title" to "Delete Consultation",
+            "delete_dialog_msg" to "Are you sure you want to delete this consultation?",
             "confirm" to "Confirm",
             "cancel" to "Cancel",
-            "conv_starters" to "Conversation Starters",
+            "conv_starters" to "Core Regulatory Topics",
             "suggestions" to "Suggestions",
-            "starter_initial_query" to "Tell me about the requirements for: %s"
+            "starter_initial_query" to "What are the statutory requirements for: %s"
         ),
         "ar" to mapOf(
-            "sofia_title" to "صوفيا الذكية",
-            "sofia_subtitle" to "خبير الهجرة الإيطالية",
-            "sofia_status_online" to "● متصل الآن",
-            "hello_user" to "أهلاً %s 👋",
-            "intro_text" to "أنا صوفيا. مستشارتك الشخصية للهجرة الإيطالية. أنا هنا لمساعدتك في التغلب على المعاملات الورقية والروتين 24/7.",
-            "ask_me_about" to "اسألني عن أي شيء يخص:",
+            "sofia_title" to "المرجع القانوني للهجرة",
+            "sofia_subtitle" to "قانون الهجرة الإيطالي (D.Lgs. 286/98)",
+            "sofia_status_online" to "● متصل",
+            "hello_user" to "مرحباً، %s",
+            "intro_text" to "مرجع إرشادي لإجراءات الهجرة الإيطالية وفق المرسوم التشريعي 286/98.",
+            "ask_me_about" to "المواضيع القانونية المتاحة:",
             "residence_permits" to "تصاريح الإقامة",
             "questure" to "مراكز الشرطة والمكاتب",
             "appointments" to "المواعيد والبصمات",
@@ -150,36 +150,36 @@ object SofiaLocalization {
             "travel" to "السفر مع الإيصال",
             "work" to "العمل والعقود",
             "bureaucracy" to "البيروقراطية والقوانين",
-            "my_journey_title" to "مساري الخاص",
-            "what_users_ask" to "ما يسأله المستخدمون عادةً",
+            "my_journey_title" to "ملخص الملف",
+            "what_users_ask" to "الأسئلة الشائعة",
             "source_title" to "مصادر المعلومات",
-            "source_ai" to "ذكاء اصطناعي",
+            "source_ai" to "قانوني",
             "source_official" to "رسمي",
             "source_community" to "مجتمعي",
-            "disclaimer" to "إشعار قانوني: تقدم صوفيا معلومات توجيهية بناءً على مصادر عامة ولا تشكل استشارة قانونية مهنية. للمساعدة في ملفك لدى مكتب الهجرة، يرجى مراجعة مكتب باتروناتو (Patronato) معتمد.",
-            "placeholder_chat" to "اسأل صوفيا...",
-            "empty_convs" to "لا توجد محادثات سابقة. اسأل سؤالاً للبدء!",
-            "recent_conversations" to "المحادثات الأخيرة",
-            "start_chat" to "محادثة جديدة",
+            "disclaimer" to "إشعار قانوني: يقدم هذا القسم معلومات توجيهية بناءً على المصادر الرسمية ولا يشكل استشارة قانونية مهنية. للمساعدة في ملفك، يرجى مراجعة مكتب باتروناتو (Patronato) معتمد.",
+            "placeholder_chat" to "اكتب استفسارك القانوني...",
+            "empty_convs" to "لا توجد استشارات سابقة.",
+            "recent_conversations" to "الاستشارات الأخيرة",
+            "start_chat" to "استشارة جديدة",
             "copy_success" to "تم النسخ إلى الحافظة",
-            "liked_success" to "تم تسجيل رأيك، شكراً لك!",
-            "search_conv_placeholder" to "البحث في المحادثات...",
+            "liked_success" to "تم تسجيل رأيك",
+            "search_conv_placeholder" to "البحث في الاستشارات...",
             "rename_dialog_title" to "إعادة تسمية المحادثة",
             "delete_dialog_title" to "حذف المحادثة",
             "delete_dialog_msg" to "هل أنت متأكد من رغبتك في حذف هذه المحادثة؟",
             "confirm" to "تأكيد",
             "cancel" to "إلغاء",
-            "conv_starters" to "مواضيع لبدء المحادثة",
+            "conv_starters" to "المواضيع القانونية الرئيسية",
             "suggestions" to "اقتراحات",
-            "starter_initial_query" to "أخبرني عن متطلبات: %s"
+            "starter_initial_query" to "أخبرني عن المتطلبات القانونية لـ: %s"
         ),
         "es" to mapOf(
-            "sofia_title" to "Sofía AI",
-            "sofia_subtitle" to "Experta en Inmigración Italiana",
-            "sofia_status_online" to "● En línea",
-            "hello_user" to "Hola %s 👋",
-            "intro_text" to "Soy Sofía. Tu asesora personal de inmigración italiana. Estoy aquí para ayudarte a navegar la burocracia 24/7.",
-            "ask_me_about" to "Pregúntame cualquier cosa sobre:",
+            "sofia_title" to "Consultor D.Lgs. 286/98",
+            "sofia_subtitle" to "Normativa de Inmigración Italiana",
+            "sofia_status_online" to "● Activo",
+            "hello_user" to "Bienvenido, %s",
+            "intro_text" to "Servicio de orientación normativa sobre inmigración italiana (D.Lgs. 286/98).",
+            "ask_me_about" to "Temas normativos:",
             "residence_permits" to "Permisos de residencia",
             "questure" to "Comisarías y oficinas",
             "appointments" to "Citas y huellas",
@@ -190,35 +190,35 @@ object SofiaLocalization {
             "travel" to "Viajar con recibo",
             "work" to "Trabajo y contratos",
             "bureaucracy" to "Burocracia y leyes",
-            "my_journey_title" to "Mi Camino",
-            "what_users_ask" to "Lo que la gente suele preguntar",
+            "my_journey_title" to "Resumen del Expediente",
+            "what_users_ask" to "Consultas frecuentes",
             "source_title" to "Fuentes de información",
-            "source_ai" to "IA",
+            "source_ai" to "Normativa",
             "source_official" to "Oficial",
             "source_community" to "Comunidad",
-            "disclaimer" to "Sofía proporciona información orientativa basada en fuentes públicas y no constituye asesoramiento legal profesional. Para asistencia con su trámite, acuda a un Patronato.",
-            "placeholder_chat" to "Pregúntale a Sofía...",
-            "empty_convs" to "Sin conversaciones previas. ¡Haz una pregunta para comenzar!",
-            "recent_conversations" to "Conversaciones recientes",
-            "start_chat" to "Nueva Conversación",
+            "disclaimer" to "Información orientativa basada en fuentes públicas (D.Lgs. 286/98). Para asistencia con su trámite, acuda a un Patronato.",
+            "placeholder_chat" to "Escribe tu consulta normativa...",
+            "empty_convs" to "Sin consultas previas.",
+            "recent_conversations" to "Consultas recientes",
+            "start_chat" to "Nueva Consulta",
             "copy_success" to "Copiado al portapapeles",
-            "liked_success" to "¡Comentario registrado, gracias!",
-            "search_conv_placeholder" to "Buscar conversaciones...",
-            "rename_dialog_title" to "Renombrar Conversación",
-            "delete_dialog_title" to "Eliminar Conversación",
-            "delete_dialog_msg" to "¿Estás seguro de que deseas eliminar esta conversación?",
+            "liked_success" to "Comentario registrado",
+            "search_conv_placeholder" to "Buscar consultas...",
+            "rename_dialog_title" to "Renombrar Consulta",
+            "delete_dialog_title" to "Eliminar Consulta",
+            "delete_dialog_msg" to "¿Estás seguro de que deseas eliminar esta consulta?",
             "confirm" to "Confirmar",
             "cancel" to "Cancelar",
-            "conv_starters" to "Temas de conversación",
+            "conv_starters" to "Temas normativos",
             "suggestions" to "Sugerencias",
-            "starter_initial_query" to "Cuéntame sobre los requisitos para: %s"
+            "starter_initial_query" to "Cuéntame sobre los requisitos legales para: %s"
         ),
         "fr" to mapOf(
-            "sofia_title" to "Sofia AI",
-            "sofia_subtitle" to "Experte en Immigration Italienne",
-            "sofia_status_online" to "● En ligne",
-            "hello_user" to "Bonjour %s 👋",
-            "intro_text" to "Je suis Sofia. Votre conseillère personnelle en immigration italienne. Je suis là pour vous aider à naviguer la bureaucratie 24/7.",
+            "sofia_title" to "Référentiel D.Lgs. 286/98",
+            "sofia_subtitle" to "Droit de l'Immigration Italienne",
+            "sofia_status_online" to "● Actif",
+            "hello_user" to "Bienvenue, %s",
+            "intro_text" to "Service d'orientation réglementaire sur l'immigration italienne (D.Lgs. 286/98).",
             "ask_me_about" to "Demandez-moi n'importe quoi sur :",
             "residence_permits" to "Titres de séjour",
             "questure" to "Préfectures et bureaux",
@@ -260,21 +260,21 @@ object SofiaLocalization {
     }
 }
 
-// Sofia Theme Premium Colors - Styled for Clean Light Green-White-Red Theme
-private val SofiaGradientStart = Color(0xFF008C45) // Italian Flag Green
-private val SofiaGradientEnd = Color(0xFF1B5E20)   // Deep Green
-private val SofiaGlowColor = Color(0xFF008C45)     // Bright Green
-private val GlassBackground = Color(0xFFEAF5EF)    // Light Green Pastel
-private val GlassBorder = Color(0xFFE2E8F0)        // Slate border
-private val SofiaTextPrimary = Color(0xFF1E293B)   // Dark slate text
-private val SofiaTextSecondary = Color(0xFF64748B) // Medium slate text
-private val BentoCardBackground = Color.White       // Pure white cards
-private val BentoCardBorder = Color(0xFFE2E8F0)     // Clean border
-private val SofiaGreen = Color(0xFF008C45)
+// Sofia Theme Apple iOS 18 Vivid Colors (Siri Violet + Vivid Emerald + Electric Blue)
+private val SofiaGradientStart = SiriViolet
+private val SofiaGradientEnd = ElectricBlue
+private val SofiaGlowColor = SiriViolet
+private val GlassBackground = SiriVioletTint
+private val GlassBorder = Color(0xFFE5E5EA)
+private val SofiaTextPrimary = AppleInk
+private val SofiaTextSecondary = AppleTextMuted
+private val BentoCardBackground = AppleCardSurface
+private val BentoCardBorder = Color(0xFFE5E5EA)
+private val SofiaGreen = VividEmerald
 private val SofiaWhite = Color(0xFFFFFFFF)
-private val SofiaRed = Color(0xFFCD212A)
-private val SofiaLightBorder = Color(0xFFE2E8F0)
-private val SofiaLightGreen = Color(0xFFEAF5EF)
+private val SofiaRed = AlertRed
+private val SofiaLightBorder = Color(0xFFE5E5EA)
+private val SofiaLightGreen = VividEmeraldTint
 
 @Composable
 fun SofiaScreen(
@@ -752,8 +752,14 @@ fun SofiaGreetingCard(
             .padding(18.dp)
     ) {
         Column {
+            val cleanName = userFullName.trim()
+            val headerTitle = if (cleanName.isNotBlank()) {
+                SofiaLocalization.string("hello_user", selectedLanguageCode).format(cleanName)
+            } else {
+                SofiaLocalization.string("sofia_title", selectedLanguageCode)
+            }
             Text(
-                text = SofiaLocalization.string("hello_user", selectedLanguageCode).format(userFullName),
+                text = headerTitle,
                 color = SofiaTextPrimary,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
@@ -819,12 +825,15 @@ fun SofiaMyJourneyCard(
     selectedLanguageCode: String
 ) {
     val credentials by viewModel.userCredentialsState.collectAsStateWithLifecycle()
-    val fullName = credentials?.fullName ?: ""
-    val hasCredentials = fullName.isNotBlank()
-    val nameToUse = if (hasCredentials) fullName else if (selectedLanguageCode == "it") "Ospite" else "Guest"
-    
-    val permitType = credentials?.selectedPermitType ?: if (selectedLanguageCode == "it") "Permesso di Soggiorno" else "Residence Permit"
-    val questuraName = credentials?.selectedQuesturaId ?: if (selectedLanguageCode == "it") "Questura di Milano" else "Questura of Milan"
+    val fullName = credentials?.fullName?.trim().orEmpty()
+    val hasDossierCode = !credentials?.numeroAssicurata.isNullOrBlank() ||
+        !credentials?.numeroPratica.isNullOrBlank() ||
+        !credentials?.codiceIstanza.isNullOrBlank()
+
+    val permitType = credentials?.selectedPermitType?.takeIf { it.isNotBlank() }
+        ?: if (selectedLanguageCode == "it") "Non specificato" else "Not specified"
+    val questuraName = credentials?.selectedQuesturaId?.takeIf { it.isNotBlank() }
+        ?: if (selectedLanguageCode == "it") "Non selezionata" else "Not selected"
 
     Box(
         modifier = Modifier
@@ -841,7 +850,7 @@ fun SofiaMyJourneyCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
-                    imageVector = Icons.Default.DirectionsRun,
+                    imageVector = Icons.Default.FolderShared,
                     contentDescription = null,
                     tint = SofiaGreen,
                     modifier = Modifier.size(20.dp)
@@ -855,84 +864,55 @@ fun SofiaMyJourneyCard(
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
-            
-            // Custom summary items dynamically loaded in text style
+
+            if (fullName.isNotBlank()) {
+                Text(
+                    text = if (selectedLanguageCode == "it") "Intestatario: $fullName"
+                           else "Holder: $fullName",
+                    color = SofiaTextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
             Text(
-                text = if (selectedLanguageCode == "it") "Ciao $nameToUse." 
-                       else if (selectedLanguageCode == "es") "Hola $nameToUse."
-                       else if (selectedLanguageCode == "fr") "Bonjour $nameToUse."
-                       else if (selectedLanguageCode == "ar") "مرحباً $nameToUse."
-                       else "Hello $nameToUse.",
-                color = SofiaTextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = if (selectedLanguageCode == "it") "Stai tracciando: $permitType"
-                       else if (selectedLanguageCode == "es") "Estás siguiendo: $permitType"
-                       else if (selectedLanguageCode == "fr") "Vous suivez : $permitType"
-                       else if (selectedLanguageCode == "ar") "أنت تتابع حالياً: $permitType"
-                       else "You are currently tracking: $permitType",
+                text = if (selectedLanguageCode == "it") "Tipologia pratica: $permitType"
+                       else if (selectedLanguageCode == "es") "Tipo de trámite: $permitType"
+                       else if (selectedLanguageCode == "fr") "Type de titre : $permitType"
+                       else if (selectedLanguageCode == "ar") "نوع التصريح: $permitType"
+                       else "Permit category: $permitType",
                 color = SofiaTextPrimary,
                 fontSize = 13.sp
             )
             Text(
-                text = if (selectedLanguageCode == "it") "Questura: $questuraName"
-                       else if (selectedLanguageCode == "es") "Questura: $questuraName"
+                text = if (selectedLanguageCode == "it") "Sede competente: $questuraName"
+                       else if (selectedLanguageCode == "es") "Oficina: $questuraName"
                        else if (selectedLanguageCode == "fr") "Préfecture : $questuraName"
                        else if (selectedLanguageCode == "ar") "المديرية: $questuraName"
-                       else "Questura: $questuraName",
+                       else "Competent office: $questuraName",
                 color = SofiaTextSecondary,
                 fontSize = 12.sp
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
+                val badgeColor = if (hasDossierCode) SofiaGreen else SofiaTextSecondary
                 Box(
                     modifier = Modifier
-                        .background(BentoBadgeOrange.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .background(badgeColor.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = if (selectedLanguageCode == "it") "In trattazione" 
-                               else if (selectedLanguageCode == "es") "En trámite"
-                               else if (selectedLanguageCode == "fr") "En traitement"
-                               else if (selectedLanguageCode == "ar") "قيد المعالجة"
-                               else "In processing", 
-                        color = BentoBadgeOrange, 
-                        fontSize = 11.sp, 
+                        text = if (hasDossierCode) {
+                            if (selectedLanguageCode == "it") "Codici registrati" else "Codes configured"
+                        } else {
+                            if (selectedLanguageCode == "it") "Codici non inseriti" else "No codes configured"
+                        },
+                        color = badgeColor,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                val appointmentText = if (selectedLanguageCode == "it") "Pratica attiva" 
-                                      else if (selectedLanguageCode == "es") "Expediente activo"
-                                      else if (selectedLanguageCode == "fr") "Dossier actif"
-                                      else if (selectedLanguageCode == "ar") "ملف نشط"
-                                      else "Active practice"
-                Text(text = appointmentText, color = SofiaTextPrimary, fontSize = 12.sp)
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (selectedLanguageCode == "it") "Documenti consigliati: Copia passaporto, marca da bollo, foto tessera"
-                       else if (selectedLanguageCode == "es") "Documentos recomendados: Copia del pasaporte, marca da bollo, fotos de carné"
-                       else if (selectedLanguageCode == "fr") "Documents recommandés : Copie du passeport, timbre fiscal, photos d'identité"
-                       else if (selectedLanguageCode == "ar") "المستندات المطلوبة: نسخة من جواز السفر، طابع بريد، صور شخصية"
-                       else "Recommended documents: Passport copy, stamp duty, passport photos",
-                color = SofiaTextSecondary,
-                fontSize = 12.sp
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = if (selectedLanguageCode == "it") "Azione raccomandata: Chiedi a Sofia AI chiarimenti su come completare la tua pratica."
-                       else if (selectedLanguageCode == "es") "Acción recomendada: Pregúntale a Sofia AI sobre cómo completar tu expediente."
-                       else if (selectedLanguageCode == "fr") "Action recommandée : Demandez à Sofia AI comment compléter votre dossier."
-                       else if (selectedLanguageCode == "ar") "الإجراء الموصى به: اسأل صوفيا الذكية عن كيفية استكمال ملفك."
-                       else "Recommended action: Ask Sofia AI about how to complete your permit details.",
-                color = SofiaGreen,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
-            )
         }
     }
 }
@@ -943,14 +923,14 @@ fun SofiaConversationStarters(
     selectedLanguageCode: String
 ) {
     val starters = listOf(
-        Triple("📄", "documents", "documents"),
-        Triple("✈️", "travel", "travel"),
-        Triple("💼", "work", "work"),
-        Triple("👨\u200D👩\u200D👧", "family_reunification", "family"),
-        Triple("🏢", "questure", "offices"),
-        Triple("📅", "appointments", "appointments"),
-        Triple("🛂", "residence_permits", "permits"),
-        Triple("⚖️", "bureaucracy", "legal")
+        Triple("", "documents", "documents"),
+        Triple("", "travel", "travel"),
+        Triple("", "work", "work"),
+        Triple("", "family_reunification", "family"),
+        Triple("", "questure", "offices"),
+        Triple("", "appointments", "appointments"),
+        Triple("", "residence_permits", "permits"),
+        Triple("", "bureaucracy", "legal")
     )
 
     Column(modifier = Modifier.padding(top = 20.dp)) {
@@ -967,8 +947,7 @@ fun SofiaConversationStarters(
             Column(modifier = Modifier.weight(1f)) {
                 starters.take(4).forEach { item ->
                     val localizedTitle = SofiaLocalization.string(item.second, selectedLanguageCode)
-                    val cardTitle = "${item.first} $localizedTitle"
-                    SofiaStarterCard(title = cardTitle, onClick = {
+                    SofiaStarterCard(title = localizedTitle, onClick = {
                         val initialMsgPattern = SofiaLocalization.string("starter_initial_query", selectedLanguageCode)
                         viewModel.startNewConversation(
                             title = localizedTitle,
@@ -983,8 +962,7 @@ fun SofiaConversationStarters(
             Column(modifier = Modifier.weight(1f)) {
                 starters.drop(4).forEach { item ->
                     val localizedTitle = SofiaLocalization.string(item.second, selectedLanguageCode)
-                    val cardTitle = "${item.first} $localizedTitle"
-                    SofiaStarterCard(title = cardTitle, onClick = {
+                    SofiaStarterCard(title = localizedTitle, onClick = {
                         val initialMsgPattern = SofiaLocalization.string("starter_initial_query", selectedLanguageCode)
                         viewModel.startNewConversation(
                             title = localizedTitle,
@@ -1399,66 +1377,128 @@ fun SofiaActiveChatPage(
             }
         }
 
-        // CHAT INPUT BAR
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .border(width = 1.dp, color = SofiaLightBorder)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // DOCKED INPUT BAR WITH REAL SPEECH RECOGNIZER & SEND ACTION
+        val context = LocalContext.current
+        val speechLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+            contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            val spoken = result.data
+                ?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+            if (!spoken.isNullOrBlank()) {
+                inputText = spoken
+            }
+        }
+
+        Surface(
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+            border = BorderStroke(1.dp, AppleBorderHairline),
+            shadowElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            OutlinedTextField(
-                value = inputText,
-                onValueChange = { inputText = it },
-                placeholder = { Text(SofiaLocalization.string("placeholder_chat", selectedLanguageCode), color = SofiaTextSecondary) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = SofiaTextPrimary,
-                    unfocusedTextColor = SofiaTextPrimary,
-                    focusedBorderColor = SofiaGreen,
-                    unfocusedBorderColor = SofiaLightBorder,
-                    focusedContainerColor = Color(0xFFF1F5F3),
-                    unfocusedContainerColor = Color(0xFFF1F5F3)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = {
-                    if (inputText.isNotBlank()) {
-                        viewModel.sendMessage(inputText, selectedLanguageCode)
-                        inputText = ""
-                    }
-                }),
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .testTag("sofia_chat_input")
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Animated Send Button
-            IconButton(
-                onClick = {
-                    if (inputText.isNotBlank()) {
-                        viewModel.sendMessage(inputText, selectedLanguageCode)
-                        inputText = ""
-                    }
-                },
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(SofiaGradientStart, SofiaGradientEnd)
-                        )
-                    )
-                    .testTag("sofia_send_button")
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                // Real Android Speech Recognition Button
+                Surface(
+                    onClick = {
+                        try {
+                            val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                putExtra(
+                                    android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                                    android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                                )
+                                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, selectedLanguageCode)
+                            }
+                            speechLauncher.launch(intent)
+                        } catch (_: Exception) {
+                            Toast.makeText(
+                                context,
+                                "Riconoscimento vocale di sistema non disponibile su questo dispositivo",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    shape = CircleShape,
+                    color = SiriVioletTint,
+                    border = BorderStroke(1.dp, SiriViolet.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .size(44.dp)
+                        .appleBounceClick()
+                        .testTag("sofia_voice_button")
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "Input Vocale",
+                            tint = SiriViolet,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Full-Capsule Input Pill
+                OutlinedTextField(
+                    value = inputText,
+                    onValueChange = { inputText = it },
+                    placeholder = {
+                        Text(
+                            text = SofiaLocalization.string("placeholder_chat", selectedLanguageCode),
+                            color = SofiaTextSecondary,
+                            fontSize = 14.sp
+                        )
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor = SiriViolet,
+                        unfocusedBorderColor = AppleBorderHairline,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    shape = CircleShape,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = {
+                        if (inputText.isNotBlank()) {
+                            viewModel.sendMessage(inputText, selectedLanguageCode)
+                            inputText = ""
+                        }
+                    }),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("sofia_chat_input")
                 )
+
+                // Send Button
+                Surface(
+                    onClick = {
+                        if (inputText.isNotBlank()) {
+                            viewModel.sendMessage(inputText, selectedLanguageCode)
+                            inputText = ""
+                        }
+                    },
+                    shape = CircleShape,
+                    color = VividEmerald,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier
+                        .size(46.dp)
+                        .appleBounceClick()
+                        .testTag("sofia_send_button")
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -1470,13 +1510,12 @@ fun SofiaQuickToolsRow(
     selectedLanguageCode: String
 ) {
     val tools = listOf(
-        Pair("Explain Status", SofiaActionEvent.ExplainStatus),
-        Pair("Check Documents", SofiaActionEvent.ShowRequiredDocuments),
-        Pair("Appointment Help", SofiaActionEvent.ShowAppointment),
-        Pair("Find Office", SofiaActionEvent.ShowMyQuestura),
-        Pair("Official Links", SofiaActionEvent.OpenOfficialWebsite),
-        Pair("Renewal Help", SofiaActionEvent.OpenRenewalGuide),
-        Pair("Guide Me Step by Step", SofiaActionEvent.OpenImmigrationGuides)
+        Pair("Analisi Stato Pratica", SofiaActionEvent.ExplainStatus),
+        Pair("Documenti Obbligatori", SofiaActionEvent.ShowRequiredDocuments),
+        Pair("Convocazione Questura", SofiaActionEvent.ShowAppointment),
+        Pair("Sedi & Uffici Questura", SofiaActionEvent.ShowMyQuestura),
+        Pair("Portali Ufficiali", SofiaActionEvent.OpenOfficialWebsite),
+        Pair("Procedure di Rinnovo", SofiaActionEvent.OpenRenewalGuide)
     )
 
     Row(
@@ -1487,14 +1526,21 @@ fun SofiaQuickToolsRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         tools.forEach { tool ->
-            Card(
+            Surface(
                 onClick = { viewModel.triggerSmartAction(tool.second) },
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, SofiaLightBorder),
-                shape = RoundedCornerShape(10.dp)
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                shape = RoundedCornerShape(10.dp),
+                shadowElevation = 1.dp,
+                modifier = Modifier.appleBounceClick()
             ) {
                 Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    Text(text = tool.first, color = SofiaTextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = tool.first,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }
@@ -1513,8 +1559,9 @@ fun SofiaMessageBubble(
     val isUser = message.sender == "user"
 
     val alignment = if (isUser) Alignment.End else Alignment.Start
-    val containerColor = if (isUser) SofiaGreen else Color.White
-    val borderStroke = if (isUser) null else BorderStroke(1.dp, SofiaLightBorder)
+    val siriBorder = Brush.linearGradient(
+        colors = listOf(SiriViolet, ElectricBlue, VividEmerald)
+    )
 
     Column(
         modifier = Modifier
@@ -1525,25 +1572,48 @@ fun SofiaMessageBubble(
         Row(
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-            modifier = Modifier.fillMaxWidth(0.85f)
+            modifier = Modifier.fillMaxWidth(0.88f)
         ) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = containerColor),
-                border = borderStroke,
+            Surface(
+                color = if (isUser) ElectricBlue else MaterialTheme.colorScheme.surface,
+                border = if (isUser) null else BorderStroke(1.5.dp, siriBorder),
+                shadowElevation = if (isUser) 2.dp else 4.dp,
                 shape = RoundedCornerShape(
-                    topStart = 16.dp,
-                    topEnd = 16.dp,
-                    bottomStart = if (isUser) 16.dp else 4.dp,
-                    bottomEnd = if (isUser) 4.dp else 16.dp
+                    topStart = 20.dp,
+                    topEnd = 20.dp,
+                    bottomStart = if (isUser) 20.dp else 6.dp,
+                    bottomEnd = if (isUser) 6.dp else 20.dp
                 )
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    if (!isUser) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Gavel,
+                                contentDescription = null,
+                                tint = SiriViolet,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "PRONTUARIO NORMATIVO • D.LGS. 286/98",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SiriViolet,
+                                letterSpacing = 0.4.sp
+                            )
+                        }
+                    }
+
                     // Message Text
                     Text(
                         text = message.text,
-                        color = if (isUser) Color.White else SofiaTextPrimary,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp
+                        color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
+                        fontSize = 15.sp,
+                        lineHeight = 21.sp
                     )
 
                     // Smart direct navigation shortcuts if detected in AI responses
@@ -1558,34 +1628,38 @@ fun SofiaMessageBubble(
         if (!isStreaming) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(0.85f)
+                    .fillMaxWidth(0.88f)
                     .padding(top = 4.dp, start = 4.dp, end = 4.dp),
                 horizontalArrangement = if (isUser) Arrangement.End else Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (!isUser) {
-                    // Source color badge
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val sourceColor = when (message.sourceType) {
-                            "official" -> SofiaGreen
-                            "community" -> SofiaRed
-                            else -> SofiaGreen
+                            "official" -> VividEmerald
+                            "community" -> SunsetTangerine
+                            else -> SiriViolet
                         }
                         val sourceLabel = when (message.sourceType) {
-                            "official" -> SofiaLocalization.string("source_official", selectedLanguageCode)
-                            "community" -> SofiaLocalization.string("source_community", selectedLanguageCode)
-                            else -> SofiaLocalization.string("source_ai", selectedLanguageCode)
+                            "official" -> "Fonte Ufficiale"
+                            "community" -> "Segnalazione Utenti"
+                            else -> "Rif. D.Lgs. 286/98"
                         }
-                        Box(
-                            modifier = Modifier
-                                .background(sourceColor.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        Surface(
+                            shape = CircleShape,
+                            color = sourceColor.copy(alpha = 0.14f)
                         ) {
-                            Text(text = sourceLabel, color = sourceColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = sourceLabel,
+                                color = if (sourceColor == VividEmerald) Color(0xFF007A33) else sourceColor,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
                         }
-                        
+
                         Spacer(modifier = Modifier.width(8.dp))
-                        
+
                         // Copy Button
                         IconButton(
                             onClick = {
@@ -1594,7 +1668,7 @@ fun SofiaMessageBubble(
                             },
                             modifier = Modifier.size(24.dp)
                         ) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = SofiaTextSecondary, modifier = Modifier.size(12.dp))
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = SofiaTextSecondary, modifier = Modifier.size(13.dp))
                         }
                     }
                 }
